@@ -1,0 +1,10 @@
+ndspy==4.2.0
+pillow==11.3.0
+py-desmume==0.0.7
+pynput==1.8.1
+pyobjc-core==11.1
+pyobjc-framework-ApplicationServices==11.1
+pyobjc-framework-Cocoa==11.1
+pyobjc-framework-CoreText==11.1
+pyobjc-framework-Quartz==11.1
+six==1.17.0
