@@ -2,6 +2,11 @@ import os, math
 from utils.init_emulator import init_desmume
 from utils.keyboard_hack import init_keyhack
 from utils.memory import read_cart_angle, read_cart_position
+from utils.collision_data import read_collision_data
+import torch
+from utils.mps import get_mps_device
+
+device = get_mps_device()
 
 emu, window = init_desmume('mariokart_ds.nds')
 init_keyhack(emu)
@@ -31,7 +36,26 @@ addrs = {
     "ptrBattleController": 0x0217b1dc + ptr_offset,
 }
 
+def collision_data_tensor(data, device=None):
+    return torch.tensor(data, device=device)
+    
+def checkpoint_data_tensor(data, device=None):
+    points_0 = []
+    points_1 = []
+    for entry in data.items():
+        p0 = torch.tensor(entry["p0"], device=device)
+        p1 = torch.tensor(entry["p1"], device=device)
+        points_0.append(p0)
+        points_1.append(p1)
+        
+    return torch.stack(points_0), torch.stack(points_1)
+    
+def find_nearest_distance(collision_data: torch.Tensor):
+    print(collision_data)
 
+collision_tensor = read_collision_data()
+collision_tensor = collision_data_tensor(collision_tensor, device=device)
+find_nearest_distance(collision_tensor)
 
 def main():
     # Run the emulation as fast as possible until quit
@@ -40,13 +64,13 @@ def main():
         emu.cycle()
         window.draw()
         
-        os.system('clear')
+        #os.system('clear')
             
         x, y, z = read_cart_position(emu)
         rad = read_cart_angle(emu)
-        deg = math.degrees(rad)
-        print(f"Position: (x) {x} / (y) {y} / (z) {z}")
-        print(f"Orientation: (rad) {rad} / (deg) {deg}°")
+
+        
+        
     
     
 if __name__ == "__main__":

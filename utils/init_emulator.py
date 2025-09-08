@@ -4,7 +4,7 @@ def init_desmume(rom_path: str):
     # Initialize desmume
     emu = DeSmuME()
     emu.open(rom_path)
-    emu.savestate.load(0)
+    emu.savestate.load(1)
     emu.volume_set(0) #turn down the fuckass volume
     
     # Create the window for the emulator
