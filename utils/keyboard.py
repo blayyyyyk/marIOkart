@@ -1,4 +1,4 @@
-from desmume.controls import keymask, Keys, load_default_config, add_key, rm_key
+from desmume.controls import keymask, Keys
 from pynput import keyboard
 
 emu = None
@@ -7,6 +7,7 @@ key_map = {
     "a": Keys.KEY_LEFT,
     "d": Keys.KEY_RIGHT,
 }
+
 
 def on_press(key):
     global emu, key_map
@@ -19,6 +20,7 @@ def on_press(key):
         _keymask = keymask(key_map[name])
         emu.input.keypad_add_key(_keymask)
 
+
 def on_release(key):
     global emu, key_map
     assert emu is not None
@@ -30,8 +32,9 @@ def on_release(key):
         _keymask = keymask(key_map[name])
         emu.input.keypad_rm_key(_keymask)
 
+
 def init_keyhack(emulator):
-    global emu 
+    global emu
     emu = emulator
     listener = keyboard.Listener(on_press=on_press, on_release=on_release)
     listener.start()
