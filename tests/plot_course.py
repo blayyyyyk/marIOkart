@@ -23,6 +23,14 @@ def plot_course(highlight_points = None):
     plt.scatter(checkpoint_x_coords_0, checkpoint_z_coords_0, color="r", marker="o")
     plt.scatter(checkpoint_x_coords_1, checkpoint_z_coords_1, color="g", marker="o")
     
+    # Add labels for each point
+    for x, y in zip(checkpoint_x_coords_0, checkpoint_z_coords_0):
+        plt.text(x + 0.1, y + 0.1, f"({x:.1f}, {y:.1f})", fontsize=9, color="darkred")
+        
+    # Add labels for each point
+    for x, y in zip(checkpoint_x_coords_1, checkpoint_z_coords_1):
+        plt.text(x + 0.1, y + 0.1, f"({x:.1f}, {y:.1f})", fontsize=9, color="darkgreen")
+    
     if highlight_points:
         highlight_points_x = [point[0] for point in highlight_points]
         highlight_points_z = [point[1] for point in highlight_points]
