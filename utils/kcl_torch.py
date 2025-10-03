@@ -44,7 +44,8 @@ class PrismsTensor(PrismsBase):
         _enrm1_i: Sequence[int],
         _enrm2_i: Sequence[int],
         _enrm3_i: Sequence[int],
-        _attributes: Sequence[int]
+        _attributes: Sequence[Sequence[int]],
+        device=None
     ):
         super().__init__(
             _height,
@@ -55,13 +56,45 @@ class PrismsTensor(PrismsBase):
             _enrm3_i,
             _attributes
         )
-        self.height = torch.tensor(_height, dtype=torch.float32)
-        self.pos_i = torch.tensor(_pos_i, dtype=torch.int32)
-        self.fnrm_i = torch.tensor(_fnrm_i, dtype=torch.int32)
-        self.enrm1_i = torch.tensor(_enrm1_i, dtype=torch.int32)
-        self.enrm2_i = torch.tensor(_enrm2_i, dtype=torch.int32)
-        self.enrm3_i = torch.tensor(_enrm3_i, dtype=torch.int32)
-        self.attributes = torch.tensor(_attributes, dtype=torch.int32)
+        self.height = torch.tensor(_height, dtype=torch.float32, device=device)
+        self.pos_i = torch.tensor(_pos_i, dtype=torch.int32, device=device)
+        self.fnrm_i = torch.tensor(_fnrm_i, dtype=torch.int32, device=device)
+        self.enrm1_i = torch.tensor(_enrm1_i, dtype=torch.int32, device=device)
+        self.enrm2_i = torch.tensor(_enrm2_i, dtype=torch.int32, device=device)
+        self.enrm3_i = torch.tensor(_enrm3_i, dtype=torch.int32, device=device)
+        self.attributes = torch.tensor(_attributes, dtype=torch.int32, device=device)
+        
+    @property
+    def map_2d_shadow(self):
+        return self.attributes[:, 0]
+        
+    @property
+    def light_id(self):
+        return self.attributes[:, 1]
+        
+    @property
+    def ignore_drivers(self):
+        return self.attributes[:, 2]
+        
+    @property
+    def collision_variant(self):
+        return self.attributes[:, 3]
+        
+    @property
+    def collision_type(self):
+        return self.attributes[:, 4]
+        
+    @property
+    def ignore_items(self):
+        return self.attributes[:, 5]
+        
+    @property
+    def is_wall(self):
+        return self.attributes[:, 6]
+        
+    @property
+    def is_floor(self):
+        return self.attributes[:, 7]
         
 
 class KCLTensor(KCLBase):
@@ -146,9 +179,10 @@ class KCLTensor(KCLBase):
         _area_x_blocks_shift: int,
         _area_xy_blocks_shift: int,
         _sphere_radius: int | None,
+        device=None
     ):
-        _positions = torch.tensor(positions)
-        _normals = torch.tensor(normals)
+        _positions = torch.tensor(positions, device=device)
+        _normals = torch.tensor(normals, device=device)
         super().__init__(
             data,
             prisms,
@@ -171,7 +205,9 @@ class KCLTensor(KCLBase):
         self.prisms = prisms
         self.positions = _positions
         self.normals = _normals
+        self.device = device
         self.triangles = self._compute_triangles()
+    
         
     def _compute_triangles(self):
         # Indexed Vectors
@@ -182,13 +218,8 @@ class KCLTensor(KCLBase):
         edge_norm_1 = self.normals[self.prisms.enrm2_i]
         edge_norm_2 = self.normals[self.prisms.enrm3_i]
         
-        
         cross_a = edge_norm_0.cross(face_norm, dim=-1)
-        cross_b = -edge_norm_1.cross(face_norm, dim=-1)
-        
-        
-        cross_a /= torch.norm(cross_a, dim=-1, keepdim=True)
-        cross_b /= torch.norm(cross_b, dim=-1, keepdim=True)
+        cross_b = edge_norm_1.cross(face_norm, dim=-1)
         
         vertex_1 = vertex_0 + cross_b * (height / torch.linalg.vecdot(edge_norm_2, cross_b))[:, None]
         vertex_2 = vertex_0 + cross_a * (height / torch.linalg.vecdot(edge_norm_2, cross_a))[:, None]
@@ -196,8 +227,10 @@ class KCLTensor(KCLBase):
         out = torch.stack([vertex_0, vertex_1, vertex_2], dim=1)
         
         return out
+        
     
-    def search_triangles(self, point: tuple[float, float, float] | torch.Tensor):
+    
+    def search_triangles(self, point: tuple[float, float, float] | torch.Tensor, filter_attribute_id: int | None = None):
         assert self.triangles is not None
         if not isinstance(point, tuple):
             p = tuple(point.tolist())
@@ -208,7 +241,7 @@ class KCLTensor(KCLBase):
         if leaf_offset is None:
             return None
     
-        tri_indices = []
+        tri_indices: list[int] = []
         chunk_size = 0x02
         start = self.block_data_offset + leaf_offset + chunk_size
         for data_offset in range(start, len(self.data), chunk_size):
@@ -220,10 +253,8 @@ class KCLTensor(KCLBase):
     
         if len(tri_indices) == 0:
             return None
-    
+            
         return tri_indices
-    
-    
     
     def nearest_triangles(self, point, n=1, device=None):
         tri_indices = self.search_triangles(point)
@@ -286,10 +317,10 @@ class KCLTensor(KCLBase):
         return dist
         
     @classmethod
-    def from_file(cls, path: str):
+    def from_file(cls, path: str, device=None):
         data = None    
         with open(path, 'rb') as f:
             data = f.read()
             
         assert data is not None
-        return cls.from_bytes(data)
+        return cls.from_bytes(data, device=device)
