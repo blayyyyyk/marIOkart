@@ -143,7 +143,7 @@ class Scene:
                 Point(*p1), 
                 Point(*p2), 
                 Point(*p3), 
-                stroke_width=5, 
+                stroke_width=2, 
                 fill=False
             )
             tri_obj.set_color(*color)

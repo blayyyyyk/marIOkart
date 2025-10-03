@@ -123,7 +123,7 @@ def compute_model_view(camera_pos, camera_target_pos, device=None):
     
     return model_view
     
-def project_to_screen(world_points, model_view, fov, aspect, device=None, z_clip=True):
+def project_to_screen(world_points, model_view, fov, aspect, far, near, device=None, z_clip=True):
     N = world_points.shape[0]
         
     # Homogenize points
@@ -133,8 +133,6 @@ def project_to_screen(world_points, model_view, fov, aspect, device=None, z_clip
     
     # Perspective projection
     f = torch.tan(torch.tensor(fov, device=device) / 2)
-    far = 2000.0
-    near = 0.0
     
     if z_clip:
         near_valid = (cam_space[:, 2] > near)
@@ -158,7 +156,7 @@ def project_to_screen(world_points, model_view, fov, aspect, device=None, z_clip
     
     clip_space = (projection_matrix @ cam_space.T).T
     
-    ndc = clip_space[:, :3] / clip_space[:, 3, None]
+    ndc = clip_space[:, :2] / clip_space[:, 3, None]
     
     screen_x = (ndc[:, 0] + 1) / 2 * SCREEN_WIDTH
     screen_y = (1 - ndc[:, 1]) / 2 * SCREEN_HEIGHT
