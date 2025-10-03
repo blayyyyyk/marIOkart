@@ -1,4 +1,11 @@
-from utils.memory import read_vector_2d, read_vector_3d, read_fx32, read_u16, read_u32
+from operator import pos
+import torch
+import os, sys
+from mkds.utils import read_vector_2d, read_vector_3d, read_fx32, read_u16, read_u32
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from utils.vector import get_mps_device, pairwise_distances_cross
+from mkds.kcl import KCL
 
 DEFAULT_NKM_PATH = "desert_course/src/course_map.nkm"
 
@@ -54,3 +61,69 @@ def read_collision_data(kcl_path: str = DEFAULT_KCL_PATH):
             points.append([x, y, z])
 
         return points
+
+def collision_data_tensor(data, device=None):
+    return torch.tensor(data, device=device)
+
+def checkpoint_data_tensor_2d(data, device=None):
+    points_0 = []
+    points_1 = []
+    for entry in data:
+        p0 = torch.tensor(entry["p0"], device=device)
+        p1 = torch.tensor(entry["p1"], device=device)
+        points_0.append(p0)
+        points_1.append(p1)
+
+    return torch.stack(points_0), torch.stack(points_1)
+
+"""
+Returns checkpoint points with y-positions interpolated using closest distance of collision points
+"""
+def checkpoint_data_tensor_3d(checkpoint, collision, device=None):
+    N = checkpoint.shape[0]
+    ones = torch.ones((N, 1), device=device)
+    checkpoint = torch.cat([checkpoint[:, 0, None], ones, checkpoint[:, 1: None]], dim=-1)
+    D = pairwise_distances_cross(checkpoint, collision)
+    D_argmin = D.argmin(dim=1)
+    y_vals = collision[D_argmin, 1]
+    checkpoint[:, 1] = y_vals
+    return checkpoint
+
+def prepare_course_data(device=None):
+    checkpoint = read_checkpoint_data()
+    checkpoint_a, checkpoint_b = checkpoint_data_tensor_2d(checkpoint, device=device)
+    checkpoint = torch.cat([checkpoint_a, checkpoint_b], dim=0)
+    collision = read_collision_data()
+    collision = collision_data_tensor(collision, device=device)
+    checkpoint = checkpoint_data_tensor_3d(checkpoint, collision, device=device)
+    checkpoint_a, checkpoint_b = checkpoint.chunk(2, dim=0)
+    return checkpoint_a, checkpoint_b, collision
+
+
+def read_kcl_triangles(path: str | None = None, device = None):
+    kcl = None
+    if path is not None:
+        kcl = KCL.from_file(path)
+    else:
+        kcl = KCL.from_file()
+        
+    
+
+    height = torch.tensor([k['height'] for k in kcl.prisms], dtype=torch.float32, device=device)
+    pos_i = torch.tensor([k['pos_i'] for k in kcl.prisms], dtype=torch.int32, device=device)
+    
+    fnrm_i = torch.tensor([k['fnrm_i'] for k in kcl.prisms], dtype=torch.int32, device=device)
+    enrm1_i = torch.tensor([k['enrm1_i'] for k in kcl.prisms], dtype=torch.int32, device=device)
+    enrm2_i = torch.tensor([k['enrm2_i'] for k in kcl.prisms], dtype=torch.int32, device=device)
+    enrm3_i = torch.tensor([k['enrm3_i'] for k in kcl.prisms], dtype=torch.int32, device=device)
+
+    all_pos = torch.tensor(kcl._positions, dtype=torch.float32, device=device)
+    all_norm = torch.tensor(kcl._normals, dtype=torch.float32, device=device)
+
+    position = all_pos[pos_i]
+    face_norm = all_norm[fnrm_i]
+    edge_norm_0 = all_norm[enrm1_i]
+    edge_norm_1 = all_norm[enrm2_i]
+    edge_norm_2 = all_norm[enrm3_i]
+
+    return decode_triangles(position, height, face_norm, edge_norm_0, edge_norm_1, edge_norm_2)
