@@ -75,26 +75,18 @@ def pairwise_distances(pts):
     D2 = torch.clamp(D2, min=0.0)
     D = torch.sqrt(D2)
     return D
-
-def project_to_screen(point_4d: torch.Tensor, proj_4d: torch.Tensor, screen_width: int, screen_height: int) -> torch.Tensor:
-    if len(point_4d.shape) == 1:
-        point_4d = point_4d.unsqueeze(0)
-
-    # Project point
-
-    point_4d = point_4d.unsqueeze(-2)
-
-    point_proj = proj_4d @ point_4d.transpose(-1, -2)
-    point_proj = point_proj.transpose(-1, -2).squeeze(-2)
-
-    point_proj_norm = point_proj / point_proj[:, 3, None] # Normalize
-
-    # Convert to screen space coordinated
-    screen_x = (point_proj_norm[:, 0] + 1) / 2 * screen_width
-    screen_y = (1 - point_proj_norm[:, 1]) / 2 * screen_height
-    screen_proj_point = torch.cat([screen_x[:, None], screen_y[:, None]], dim=-1)
-
-    return screen_proj_point
+    
+def pairwise_distances_cross(A, B):
+    # Compute squared norms
+    A_norms = (A**2).sum(dim=1).unsqueeze(1)  # n x 1
+    B_norms = (B**2).sum(dim=1).unsqueeze(0)  # 1 x m
+    
+    # Compute pairwise squared distances
+    D_squared = A_norms + B_norms - 2 * (A @ B.T)
+    
+    # Euclidean distances
+    D = torch.sqrt(D_squared.clamp(min=0))
+    return D
 
 def compute_orthonormal_basis(forward_vector_3d, reference_vector_3d=None, device=None):
     if reference_vector_3d is None:
@@ -128,13 +120,11 @@ def compute_model_view(camera_pos, camera_target_pos, device=None):
     model_view = torch.eye(4, dtype=rot.dtype, device=device)
     model_view[:3,:3] = rot
     model_view[:3,3] = -pos_proj.squeeze(-1)
+    
     return model_view
     
-def project_to_camera(world_points, model_view, fov, aspect, device=None):
+def project_to_screen(world_points, model_view, fov, aspect, device=None, z_clip=True):
     N = world_points.shape[0]
-    
-    fov = 3.1
-    
         
     # Homogenize points
     ones = torch.ones((N, 1), device=device)
@@ -142,31 +132,36 @@ def project_to_camera(world_points, model_view, fov, aspect, device=None):
     cam_space = (model_view @ world_points.T).T
     
     # Perspective projection
-    f = 1 / torch.tan(torch.tensor(fov, device=device) / 2)
-    far = 100.0
+    f = torch.tan(torch.tensor(fov, device=device) / 2)
+    far = 2000.0
     near = 0.0
     
-    
+    if z_clip:
+        near_valid = (cam_space[:, 2] > near)
+        far_valid = (cam_space[:, 2] < far)
+        cam_space = cam_space[near_valid & far_valid]
     
     if cam_space.shape[0] == 0:
         return torch.empty((0, 2), device=device)
     
+    
+    fov_w = math.tan(fov * aspect)
+    fov_h = math.tan(fov)
+    
     projection_matrix = torch.zeros((4, 4), device=device)
-    projection_matrix[0, 0] = - 0.16 * f / aspect
-    projection_matrix[1, 1] = 0.9 * f
+    projection_matrix[0, 0] = 1 / fov_w
+    projection_matrix[1, 1] = -1 / fov_h
     projection_matrix[2, 2] = -(far + near) / (far - near)
     projection_matrix[2, 3] = -(2 * far * near) / (far - near)
     projection_matrix[3, 2] = -1
     projection_matrix[3, 3] = 0
     
-    proj_space = (projection_matrix @ cam_space.T).T
+    clip_space = (projection_matrix @ cam_space.T).T
     
-    screen_x = (proj_space[:, 0] + 1) / 2 * SCREEN_WIDTH
-    screen_y = (1 - proj_space[:, 1]) / 2 * SCREEN_HEIGHT
+    ndc = clip_space[:, :3] / clip_space[:, 3, None]
     
+    screen_x = (ndc[:, 0] + 1) / 2 * SCREEN_WIDTH
+    screen_y = (1 - ndc[:, 1]) / 2 * SCREEN_HEIGHT
+    screen_depth = far / (far + cam_space[:, 2])
     
-    
-    
-    
-    
-    return torch.stack([screen_x, screen_y], dim=-1)
+    return torch.stack([screen_x, screen_y, screen_depth], dim=-1)

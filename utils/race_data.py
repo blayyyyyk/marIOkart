@@ -1,7 +1,11 @@
-from utils.memory import read_fx16, read_u16, read_u32, read_fx32, RACER_DATA_PTR, CAMERA_DATA_PTR, read_vector_3d
-import torch
-from utils.memory import read_s32
+from mkds.utils import read_fx16, read_u16, read_u32, read_fx32, read_vector_3d
+from mkds.utils import read_s32
+
 import math
+
+
+RACER_DATA_PTR = 0x0217ACF8
+CAMERA_DATA_PTR = 0x0217AA4C
 
 def get_racer_pos(data):
     data_addr = read_u32(data, RACER_DATA_PTR)
@@ -12,8 +16,6 @@ def get_racer_dir(data):
     racer_data_addr = read_u32(data, RACER_DATA_PTR)
     x, y, z = read_vector_3d(data, racer_data_addr + 0x68)
     return x, y, z
-    
-# 0x02382700
     
 def get_camera_fov(data, data_addr=None):
     if not data_addr:
