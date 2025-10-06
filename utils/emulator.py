@@ -30,14 +30,7 @@ current_input = 0
 # Queue for callback processing in a separate thread
 callback_queue = queue.Queue()
 
-class DrawRequest:
-    def __init__(self, points: list[list[float]], color: tuple[float, float, float], depth: bool | None = False):
-        self.points = points
-        self.color = color
-        self.depth = depth
-    
-
-points: list[DrawRequest] = []
+       # what the worker prepares
 
 
 class DrawObject:
@@ -160,56 +153,46 @@ class Scene:
         for draw_obj in self.draw_objs:
             draw_obj.draw(ctx)
         
-scene = Scene()
+scene_lock = threading.Lock()
+scene_current = Scene()   # what GTK renders
+scene_next = None  
 
-# --- Key handling ---
+
+input_lock = threading.Lock()
+input_state = set()  # holds active keys (e.g. {"up", "left", "a"})
+
 def on_key_press(widget, event):
-    global emu, current_input
-    assert emu is not None
     key = Gdk.keyval_name(event.keyval).lower()
-
-    if key in ("w", "up"):
-        emu.input.keypad_add_key(keymask(Keys.KEY_UP))
-    elif key in ("s", "down"):
-        emu.input.keypad_add_key(keymask(Keys.KEY_DOWN))
-    elif key in ("a", "left"):
-        emu.input.keypad_add_key(keymask(Keys.KEY_LEFT))
-    elif key in ("d", "right"):
-        emu.input.keypad_add_key(keymask(Keys.KEY_RIGHT))
-    elif key == "z":
-        emu.input.keypad_add_key(keymask(Keys.KEY_B))
-    elif key == "x":
-        emu.input.keypad_add_key(keymask(Keys.KEY_A))
-    elif key == "8":
-        emu.input.keypad_add_key(keymask(Keys.KEY_START))
-    elif key == "9":
-        emu.input.keypad_add_key(keymask(Keys.KEY_SELECT))
-    elif key == 'p':
-        emu.savestate.save(2)
+    with input_lock:
+        input_state.add(key)
+    return True
 
 def on_key_release(widget, event):
-    global emu, current_input, points
-    assert emu is not None
     key = Gdk.keyval_name(event.keyval).lower()
+    with input_lock:
+        input_state.discard(key)
+    return True
 
-    if key in ("w", "up"):
-        emu.input.keypad_rm_key(keymask(Keys.KEY_UP))
-    elif key in ("s", "down"):
-        emu.input.keypad_rm_key(keymask(Keys.KEY_DOWN))
-    elif key in ("a", "left"):
-        emu.input.keypad_rm_key(keymask(Keys.KEY_LEFT))
-    elif key in ("d", "right"):
-        emu.input.keypad_rm_key(keymask(Keys.KEY_RIGHT))
-    elif key == "z":
-        emu.input.keypad_rm_key(keymask(Keys.KEY_B))
-    elif key == "x":
-        emu.input.keypad_rm_key(keymask(Keys.KEY_A))
-    elif key == "b":
-        emu.input.keypad_rm_key(keymask(Keys.KEY_START))
+def apply_input_state(emu: DeSmuME, pressed):
+    emu.input.keypad_update(0)
 
+    keymap = {
+        "w": Keys.KEY_UP, "up": Keys.KEY_UP,
+        "s": Keys.KEY_DOWN, "down": Keys.KEY_DOWN,
+        "a": Keys.KEY_LEFT, "left": Keys.KEY_LEFT,
+        "d": Keys.KEY_RIGHT, "right": Keys.KEY_RIGHT,
+        "z": Keys.KEY_B,
+        "x": Keys.KEY_A,
+        "8": Keys.KEY_START,
+        "9": Keys.KEY_SELECT,
+    }
+
+    for k in pressed:
+        if k in keymap:
+            emu.input.keypad_add_key(keymask(keymap[k]))
 
 def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
-    global renderer
+    global renderer, scene_current, scene_lock
     assert renderer is not None
     
     # Scale the whole drawing context
@@ -217,8 +200,9 @@ def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
     
     # Draw emulator screen
     renderer.screen(SCREEN_WIDTH, SCREEN_HEIGHT, ctx, 0)
-    scene.draw(ctx)
-    scene.clear()
+    with scene_lock:
+        scene_current.draw(ctx)
+    
     return False
     
 
@@ -247,21 +231,23 @@ class EmulatorWindow(Gtk.Window):
         self.set_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK)
 
 
-def draw_points(pts: list[list[float]], color: tuple[float, float, float]):
-    global scene
+def draw_points(scene: Scene, pts: list[list[float]], color: tuple[float, float, float]):
     scene.add_points(pts, color)
     
-def draw_triangles(pts1: list[list[float]], pts2: list[list[float]], pts3: list[list[float]], color: tuple[float, float, float]):
-    global scene
+def draw_triangles(scene: Scene, pts1: list[list[float]], pts2: list[list[float]], pts3: list[list[float]], color: tuple[float, float, float]):
     scene.add_triangles(pts1, pts2, pts3, color)
 
 def callback_worker():
+    global scene_next
     while True:
         emu_instance = callback_queue.get()
         if emu_instance is None:
             break  # exit signal
         try:
-            callback(emu_instance)
+            new_scene = Scene()
+            callback(emu_instance, new_scene)
+            with scene_lock:
+                scene_next = new_scene
         except Exception as e:
             raise RuntimeError("Custom thread failure")
         callback_queue.task_done()
@@ -293,11 +279,23 @@ def init_desmume_with_overlay(rom_path: str, callback_fn, init_fn):
 
     # Timer for stepping emulator and queuing callback
     def tick():
+        global scene_current, scene_next
         assert emu is not None
-        emu.cycle()  # step one frame
-        win.drawing_area.queue_draw()  # trigger redraw
+        emu.cycle()
         
-        callback_queue.put(emu)  # queue callback work
+        with input_lock:
+            pressed = set(input_state)
+        
+        apply_input_state(emu, pressed)
+    
+        # If worker produced a new scene, swap it in safely
+        with scene_lock:
+            if scene_next is not None:
+                scene_current = scene_next
+                scene_next = None
+    
+        win.drawing_area.queue_draw()  # render current scene
+        callback_queue.put(emu)        # queue next computation
         return True
 
     GLib.timeout_add(16, tick)  # ~60 FPS

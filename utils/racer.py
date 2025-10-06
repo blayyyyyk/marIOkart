@@ -7,9 +7,9 @@ from desmume.emulator import MemoryAccessor
 from utils.vector import compute_model_view, project_to_screen, triangle_raycast_batch, sample_cone
 import math
 
-RACER_DATA_PTR = 0x0217ACF8
-CAMERA_DATA_PTR = 0x0217AA4C
+
 OBJECT_DATA_PTR = 0x0217B588
+CHECKPOINT_DATA_PTR = 0x021755FC
 
 # Object flags
 FLAG_DYNAMIC = 0x1000
@@ -17,16 +17,36 @@ FLAG_MAPOBJ  = 0x2000
 FLAG_ITEM    = 0x4000
 FLAG_RACER   = 0x8000
 
+DEFAULT_RACER_ADDRS = {
+    "racer_data_ptr": 0x0217ACF8,
+    "camera_data_ptr": 0x0217AA4C,
+    "object_data_ptr": 0x0217B588,
+    "checkpoint_data_ptr": 0x021755FC
+}
+
 class Racer:
-    def __init__(self, kcl: KCL, nkm: NKM, z_near, z_far, device=None):
+    def __init__(self, kcl: KCL, nkm: NKM, z_near=0.0, z_far=1000.0, device=None):
         self.device = device
         self.kcl = kcl
         self.nkm = nkm
         self.racer_data_addr: int | None = None
         self.camera_data_addr: int | None = None
+        self.object_data_addr: int | None = None
         self.camera_z_near = z_near
         self.camera_z_far = z_far
         self.memory: MemoryAccessor | None = None
+        
+    def set_kcl(self, kcl: KCL):
+        self.kcl = kcl
+        
+    def set_nkm(self, nkm: KCL):
+        self.nkm = nkm
+        
+    @property
+    def course_id(self) -> int | None:
+        if self.memory is None:
+            return None
+        return self.memory.read_byte(0x23cdcd8)
         
         
     @classmethod
@@ -39,7 +59,7 @@ class Racer:
     def position(self) -> torch.Tensor:
         if self.racer_data_addr is None:
             assert self.memory is not None
-            self.racer_data_addr = read_u32(self.memory, RACER_DATA_PTR)
+            self.racer_data_addr = self.memory.read_long(DEFAULT_RACER_ADDRS['racer_data_ptr'])
         
         pos = read_vector_3d_fx32(self.memory, self.racer_data_addr + 0x80)
         return torch.tensor(pos, device=self.device)
@@ -48,7 +68,7 @@ class Racer:
     def direction(self) -> torch.Tensor:
         if self.racer_data_addr is None:
             assert self.memory is not None
-            self.racer_data_addr = read_u32(self.memory, RACER_DATA_PTR)
+            self.racer_data_addr = self.memory.read_long(DEFAULT_RACER_ADDRS['racer_data_ptr'])
             
         pos = read_vector_3d_fx32(self.memory, self.racer_data_addr + 0x68)
         return torch.tensor(pos, device=self.device)
@@ -57,7 +77,7 @@ class Racer:
     def camera_details(self) -> tuple[float, float]:
         if self.camera_data_addr is None:
             assert self.memory is not None
-            self.camera_data_addr = read_u32(self.memory, CAMERA_DATA_PTR)
+            self.camera_data_addr = self.memory.read_long(DEFAULT_RACER_ADDRS['camera_data_ptr'])
             
         fov = read_u16(self.memory, self.camera_data_addr + 0x60) * (2 * math.pi / 0x10000)
         aspect = read_fx32(self.memory, self.camera_data_addr + 0x6C)
@@ -105,7 +125,7 @@ class Racer:
     def camera_position(self) -> torch.Tensor:
         if self.camera_data_addr is None:
             assert self.memory is not None
-            self.camera_data_addr = read_u32(self.memory, CAMERA_DATA_PTR)
+            self.camera_data_addr = self.memory.read_long(DEFAULT_RACER_ADDRS['camera_data_ptr'])
             
         pos = read_vector_3d_fx32(self.memory, self.camera_data_addr + 0x24)
         elevation = read_fx32(self.memory, self.camera_data_addr + 0x178)
@@ -116,10 +136,9 @@ class Racer:
     def camera_target_position(self) -> torch.Tensor:
         if self.camera_data_addr is None:
             assert self.memory is not None
-            self.camera_data_addr = read_u32(self.memory, CAMERA_DATA_PTR)
+            self.camera_data_addr = self.memory.read_long(DEFAULT_RACER_ADDRS['camera_data_ptr'])
             
-        data_addr = read_u32(self.memory, CAMERA_DATA_PTR)
-        pos = read_vector_3d_fx32(self.memory, data_addr + 0x18)
+        pos = read_vector_3d_fx32(self.memory, self.camera_data_addr + 0x18)
         return torch.tensor(pos, device=self.device)
         
     @property
@@ -205,7 +224,3 @@ class Racer:
             
         dist = torch.sqrt(torch.sum((self.position - ray_point)**2, dim=0))
         return dist
-        
-        
-    def get_forward_facing_distance(self, pos):
-        return self.kcl.search_triangles(pos)
