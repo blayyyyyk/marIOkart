@@ -22,6 +22,7 @@ from desmume.frontend.gtk_drawing_area_desmume import AbstractRenderer
 emu = None
 renderer = None
 dot_radius = 5
+SCALE = 3
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
 current_input = 0
 
@@ -48,10 +49,10 @@ class DrawObject:
     
 
 class Point(DrawObject):
-    def __init__(self, x, y, z=None):
+    def __init__(self, x, y, z=1.0):
         self.x = x
         self.y = y
-        self.z = z if z is not None else 1
+        self.z = z
         self.rgb = (255.0, 0.0, 0.0)
         
     def set_color(self, r: float, g: float, b: float):
@@ -59,6 +60,8 @@ class Point(DrawObject):
         
     def draw(self, ctx: cairo.Context):
         ctx.set_source_rgb(*self.rgb)
+        ctx.set_line_width(5)
+        
         ctx.new_sub_path()
         ctx.arc(self.x, self.y, dot_radius * self.z, 0, 2 * 3.14159)
         ctx.fill()
@@ -77,7 +80,7 @@ class Line(DrawObject):
         return self.p1.rgb
         
     def draw(self, ctx: cairo.Context):
-        ctx.set_line_width(self.width)
+        ctx.set_line_width(self.stroke_width)
         ctx.set_source_rgb(*self.rgb)
         ctx.new_sub_path()
         ctx.move_to(self.p1.x, self.p1.y)
@@ -177,7 +180,12 @@ def on_key_press(widget, event):
         emu.input.keypad_add_key(keymask(Keys.KEY_B))
     elif key == "x":
         emu.input.keypad_add_key(keymask(Keys.KEY_A))
-
+    elif key == "8":
+        emu.input.keypad_add_key(keymask(Keys.KEY_START))
+    elif key == "9":
+        emu.input.keypad_add_key(keymask(Keys.KEY_SELECT))
+    elif key == 'p':
+        emu.savestate.save(2)
 
 def on_key_release(widget, event):
     global emu, current_input, points
@@ -196,11 +204,17 @@ def on_key_release(widget, event):
         emu.input.keypad_rm_key(keymask(Keys.KEY_B))
     elif key == "x":
         emu.input.keypad_rm_key(keymask(Keys.KEY_A))
+    elif key == "b":
+        emu.input.keypad_rm_key(keymask(Keys.KEY_START))
 
 
 def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
     global renderer
     assert renderer is not None
+    
+    # Scale the whole drawing context
+    ctx.scale(SCALE, SCALE)
+    
     # Draw emulator screen
     renderer.screen(SCREEN_WIDTH, SCREEN_HEIGHT, ctx, 0)
     scene.draw(ctx)
@@ -221,7 +235,7 @@ class EmulatorWindow(Gtk.Window):
         self.set_default_size(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         drawing_area = Gtk.DrawingArea()
-        drawing_area.set_size_request(SCREEN_WIDTH, SCREEN_HEIGHT)
+        drawing_area.set_size_request(SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE)
         drawing_area.connect("draw", on_draw_main)
         drawing_area.connect("configure-event", on_configure_main)
         self.add(drawing_area)
@@ -233,11 +247,11 @@ class EmulatorWindow(Gtk.Window):
         self.set_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK)
 
 
-def draw_checkpoints(pts: list[list[float]], color: tuple[float, float, float]):
+def draw_points(pts: list[list[float]], color: tuple[float, float, float]):
     global scene
     scene.add_points(pts, color)
     
-def draw_collisions(pts1: list[list[float]], pts2: list[list[float]], pts3: list[list[float]], color: tuple[float, float, float]):
+def draw_triangles(pts1: list[list[float]], pts2: list[list[float]], pts3: list[list[float]], color: tuple[float, float, float]):
     global scene
     scene.add_triangles(pts1, pts2, pts3, color)
 
@@ -253,7 +267,7 @@ def callback_worker():
         callback_queue.task_done()
             
 
-def init_desmume_with_overlay(rom_path: str, callback_fn):
+def init_desmume_with_overlay(rom_path: str, callback_fn, init_fn):
     global emu, renderer, callback
 
     callback = callback_fn  # store global callback reference
@@ -263,6 +277,7 @@ def init_desmume_with_overlay(rom_path: str, callback_fn):
     emu.open(rom_path)
     emu.savestate.load(1)
     emu.volume_set(0)  # mute
+    init_fn(emu)
 
     # Setup renderer
     renderer = AbstractRenderer.impl(emu)
