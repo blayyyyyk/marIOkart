@@ -41,8 +41,11 @@ def collision_overlay(emu: DeSmuME):
     
     
     racer.memory = emu.memory.unsigned
+    indices = racer.kcl.search_triangles(racer.position)
+    if indices is None or len(indices) == 0:
+        return
     
-    indices = torch.tensor(racer.kcl.search_triangles(racer.position), dtype=torch.int32, device=device)
+    indices = torch.tensor(indices, dtype=torch.int32, device=device)
     triangles = racer.kcl.triangles
     color_map = [
         (racer.kcl.prisms.is_wall, lambda x: x == 1, (1, 0, 1)),

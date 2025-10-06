@@ -275,7 +275,7 @@ def init_desmume_with_overlay(rom_path: str, callback_fn, init_fn):
     # Initialize emulator
     emu = DeSmuME()
     emu.open(rom_path)
-    emu.savestate.load(1)
+    emu.savestate.load(3)
     emu.volume_set(0)  # mute
     init_fn(emu)
 
