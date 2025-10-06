@@ -1,6 +1,6 @@
 import torch, os
 from desmume.emulator import DeSmuME
-from utils.emulator import init_desmume_with_overlay, draw_triangles, draw_points
+from utils.emulator import init_desmume_with_overlay, draw_triangles, draw_points, Scene
 from utils.vector import get_mps_device, sample_cone, triangle_raycast_batch, smooth_mean, interpolate, clipped_mean
 from utils.racer import Racer
 import math
@@ -36,7 +36,7 @@ def init_racer(emu: DeSmuME):
     current_point = torch.tensor([0, 0, 0], device=racer.device)
 
 """ Display Collision Triangles in Overlay """
-def collision_overlay(emu: DeSmuME):
+def collision_overlay(emu: DeSmuME, scene: Scene):
     global racer
     
     
@@ -77,10 +77,10 @@ def collision_overlay(emu: DeSmuME):
         v2 = v2[valid_mask].tolist()
         v3 = v3[valid_mask].tolist()
         
-        draw_triangles(v1, v2, v3, color=color)
+        draw_triangles(scene, v1, v2, v3, color=color)
 
 """ Display Kart Raycasting """
-def raycasting_overlay(emu):
+def raycasting_overlay(emu: DeSmuME, scene: Scene):
     global racer, current_point
     racer.memory = emu.memory.unsigned
     
@@ -98,24 +98,25 @@ def raycasting_overlay(emu):
     
     
     
-def camera_overlay(emu: DeSmuME):
+def camera_overlay(emu: DeSmuME, scene: Scene):
     global racer
     racer.memory = emu.memory.unsigned
     
     camera_target = racer.camera_target_position
     points = racer.project_to_screen(camera_target.unsqueeze(0))
     points = points.tolist()
-    draw_points(points, color=(1, 0, 0))
+    draw_points(scene, points, color=(1, 0, 0))
     
     
-def player_overlay(emu: DeSmuME):
+def player_overlay(emu: DeSmuME, scene: Scene):
     racer.memory = emu.memory.unsigned
 
-def main(emu: DeSmuME):
+def main(emu: DeSmuME, scene: Scene):
     os.system("clear")
-    raycasting_overlay(emu)
-    collision_overlay(emu)
-    camera_overlay(emu)
+    
+    raycasting_overlay(emu, scene)
+    collision_overlay(emu, scene)
+    camera_overlay(emu, scene)
         
     
     
