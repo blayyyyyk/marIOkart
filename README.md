@@ -1,5 +1,9 @@
 # Training a model to play Mariokart DS
 
+```
+pip install -r requirements.txt
+```
+
 # Overview
 The project falls down into three main parts
 1) Reverse engineering MKDS Rom for car data (Done)
