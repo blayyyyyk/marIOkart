@@ -1,4 +1,6 @@
 from mkds.nkm import NKM, CPOI
+from utils.kcl_torch import KCLTensor
+from utils.vector import extrapolate
 import torch
 
 class CPOITensor(CPOI):

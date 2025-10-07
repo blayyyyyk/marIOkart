@@ -68,138 +68,39 @@ def triangle_raycast(
     else:
         return None
       
-def ray_triangle_intersect_mt(
-    origins: torch.Tensor,      # (N, 3)
-    directions: torch.Tensor,   # (N, 3) -- need not be unit, but 't' scales accordingly
-    v0: torch.Tensor,           # (M, 3)
-    v1: torch.Tensor,           # (M, 3)
-    v2: torch.Tensor,           # (M, 3)
-    *,
-    eps: float = 1e-8,
-    t_min: float = 1e-6,
-    t_max: float = float('inf'),
-    backface_cull: bool = True,
-    return_nearest: bool = True,
-    return_barycentric: bool = False,
-    return_points: bool = False,
-):
+import torch
+
+def intersect_ray_line_2d(O, D, P1, P2, eps=1e-8):
     """
-    Batched Möller–Trumbore ray/triangle intersections.
+    Find intersection of a ray (O + tD, t>=0)
+    with a line segment between P1 and P2.
 
-    Returns
-    -------
-    If return_nearest:
-        hit_t:      (N,)        smallest positive t per ray (inf if no hit)
-        hit_idx:    (N,)        triangle index of the nearest hit (-1 if none)
-        [u,v]:      (N,) each   barycentrics (optional; 0 if no hit)
-        [points]:   (N,3)       intersection points (optional; 0 if no hit)
-        hit_mask:   (N,)        boolean ray-level mask (True if any hit)
-    Else (all pairwise):
-        t:          (N,M)       t for each ray/triangle (inf if no hit)
-        hit_mask:   (N,M)       boolean mask of pairwise hits
-        [u,v]:      (N,M) each  barycentrics (optional)
-        [points]:   (N,M,3)     points (optional)
+    All inputs are torch tensors of shape (..., 2)
+    and can be batched.
     """
-    # Ensure all on same device/dtype
-    device = origins.device
-    dtype = origins.dtype
-    directions = directions.to(device=device, dtype=dtype)
-    v0 = v0.to(device=device, dtype=dtype)
-    v1 = v1.to(device=device, dtype=dtype)
-    v2 = v2.to(device=device, dtype=dtype)
+    # Direction of the segment
+    v = P2 - P1
 
-    N = origins.shape[0]
-    M = v0.shape[0]
+    # 2D cross product helper (scalar)
+    def cross(a, b):
+        return a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
 
-    # Triangle edges (M,3)
-    e1 = v1 - v0
-    e2 = v2 - v0
+    # Compute determinant
+    denom = cross(D, v)  # parallel if denom == 0
 
-    # Broadcast shapes:
-    # origins, directions: (N,1,3)
-    # v0, e1, e2:          (1,M,3)
-    O  = origins[:, None, :]
-    D  = directions[:, None, :]
-    V0 = v0[None, :, :]
-    E1 = e1[None, :, :]
-    E2 = e2[None, :, :]
+    # Compute relative position
+    w = P1 - O
 
-    # Möller–Trumbore core
-    P = torch.cross(D, E2, dim=-1)                        # (N,M,3)
-    a = torch.sum(E1 * P, dim=-1)                         # (N,M)
+    t = cross(w, v) / (denom + eps)
+    u = cross(w, D) / (denom + eps)
 
-    if backface_cull:
-        # reject parallel or backfacing (a >= -eps)
-        denom_ok = a < -eps
-    else:
-        denom_ok = torch.abs(a) > eps
+    # Compute intersection point
+    intersection = O + t.unsqueeze(-1) * D
 
-    f = torch.where(denom_ok, 1.0 / a, torch.zeros_like(a))  # (N,M)
+    # Valid if:
+    valid = (denom.abs() > eps) & (t >= 0) & (u >= 0) & (u <= 1)
 
-    S = O - V0                                              # (N,M,3)
-    u = f * torch.sum(S * P, dim=-1)                        # (N,M)
-
-    u_ok = (u >= 0.0) & (u <= 1.0)
-
-    Q = torch.cross(S, E1, dim=-1)                          # (N,M,3)
-    v = f * torch.sum(D * Q, dim=-1)                        # (N,M)
-    v_ok = (v >= 0.0) & ((u + v) <= 1.0)
-
-    t = f * torch.sum(E2 * Q, dim=-1)                       # (N,M)
-    t_ok = (t >= t_min) & (t <= t_max)
-
-    # Combine masks
-    hit_mask = denom_ok & u_ok & v_ok & t_ok                # (N,M)
-
-    # For non-hits, set t to +inf to make reductions easy
-    t_out = torch.where(hit_mask, t, torch.full_like(t, float('inf')))
-
-    if not return_nearest:
-        outs = {"t": t_out, "hit_mask": hit_mask}
-        if return_barycentric:
-            outs["u"] = torch.where(hit_mask, u, torch.zeros_like(u))
-            outs["v"] = torch.where(hit_mask, v, torch.zeros_like(v))
-        if return_points:
-            Pts = O + t_out[..., None] * D                  # (N,M,3) with inf*D -> inf; mask it
-            Pts = torch.where(hit_mask[..., None], Pts, torch.zeros_like(Pts))
-            outs["points"] = Pts
-        return outs
-
-    # Nearest hit per ray
-    # argmin over M; if all inf -> no hit
-    hit_t, hit_idx = torch.min(t_out, dim=1)                # (N,), (N,)
-    any_hit = torch.isfinite(hit_t)
-
-    # Make a clean hit_idx: -1 where no hit
-    hit_idx = torch.where(any_hit, hit_idx, torch.full_like(hit_idx, -1))
-
-    result = {
-        "t": hit_t,             # (N,)
-        "tri_idx": hit_idx,     # (N,)
-        "hit_mask": any_hit,    # (N,)
-    }
-
-    if return_barycentric or return_points:
-        # Gather per-ray u, v at the chosen triangle
-        # To avoid index errors when no hit, clamp idx to 0 then mask later
-        safe_idx = torch.clamp(hit_idx, min=0)
-        gather_idx = safe_idx[:, None]                       # (N,1)
-
-        if return_barycentric:
-            u_near = u.gather(1, gather_idx).squeeze(1)      # (N,)
-            v_near = v.gather(1, gather_idx).squeeze(1)      # (N,)
-            u_near = torch.where(any_hit, u_near, torch.zeros_like(u_near))
-            v_near = torch.where(any_hit, v_near, torch.zeros_like(v_near))
-            result["u"] = u_near
-            result["v"] = v_near
-
-        if return_points:
-            # Intersection point: O + t*D
-            pts = O[:, 0, :] + hit_t[:, None] * D[:, 0, :]
-            pts = torch.where(any_hit[:, None], pts, torch.zeros_like(pts))
-            result["points"] = pts
-
-    return result
+    return intersection, valid
         
 def triangle_raycast_batch(
     ray_origin: torch.Tensor,  # (N, 3)
@@ -313,7 +214,7 @@ def compute_model_view(camera_pos, camera_target_pos, device=None):
     
     return model_view
     
-def project_to_screen(world_points, model_view, fov, aspect, far, near, device=None):
+def project_to_screen(world_points, model_view, fov, aspect, far, near, z_scale, device=None):
     N = world_points.shape[0]
         
     # Homogenize points
@@ -341,12 +242,13 @@ def project_to_screen(world_points, model_view, fov, aspect, far, near, device=N
     
     clip_space = (projection_matrix @ cam_space.T).T
     
-    ndc = clip_space[:, :2] / clip_space[:, 3, None]
+    ndc = clip_space[:, :3] / clip_space[:, 3, None]
     
     screen_x = (ndc[:, 0] + 1) / 2 * SCREEN_WIDTH
     screen_y = (1 - ndc[:, 1]) / 2 * SCREEN_HEIGHT
     screen_depth = clip_space[:, 2]
-    return torch.stack([screen_x, screen_y, screen_depth], dim=-1)
+    screen_depth_norm = -far / (-far + z_scale * clip_space[:, 2])
+    return torch.stack([screen_x, screen_y, screen_depth, screen_depth_norm], dim=-1)
 
 def sample_cone(x, theta, k):
     device = x.device
@@ -418,3 +320,15 @@ def project(a: torch.Tensor, b: torch.Tensor):
     x = a.dot(b)
     y = b.dot(b)
     return x / y * b
+    
+def extrapolate(P: torch.Tensor, source: torch.Tensor, dim=0):
+    dim_mask = torch.range(0, source.shape[1] - 1, 1) != dim
+    
+    D = pairwise_distances_cross(P, source[:, dim_mask])
+    min_idx = D.argmin(dim=1)
+    
+    result = torch.ones(P.shape[0], P.shape[1] + 1, device=P.device)
+    result[:, dim_mask] = P
+    result[:, dim] = source[min_idx, dim]
+    
+    return result

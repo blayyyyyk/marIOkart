@@ -42,7 +42,7 @@ class DrawObject:
     
 
 class Point(DrawObject):
-    def __init__(self, x, y, z=1.0):
+    def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
@@ -53,61 +53,49 @@ class Point(DrawObject):
         
     def draw(self, ctx: cairo.Context):
         ctx.set_source_rgb(*self.rgb)
-        ctx.set_line_width(5)
+        stroke_width = dot_radius * self.z
         
         ctx.new_sub_path()
-        ctx.arc(self.x, self.y, dot_radius * self.z, 0, 2 * 3.14159)
+        ctx.arc(self.x, self.y, stroke_width, 0, 2 * 3.14159)
         ctx.fill()
         
 class Line(DrawObject):
-    def __init__(self, p1: Point, p2: Point, stroke_width: int):
+    def __init__(self, p1: Point, p2: Point, stroke_width: int | None = None):
         self.p1 = p1
         self.p2 = p2
         self.stroke_width = stroke_width
-        
-    def set_color(self, r: float, g: float, b: float):
-        self.p1.set_color(r, g, b)
-        
-    @property
-    def rgb(self):
-        return self.p1.rgb
+        x1 = self.p1.x
+        x2 = self.p2.x
+        y1 = self.p1.y
+        y2 = self.p2.y
+        self.grad = cairo.LinearGradient(x1, y1, x2, y2)
+        r1, g1, b1 = self.p1.rgb
+        r2, g2, b2 = self.p2.rgb
+        self.grad.add_color_stop_rgb(0, r1, g1, b1)
+        self.grad.add_color_stop_rgb(1, r2, g2, b2)
         
     def draw(self, ctx: cairo.Context):
-        ctx.set_line_width(self.stroke_width)
-        ctx.set_source_rgb(*self.rgb)
+        if self.stroke_width is None:
+            z = (self.p1.z + self.p2.z) / 2
+            ctx.set_line_width(dot_radius * z)
+        else:
+            ctx.set_line_width(self.stroke_width)
+        ctx.set_source(self.grad)
         ctx.new_sub_path()
         ctx.move_to(self.p1.x, self.p1.y)
         ctx.line_to(self.p2.x, self.p2.y)
         ctx.stroke()
         
 class Triangle(DrawObject):
-    def __init__(self, p1: Point, p2: Point, p3: Point, stroke_width: int, fill: bool):
-        self.p1 = p1
-        self.p2 = p2
-        self.p3 = p3
-        self.stroke_width = stroke_width
-        self.fill = fill
-        
-        
-    def set_color(self, r: float, g: float, b: float):
-        self.p1.set_color(r, g, b)
-        
-    @property
-    def rgb(self):
-        return self.p1.rgb
+    def __init__(self, p1: Point, p2: Point, p3: Point, stroke_width: int | None = None):
+        self.l1 = Line(p1, p2, stroke_width=stroke_width)
+        self.l2 = Line(p2, p3, stroke_width=stroke_width)
+        self.l3 = Line(p3, p1, stroke_width=stroke_width)
         
     def draw(self, ctx: cairo.Context):
-        ctx.set_line_width(self.stroke_width)
-        ctx.set_source_rgb(*self.rgb)
-        ctx.new_sub_path()
-        ctx.move_to(self.p1.x, self.p1.y)
-        ctx.line_to(self.p2.x, self.p2.y)
-        ctx.line_to(self.p3.x, self.p3.y)
-        ctx.close_path()
-        if self.fill:
-            ctx.fill()
-        else:
-            ctx.stroke()
+        self.l1.draw(ctx)
+        self.l2.draw(ctx)
+        self.l3.draw(ctx)
         
 class Scene:
     def __init__(self):
@@ -122,12 +110,12 @@ class Scene:
             pt_obj.set_color(*color)
             self.add_obj(pt_obj)
             
-    def add_lines(self, pts1: list[list[float]], pts2: list[list[float]], color: tuple[float, float, float]):
+    def add_lines(self, pts1: list[list[float]], pts2: list[list[float]], color: tuple[float, float, float], stroke_width: int | None = None):
         for p1, p2 in zip(pts1, pts2):
             line_obj = Line(
                 Point(*p1),
                 Point(*p2),
-                stroke_width=5
+                stroke_width=stroke_width
             )
             line_obj.set_color(*color)
             self.add_obj(line_obj)
@@ -135,16 +123,21 @@ class Scene:
             
     def add_triangles(self, pts1: list[list[float]], pts2: list[list[float]], pts3: list[list[float]], color: tuple[float, float, float]):
         for p1, p2, p3 in zip(pts1, pts2, pts3):
+            point_1 = Point(*p1)
+            point_1.set_color(*color)
+            point_2 = Point(*p2)
+            point_2.set_color(*color)
+            point_3 = Point(*p3)
+            point_3.set_color(*color)
             tri_obj = Triangle(
-                Point(*p1), 
-                Point(*p2), 
-                Point(*p3), 
+                point_1,
+                point_2,
+                point_3,
                 stroke_width=2, 
-                fill=False
             )
-            tri_obj.set_color(*color)
             self.add_obj(tri_obj)
             
+    
         
     def clear(self):
         self.draw_objs = []

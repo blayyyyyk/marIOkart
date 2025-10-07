@@ -1,11 +1,13 @@
 import torch
 from utils.kcl_torch import KCLTensor as KCL
 from utils.nkm_torch import NKMTensor as NKM
-from mkds.utils import read_fx16, read_u16, read_u32, read_fx32, read_vector_3d_fx32
+from mkds.utils import read_fx16, read_s16, read_u16, read_u32, read_fx32, read_vector_3d_fx32, read_s8, read_u8
 from mkds.utils import read_s32
 from desmume.emulator import MemoryAccessor
-from utils.vector import compute_model_view, project_to_screen, triangle_raycast_batch, sample_cone
+from utils.vector import compute_model_view, extrapolate, project_to_screen, triangle_raycast_batch, sample_cone, intersect_ray_line_2d
 import math
+
+from utils.object import DynamicObject, GameObject, MapObject, RacerObject, GameItemObject
 
 
 OBJECT_DATA_PTR = 0x0217B588
@@ -25,22 +27,34 @@ DEFAULT_RACER_ADDRS = {
 }
 
 class Racer:
-    def __init__(self, kcl: KCL, nkm: NKM, z_near=0.0, z_far=1000.0, device=None):
+    def __init__(self, kcl: KCL, nkm: NKM, z_near=0.0, z_far=1000.0, z_scale=10.0, device=None):
         self.device = device
         self.kcl = kcl
         self.nkm = nkm
         self.racer_data_addr: int | None = None
         self.camera_data_addr: int | None = None
         self.object_data_addr: int | None = None
+        self.checkpoint_data_addr: int | None = None
         self.camera_z_near = z_near
         self.camera_z_far = z_far
+        self.camera_z_scale = z_scale
         self.memory: MemoryAccessor | None = None
+        self.objects = {}
+        self.z_clip_mask = lambda x: (x[:, 2] < -z_near) & (x[:, 2] > -z_far)
+        self.checkpoint_cache = self.init_checkpoint_cache()
         
-    def set_kcl(self, kcl: KCL):
-        self.kcl = kcl
+    def init_checkpoint_cache(self):
+        floor_mask = self.kcl.prisms.is_floor == 1
+        floor_points = self.kcl.triangles[floor_mask]
+        floor_points = floor_points.reshape(floor_points.shape[0] * 3, 3)
         
-    def set_nkm(self, nkm: KCL):
-        self.nkm = nkm
+        return torch.stack([
+            extrapolate(self.nkm._CPOI.position1, floor_points, dim=1),
+            extrapolate(self.nkm._CPOI.position2, floor_points, dim=1)
+        ], dim=1)
+        
+    
+        
         
     @property
     def course_id(self) -> int | None:
@@ -84,34 +98,74 @@ class Racer:
         return fov, aspect
         
         
-    # TODO
-    @property
-    def objects(self):
+    def get_objects(self):
         obj_array_ptr = read_s32(self.memory, OBJECT_DATA_PTR + 0x10)
-        array_offset = obj_array_ptr + 1
+        array_offset = obj_array_ptr
         max_count = read_u16(self.memory, OBJECT_DATA_PTR + 0x08)
         count = 0
         idx = 0
-        while count < max_count:
-            current = array_offset + idx * 0x1C
-            obj_ptr = read_u32(self.memory, current + 0x18)
-            flags = read_u16(self.memory, current + 0x14)
-            if obj_ptr == 0:
+        objects = {}
+        while idx < 255 and count != max_count:
+            obj = GameObject.from_bytes(idx, self.memory)
+            if obj.flags & FLAG_MAPOBJ != 0:
+                obj = MapObject(**vars(obj))
+            elif obj.flags & FLAG_RACER != 0:
+                obj = RacerObject(**vars(obj))
+            elif obj.flags & FLAG_ITEM != 0:
+                obj = GameItemObject(**vars(obj))
+            elif obj.flags & FLAG_DYNAMIC == 0:
+                obj = DynamicObject(**vars(obj))
+                
+            
+                
+            if obj.is_deleted:
+                
                 continue
                 
             count += 1
             
-            if flags & 0x200 != 0:
+            if obj.is_deactivated:
+                
                 continue
                 
-            pos_ptr = read_s32(self.memory, current + 0x0C)
-            if pos_ptr == 0:
+            if obj.is_removed:
+                
                 continue
                 
-                
-            if flags & FLAG_RACER != 0:
-                pass
+            if obj.ptr not in objects:
+                objects[obj.ptr] = obj
             
+            
+            idx += 1
+            
+        self.objects = objects
+        return self.objects
+        
+    def _get_objects_details(self, cls):
+        objects = self.get_objects()
+        out = {}
+        for key, obj in objects.items():
+            if not isinstance(obj, cls):
+                continue
+                
+            out[key] = obj
+        return out
+        
+    def get_objects_details(self):
+        return self._get_objects_details(GameObject)
+    
+    def get_map_objects_details(self):
+        return self._get_objects_details(MapObject)
+        
+    def get_racer_objects_details(self):
+        return self._get_objects_details(RacerObject)
+        
+    def get_item_objects_details(self):
+        return self._get_objects_details(GameItemObject)
+        
+    def get_dynamic_objects_details(self):
+        return self._get_objects_details(DynamicObject)
+        
         
     @property
     def camera_fov(self) -> float:
@@ -129,7 +183,7 @@ class Racer:
             
         pos = read_vector_3d_fx32(self.memory, self.camera_data_addr + 0x24)
         elevation = read_fx32(self.memory, self.camera_data_addr + 0x178)
-        pos = (pos[0], pos[1], pos[2])
+        pos = (pos[0], pos[1] + elevation, pos[2])
         return torch.tensor(pos, device=self.device)
         
     @property
@@ -149,6 +203,40 @@ class Racer:
             device=self.device
         )
         
+    
+    def get_checkpoint_details(self):
+        assert self.memory is not None
+        if self.checkpoint_data_addr is None:
+            self.checkpoint_data_addr = read_u32(self.memory, DEFAULT_RACER_ADDRS['checkpoint_data_ptr'])
+            
+        checkpoint = read_u8(self.memory, self.checkpoint_data_addr + 0x46)
+        key_checkpoint = read_s8(self.memory, self.checkpoint_data_addr + 0x48)
+        checkpoint_ghost = read_s8(self.memory, self.checkpoint_data_addr + 0xD2)
+        key_checkpoint_ghost = read_s8(self.memory, self.checkpoint_data_addr + 0xD4)
+        lap = read_s8(self.memory, self.checkpoint_data_addr + 0x38)
+        
+        checkpoint_count = self.nkm._CPOI.entry_count
+        next_checkpoint = checkpoint + 1 if checkpoint + 1 != checkpoint_count else 0
+     
+        return {
+            "checkpoint": checkpoint,
+            "next_checkpoint": next_checkpoint,
+            "keyCheckpoint": key_checkpoint,
+            "checkpointGhost": checkpoint_ghost,
+            "keyCheckpointGhost": key_checkpoint_ghost,
+            "lap": lap
+        }
+           
+    def get_current_checkpoint(self) -> torch.Tensor:
+        checkpoint_details = self.get_checkpoint_details()
+        checkpoint_idx = checkpoint_details['checkpoint']
+        return self.checkpoint_cache[checkpoint_idx]
+        
+    def get_next_checkpoint(self) -> torch.Tensor:
+        checkpoint_details = self.get_checkpoint_details()
+        checkpoint_idx = checkpoint_details['next_checkpoint']
+        return self.checkpoint_cache[checkpoint_idx]
+        
     def project_to_screen(self, x: torch.Tensor) -> torch.Tensor:
         return project_to_screen(
             x,
@@ -157,10 +245,41 @@ class Racer:
             self.camera_aspect,
             self.camera_z_far,
             self.camera_z_near,
+            self.camera_z_scale,
             device=self.device
         )
+        
+    def get_facing_point_checkpoint(self, position: torch.Tensor, direction: torch.Tensor):
+        checkpoint = self.get_next_checkpoint()
+        pos = position
+        mask_xz = torch.tensor([0, 2], dtype=torch.int32, device=self.device)
+        pos_xz = pos[mask_xz]
+        dir_xz = direction[mask_xz]
+        pxz_1, pxz_2 = checkpoint[:, mask_xz].chunk(2, dim=0)
+        pxz_1 = pxz_1.squeeze(0)
+        pxz_2 = pxz_2.squeeze(0)
+        intersect, _ = intersect_ray_line_2d(pos_xz, dir_xz, pxz_1, pxz_2)
+        intersect = torch.tensor([intersect[0], position[1], intersect[1]], device=self.device)
+        return intersect
+        
+    def get_forward_distance_checkpoint(self):
+        ray_point = self.get_facing_point_checkpoint(self.position, self.direction)
+        return torch.norm(ray_point - self.position)
+        
+    def get_left_distance_checkpoint(self):
+        up_basis = -torch.tensor([0, 1.0, 0], device=self.device, dtype=torch.float32)
+        left_basis = torch.cross(self.direction, up_basis)
+        ray_point = self.get_facing_point_checkpoint(self.position, left_basis)
+        return torch.norm(ray_point - self.position)
+        
+    def get_direction_checkpoint(self):
+        f = self.get_forward_distance_checkpoint()
+        l = self.get_left_distance_checkpoint()
+        angle = torch.atan(f/l)
+        return angle
+        
     
-    def get_facing_point(self, position: torch.Tensor, direction: torch.Tensor):
+    def get_facing_point_obstacle(self, position: torch.Tensor, direction: torch.Tensor):
         triangles = self.kcl.triangles
         wall_mask = self.kcl.prisms.is_wall == 1
         offroad_mask = (self.kcl.prisms.collision_type == 5) | (self.kcl.prisms.collision_type == 3) | (self.kcl.prisms.collision_type == 2)
@@ -197,30 +316,34 @@ class Racer:
         current_point_min = points[min_id]
         return current_point_min
         
-    def get_forward_distance(self):
-        ray_point = self.get_facing_point(self.position, self.direction)
+    
+        
+    def get_forward_distance_obstacle(self):
+        ray_point = self.get_facing_point_obstacle(self.position, self.direction)
         if ray_point is None:
             return None
             
         dist = torch.sqrt(torch.sum((self.position - ray_point)**2, dim=0))
         return dist
         
-    def get_left_distance(self):
+    def get_left_distance_obstacle(self):
         up_basis = -torch.tensor([0, 1.0, 0], device=self.device, dtype=torch.float32)
         left_basis = torch.cross(self.direction, up_basis)
-        ray_point = self.get_facing_point(self.position, left_basis)
+        ray_point = self.get_facing_point_obstacle(self.position, left_basis)
         if ray_point is None:
             return None
             
         dist = torch.sqrt(torch.sum((self.position - ray_point)**2, dim=0))
         return dist
         
-    def get_right_distance(self):
+    def get_right_distance_obstacle(self):
         up_basis = torch.tensor([0, 1.0, 0], device=self.device, dtype=torch.float32)
         right_basis = torch.cross(self.direction, up_basis)
-        ray_point = self.get_facing_point(self.position, right_basis)
+        ray_point = self.get_facing_point_obstacle(self.position, right_basis)
         if ray_point is None:
             return None
             
         dist = torch.sqrt(torch.sum((self.position - ray_point)**2, dim=0))
         return dist
+        
+
