@@ -37,7 +37,9 @@ class PrismsTensor(PrismsBase):
     _attributes : list[int]
         Collision attribute flags
     """
-    def __init__(self, 
+
+    def __init__(
+        self,
         _height: Sequence[float],
         _pos_i: Sequence[int],
         _fnrm_i: Sequence[int],
@@ -45,16 +47,10 @@ class PrismsTensor(PrismsBase):
         _enrm2_i: Sequence[int],
         _enrm3_i: Sequence[int],
         _attributes: Sequence[Sequence[int]],
-        device=None
+        device=None,
     ):
         super().__init__(
-            _height,
-            _pos_i,
-            _fnrm_i,
-            _enrm1_i,
-            _enrm2_i,
-            _enrm3_i,
-            _attributes
+            _height, _pos_i, _fnrm_i, _enrm1_i, _enrm2_i, _enrm3_i, _attributes
         )
         self.height = torch.tensor(_height, dtype=torch.float32, device=device)
         self.pos_i = torch.tensor(_pos_i, dtype=torch.int32, device=device)
@@ -63,39 +59,39 @@ class PrismsTensor(PrismsBase):
         self.enrm2_i = torch.tensor(_enrm2_i, dtype=torch.int32, device=device)
         self.enrm3_i = torch.tensor(_enrm3_i, dtype=torch.int32, device=device)
         self.attributes = torch.tensor(_attributes, dtype=torch.int32, device=device)
-        
+
     @property
     def map_2d_shadow(self):
         return self.attributes[:, 0]
-        
+
     @property
     def light_id(self):
         return self.attributes[:, 1]
-        
+
     @property
     def ignore_drivers(self):
         return self.attributes[:, 2]
-        
+
     @property
     def collision_variant(self):
         return self.attributes[:, 3]
-        
+
     @property
     def collision_type(self):
         return self.attributes[:, 4]
-        
+
     @property
     def ignore_items(self):
         return self.attributes[:, 5]
-        
+
     @property
     def is_wall(self):
         return self.attributes[:, 6]
-        
+
     @property
     def is_floor(self):
         return self.attributes[:, 7]
-        
+
 
 class KCLTensor(KCLBase):
     """
@@ -158,10 +154,11 @@ class KCLTensor(KCLBase):
     _normals : list
         List of normal vectors
     """
+
     prism_cls = PrismsTensor
-    
+
     def __init__(
-        self, 
+        self,
         data: bytes,
         prisms: PrismsTensor,
         positions: Sequence[Sequence[float]],
@@ -179,7 +176,7 @@ class KCLTensor(KCLBase):
         _area_x_blocks_shift: int,
         _area_xy_blocks_shift: int,
         _sphere_radius: int | None,
-        device=None
+        device=None,
     ):
         _positions = torch.tensor(positions, device=device)
         _normals = torch.tensor(normals, device=device)
@@ -200,15 +197,14 @@ class KCLTensor(KCLBase):
             _block_width_shift,
             _area_x_blocks_shift,
             _area_xy_blocks_shift,
-            _sphere_radius
+            _sphere_radius,
         )
         self.prisms = prisms
         self.positions = _positions
         self.normals = _normals
         self.device = device
         self.triangles = self._compute_triangles()
-    
-        
+
     def _compute_triangles(self):
         # Indexed Vectors
         height = self.prisms.height
@@ -217,30 +213,38 @@ class KCLTensor(KCLBase):
         edge_norm_0 = self.normals[self.prisms.enrm1_i]
         edge_norm_1 = self.normals[self.prisms.enrm2_i]
         edge_norm_2 = self.normals[self.prisms.enrm3_i]
-        
+
         cross_a = edge_norm_0.cross(face_norm, dim=-1)
         cross_b = edge_norm_1.cross(face_norm, dim=-1)
-        
-        vertex_1 = vertex_0 + cross_b * (height / torch.linalg.vecdot(edge_norm_2, cross_b))[:, None]
-        vertex_2 = vertex_0 + cross_a * (height / torch.linalg.vecdot(edge_norm_2, cross_a))[:, None]
-        
+
+        vertex_1 = (
+            vertex_0
+            + cross_b * (height / torch.linalg.vecdot(edge_norm_2, cross_b))[:, None]
+        )
+        vertex_2 = (
+            vertex_0
+            + cross_a * (height / torch.linalg.vecdot(edge_norm_2, cross_a))[:, None]
+        )
+
         out = torch.stack([vertex_0, vertex_1, vertex_2], dim=1)
-        
+
         return out
-        
-    
-    
-    def search_triangles(self, point: tuple[float, float, float] | torch.Tensor, filter_attribute_id: int | None = None):
+
+    def search_triangles(
+        self,
+        point: tuple[float, float, float] | torch.Tensor,
+        filter_attribute_id: int | None = None,
+    ):
         assert self.triangles is not None
         if not isinstance(point, tuple):
             p = tuple(point.tolist())
             leaf_offset = self.search_block(p)
         else:
             leaf_offset = self.search_block(point)
-        
+
         if leaf_offset is None:
             return None
-    
+
         tri_indices: list[int] = []
         chunk_size = 0x02
         start = self.block_data_offset + leaf_offset + chunk_size
@@ -248,25 +252,27 @@ class KCLTensor(KCLBase):
             idx = read_u16(self.data, data_offset) - 1
             if idx == -1:
                 break
-                
+
             tri_indices.append(idx)
-    
+
         if len(tri_indices) == 0:
             return None
-            
+
         return tri_indices
-    
+
     def nearest_triangles(self, point, n=1, device=None):
         tri_indices = self.search_triangles(point)
         assert tri_indices is not None
-        
+
         tri_vertices = self.triangles[tri_indices]  # (M, 3, 3)
         point_t = torch.tensor(point, dtype=torch.float32, device=device)
-        dists = KCLTensor._point_triangle_distance_squared(point_t, tri_vertices, device=device)
-    
+        dists = KCLTensor._point_triangle_distance_squared(
+            point_t, tri_vertices, device=device
+        )
+
         nearest_idx = torch.topk(dists, k=min(n, len(dists)), largest=False).indices
         return tri_vertices[nearest_idx], tri_indices[nearest_idx]
-        
+
     @staticmethod
     def _point_triangle_distance_squared(point, triangles: torch.Tensor, device=None):
         """
@@ -277,35 +283,35 @@ class KCLTensor(KCLBase):
         """
         p = point.unsqueeze(0).unsqueeze(1)  # (1,1,3)
         a, b, c = triangles[:, 0], triangles[:, 1], triangles[:, 2]  # (M,3)
-    
+
         ab = b - a
         ac = c - a
         ap = p - a.unsqueeze(1)
-    
+
         d1 = (ab * ap).sum(-1)
         d2 = (ac * ap).sum(-1)
         mask = (d1 <= 0) & (d2 <= 0)
-        dist_a = (ap ** 2).sum(-1)
-    
+        dist_a = (ap**2).sum(-1)
+
         bp = p - b.unsqueeze(1)
         d3 = (ab * bp).sum(-1)
         d4 = (ac * bp).sum(-1)
         mask_b = (d3 >= 0) & (d4 <= d3)
-        dist_b = (bp ** 2).sum(-1)
-    
+        dist_b = (bp**2).sum(-1)
+
         cp = p - c.unsqueeze(1)
         d5 = (ab * cp).sum(-1)
         d6 = (ac * cp).sum(-1)
         mask_c = (d6 >= 0) & (d5 <= d6)
-        dist_c = (cp ** 2).sum(-1)
-    
+        dist_c = (cp**2).sum(-1)
+
         # Default large value
         dist = torch.full((triangles.shape[0],), float("inf"), device=device)
-    
+
         dist[mask] = dist_a[mask]
         dist[mask_b] = dist_b[mask_b]
         dist[mask_c] = dist_c[mask_c]
-    
+
         # Fallback for points projecting inside face
         inside_mask = ~(mask | mask_b | mask_c)
         if inside_mask.any():
@@ -313,14 +319,14 @@ class KCLTensor(KCLBase):
             normal = normal / normal.norm(dim=-1, keepdim=True)
             dist_face = ((ap.squeeze(1) * normal).sum(-1) ** 2)[inside_mask]
             dist[inside_mask] = dist_face
-    
+
         return dist
-        
+
     @classmethod
     def from_file(cls, path: str, device=None):
-        data = None    
-        with open(path, 'rb') as f:
+        data = None
+        with open(path, "rb") as f:
             data = f.read()
-            
+
         assert data is not None
         return cls.from_bytes(data, device=device)
