@@ -39,6 +39,16 @@ The pointer to the car camera's data is located at `0x0217AA4C`, stored as an un
 This is all the camera data that we need to reconstruct the camera's [perspective projection and model view matrices](https://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#the-model-view-and-projection-matrices). This will come in handy when I discuss the visualization overlay later on.
 
 ## Interpreting Course Data
+
+For course information, we have two main files of interest per course: NKM and KCL files
+
+### KCL
+The course's KCL file (ending in `.kcl`) contains information about the course's collision data. This will help us compute the information we need to pass to our model for obstacle avoidance.
+
+The file contains a header section specifying section offsets as well four data sections: the vertex positions, the normal vectors of the triangles that make up the course, 
+
+### NKM
+The course's NKM file (ending in `.nkm`) contains information about  
 Course data is located as an `.nkm` file within the MKDS ROM. In order the retreive this file, we need to unpack the ROM file. I used [kiwi.ds](https://projectpokemon.org/home/files/file/2073-nds-editor-kiwids/) to retreive the course files. The course files are compressed as `.carc`. To uncompress it, I used [NArchive](https://github.com/nickworonekin/narchive/tree/master/src/Narchive) to extract the course files. I'm mainly focused on reading the checkpoint data for a course, so I ignore the rest of the files except the `.nkm` files.
 
 NKM files are essentially specialized bin files. The spec for this file can be found [here](https://wiki.tockdom.com/wiki/NKM_(File_Format)#cite_note-MoreCPOIInfo-4). The NKM file has a header that specifies the byte offset of each data section in the file. The `CPOI` section contains all the entries for checkpoints on a map. It's section offset is found at `0x2C`. Each data section specifies it name and the number of entries. `CPOI` entries are 36 bytes in size and contain:
