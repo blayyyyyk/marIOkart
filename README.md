@@ -228,7 +228,8 @@ $$
 
 Taking all the spatial information I've collected from the KCL and NKM files, and the game memory buffer, I can now make a fully working game overlay. I used Pycairo to render simple shapes to a an existing GTK window containing the emulator game.
 
-![Overlay Demo](https://raw.githubusercontent.com/blakemoody/mariokart-ml/main/media/overlay_demo_clip_1.gif)
+![overlay_demo_clip_1.gif](https://github.com/gg-blake/marIOkart/blob/main/media/overlay_demo_clip_1.gif?raw=True)
+
 ##### Figure 1: Game overlay rendering in realtime using Pycairo the Python GTK library.
 
 # Building the game model
