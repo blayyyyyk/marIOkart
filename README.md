@@ -7,8 +7,8 @@ pip install -r requirements.txt
 # Overview
 The project falls down into three main parts
 1) Reverse engineering MKDS Rom for car data (Done)
-2) Making a visualization for debugging and benchmarking (In Progress)
-3) Building and training the model (To Do)
+2) Making a visualization for debugging and benchmarking (Done)
+3) Building and training the model (In Progess)
 
 # Reverse Engineering Mariokart DS
 The reverse engineering process consisted mainly of using [dynamic code analysis](https://en.wikipedia.org/wiki/Dynamic_program_analysis) to extract import values from kart's game state. Values consisted of but were not limited to:
