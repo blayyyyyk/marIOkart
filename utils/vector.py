@@ -332,3 +332,11 @@ def extrapolate(P: torch.Tensor, source: torch.Tensor, dim=0):
     result[:, dim] = source[min_idx, dim]
     
     return result
+    
+def triangle_altitude(a, b):
+    assert isinstance(a, torch.Tensor) == isinstance(b, torch.Tensor)
+    
+    if isinstance(a, torch.Tensor):
+        return a * b / torch.sqrt(a**2 + b**2)
+        
+    return a * b / math.sqrt(a**2 + b**2)

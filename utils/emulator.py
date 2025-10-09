@@ -18,7 +18,7 @@ from gi.repository import Gtk, Gdk, GLib
 from desmume.controls import Keys, keymask
 from desmume.emulator import DeSmuME
 from desmume.frontend.gtk_drawing_area_desmume import AbstractRenderer
-
+import torch
 
 # --- Global variables ---
 emu = None
@@ -27,7 +27,7 @@ dot_radius = 5
 SCALE = 3
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
 current_input = 0
-
+is_running = False
 
 # Queue for callback processing in a separate thread
 callback_queue = queue.Queue()
@@ -260,14 +260,14 @@ def draw_triangles(
 
 
 def callback_worker():
-    global scene_next
-    while True:
+    global scene_next, is_running
+    while is_running:
         emu_instance = callback_queue.get()
         if emu_instance is None:
             break  # exit signal
         try:
             new_scene = Scene()
-            callback(emu_instance, new_scene)
+            is_running = callback(emu_instance, new_scene)
             with scene_lock:
                 scene_next = new_scene
         except Exception as e:
@@ -275,33 +275,43 @@ def callback_worker():
         callback_queue.task_done()
 
 
-def init_desmume_with_overlay(rom_path: str, callback_fn, init_fn):
-    global emu, renderer, callback
+ROM_PATH = './mariokart_ds.nds'
 
-    callback = callback_fn  # store global callback reference
+def run_emulator(save_id: int, init_fn=None, overlay_fn=None, is_overlay=False):
+    assert overlay_fn is None if not is_overlay else True
+    global emu, renderer, callback, is_running
 
     # Initialize emulator
-    emu = DeSmuME()
-    emu.open(rom_path)
-    emu.savestate.load(2)
-    emu.volume_set(0)  # mute
-    init_fn(emu)
+    if emu is None:
+        emu = DeSmuME()
+        emu.open(ROM_PATH)
+        emu.savestate.load(save_id)
+    
+    if init_fn is not None:
+        init_fn(emu)
 
     # Setup renderer
     renderer = AbstractRenderer.impl(emu)
     renderer.init()
 
     # Create GTK window
-    win = EmulatorWindow()
-    win.show_all()
+    win = None
+    if is_overlay:
+        win = EmulatorWindow()
+        win.show_all()
 
     # Start callback worker thread
-    thread = threading.Thread(target=callback_worker, daemon=True)
-    thread.start()
+    is_running = True
+    if overlay_fn is not None:
+        callback = overlay_fn  # store global callback reference
+        thread = threading.Thread(target=callback_worker, daemon=True)
+        thread.start()
 
+    timeout_id = None
     # Timer for stepping emulator and queuing callback
     def tick():
         global scene_current, scene_next
+        nonlocal timeout_id
         assert emu is not None
         emu.cycle()
 
@@ -316,13 +326,31 @@ def init_desmume_with_overlay(rom_path: str, callback_fn, init_fn):
                 scene_current = scene_next
                 scene_next = None
 
-        win.drawing_area.queue_draw()  # render current scene
-        callback_queue.put(emu)  # queue next computation
+        if is_overlay and win is not None:
+            win.drawing_area.queue_draw()  # render current scene
+            
+        if callback is not None:
+            callback_queue.put(emu)  # queue next computation
+            
+        if not is_running and timeout_id is not None:
+            GLib.source_remove(timeout_id)
+            callback_queue.put(None)
+        
         return True
 
-    GLib.timeout_add(16, tick)  # ~60 FPS
+    
+    if callback is not None:
+        timeout_id = GLib.timeout_add(16, tick)  # ~60 FPS
+    else:
+        timeout_id = GLib.timeout_add(1, tick)
 
-    # Ensure worker thread stops on window close
-    win.connect("destroy", lambda w: callback_queue.put(None))
+    
+    
 
     Gtk.main()
+    # Ensure worker thread stops on window close
+    # 
+    print(emu.has_opengl())
+    if win is not None:
+        win.connect("destroy", lambda w: callback_queue.put(None))
+    

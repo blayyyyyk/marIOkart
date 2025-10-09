@@ -1,6 +1,6 @@
 import torch, os
 from desmume.emulator import SCREEN_HEIGHT, SCREEN_WIDTH, DeSmuME
-from utils.emulator import init_desmume_with_overlay, draw_triangles, draw_points, Scene
+from utils.emulator import run_emulator, draw_triangles, draw_points, Scene
 from utils.object import DynamicObject, GameItemObject, MapObject, RacerObject
 from utils.vector import (
     get_mps_device,
@@ -16,15 +16,16 @@ from utils.racer import Racer
 import math
 import json
 from mkds.utils import read_u8
+from utils.train import train, fitness
 
 device = get_mps_device()
 
 course_parent_directory = "./courses"
 
-
 def init_racer(emu: DeSmuME):
     global racer, current_point
 
+    emu.volume_set(0) # mute
     track_id = emu.memory.unsigned.read_byte(0x23CDCD8)
     course_id_lookup = None
     with open("utils/courses.json", "r") as f:
@@ -47,8 +48,6 @@ def init_racer(emu: DeSmuME):
 
 
 """ Display Collision Triangles in Overlay """
-
-
 def collision_overlay(emu: DeSmuME, scene: Scene):
     global racer
 
@@ -189,7 +188,6 @@ def checkpoint_overlay_2(emu: DeSmuME, scene: Scene):
     scene.add_lines(intersect_proj, pos_proj, color=(0, 0, 1.0))
 
     angle = racer.get_direction_checkpoint()
-    print(f"Angle: {angle}")
 
 
 def player_overlay(emu: DeSmuME, scene: Scene):
@@ -235,15 +233,37 @@ def player_overlay(emu: DeSmuME, scene: Scene):
         scene.add_points(object_positions, color=colors[i])
 
 
-def main(emu: DeSmuME, scene: Scene):
+"""def main(emu: DeSmuME, scene: Scene):
     # os.system("clear")
-
+    train_gen = train(
+        emu, 
+        fitness, 
+        genome_pop_size=20, 
+        max_epoch=50, 
+        top_k=10, 
+        log_interval=5
+    )
+    print("Test")
+    for i in train_gen:
+        
+        player_overlay(emu, scene)
+        raycasting_overlay(emu, scene)
+        collision_overlay(emu, scene)
+        checkpoint_overlay_1(emu, scene)
+        checkpoint_overlay_2(emu, scene)
+        yield i
+    
+    return False"""
+    
+def main(emu: DeSmuME, scene: Scene):
     player_overlay(emu, scene)
     raycasting_overlay(emu, scene)
     collision_overlay(emu, scene)
     checkpoint_overlay_1(emu, scene)
     checkpoint_overlay_2(emu, scene)
+    
+    return True
 
 
 if __name__ == "__main__":
-    init_desmume_with_overlay("mariokart_ds.nds", main, init_racer)
+    run_emulator(2, init_racer, main, is_overlay=True)
