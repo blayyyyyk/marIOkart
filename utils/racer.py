@@ -17,6 +17,7 @@ from utils.vector import (
     compute_model_view,
     extrapolate,
     project_to_screen,
+    triangle_altitude,
     triangle_raycast_batch,
     sample_cone,
     intersect_ray_line_2d,
@@ -34,6 +35,7 @@ from utils.object import (
 
 OBJECT_DATA_PTR = 0x0217B588
 CHECKPOINT_DATA_PTR = 0x021755FC
+CLOCK_DATA_PTR = 0x0217AA34
 
 # Object flags
 FLAG_DYNAMIC = 0x1000
@@ -60,6 +62,7 @@ class Racer:
         self.camera_data_addr: int | None = None
         self.object_data_addr: int | None = None
         self.checkpoint_data_addr: int | None = None
+        self.clock_data_addr: int | None = None
         self.camera_z_near = z_near
         self.camera_z_far = z_far
         self.camera_z_scale = z_scale
@@ -86,6 +89,15 @@ class Racer:
         if self.memory is None:
             return None
         return self.memory.read_byte(0x23CDCD8)
+    
+    # get race clock in milliseconds
+    @property
+    def clock(self) -> int:
+        assert self.memory is not None, "Racer memory not set"
+        if self.clock_data_addr is None:
+            self.clock_data_addr = read_u32(self.memory, CLOCK_DATA_PTR)
+        
+        return read_s32(self.memory, self.clock_data_addr + 0x08) * 10
 
     @classmethod
     def from_path(
@@ -357,30 +369,37 @@ class Racer:
         current_point_min = points[min_id]
         return current_point_min
 
-    def get_forward_distance_obstacle(self):
+    def get_forward_distance_obstacle(self) -> torch.Tensor:
         ray_point = self.get_facing_point_obstacle(self.position, self.direction)
         if ray_point is None:
-            return None
+            return torch.tensor([float('inf')], device=self.device)
 
         dist = torch.sqrt(torch.sum((self.position - ray_point) ** 2, dim=0))
         return dist
 
-    def get_left_distance_obstacle(self):
+    def get_left_distance_obstacle(self) -> torch.Tensor:
         up_basis = -torch.tensor([0, 1.0, 0], device=self.device, dtype=torch.float32)
         left_basis = torch.cross(self.direction, up_basis)
         ray_point = self.get_facing_point_obstacle(self.position, left_basis)
         if ray_point is None:
-            return None
+            return torch.tensor([float('inf')], device=self.device)
 
         dist = torch.sqrt(torch.sum((self.position - ray_point) ** 2, dim=0))
         return dist
 
-    def get_right_distance_obstacle(self):
+    def get_right_distance_obstacle(self) -> torch.Tensor:
         up_basis = torch.tensor([0, 1.0, 0], device=self.device, dtype=torch.float32)
         right_basis = torch.cross(self.direction, up_basis)
         ray_point = self.get_facing_point_obstacle(self.position, right_basis)
         if ray_point is None:
-            return None
+            return torch.tensor([float('inf')], device=self.device)
 
         dist = torch.sqrt(torch.sum((self.position - ray_point) ** 2, dim=0))
         return dist
+        
+    def get_checkpoint_distance_altitude(self) -> torch.Tensor:
+        next_checkpoint = self.get_next_checkpoint()
+        p1, p2 = next_checkpoint.chunk(2, dim=1)
+        a = torch.norm(p1 - self.position)
+        b = torch.norm(p2 - self.position)
+        return triangle_altitude(a, b)
