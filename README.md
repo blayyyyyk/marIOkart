@@ -1,4 +1,4 @@
-# MarI/O Kart — Mario Kart DS ML + Overlays
+# MarI/O Kart - Mario Kart DS ML + Overlays
 
 > **Train AI, render overlays, and read real game state from DeSmuME.**  
 > A batteries-included toolkit for **Mario Kart DS** research and tooling: memory I/O, geometry/projection, collision & map parsers, and an extensible overlay system — with optional Torch-powered acceleration.
@@ -8,7 +8,7 @@
 ## Quick Demo
 
 ##### Figure: Realtime overlay rendering using PyCairo + GTK (AI demo training in progress)
-![overlay_demo_clip_1.gif](https://github.com/gg-blake/marIOkart/blob/main/media/overlay_demo_clip_1.giv?raw=True)
+![overlay_demo_clip_1.gif](https://github.com/gg-blake/marIOkart/blob/main/media/overlay_demo_clip_1.giv?raw=True)-
 
 ---
 
