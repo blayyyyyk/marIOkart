@@ -1,13 +1,18 @@
-from utils.racer import Racer
+from types import GeneratorType
+from utils.memory import *
 from utils.model import EvolvedNet, Genome, NodeGene, ConnGene
 from utils.vector import get_mps_device
 import random, copy
 from desmume.emulator import DeSmuME
-from utils.emulator import run_emulator
-import json
 import torch
 from desmume.controls import Keys, keymask
 import os
+
+
+from typing import Generator
+
+
+course_parent_directory = "courses"
 
 in_nodes = 6
 out_nodes = 4
@@ -22,8 +27,8 @@ controls = [Keys.KEY_LEFT, Keys.KEY_RIGHT, Keys.KEY_A, Keys.KEY_B]
 
 
 def calculate_max_course_distance(pts1: torch.Tensor, pts2: torch.Tensor):
-    pts3 = torch.cat([pts1[1:], pts1[0]])
-    pts4 = torch.cat([pts2[1:], pts2[0]])
+    pts3 = torch.cat([pts1[1:], pts1[None, 0]])
+    pts4 = torch.cat([pts2[1:], pts2[None, 0]])
     sum = 0
     for p1, p2 in zip(pts1.unbind(), pts2.unbind()):
         for p3, p4 in zip(pts3.unbind(), pts4.unbind()):
@@ -37,70 +42,62 @@ def calculate_max_course_distance(pts1: torch.Tensor, pts2: torch.Tensor):
     return sum
 
 
-def fitness(genome: Genome, emu: DeSmuME, max_time: int = 60000):
-    global racer, max_dist
-    assert racer is not None, "racer has not been initialized"
+def fitness(emu: DeSmuME, genome: Genome, max_time: int = 20000, device=None):
     emu.volume_set(0)
     emu.savestate.load(SAVE_STATE_ID)
-    pts1 = racer.nkm._CPOI.position1
-    pts2 = racer.nkm._CPOI.position2
+    pts1, pts2 = read_checkpoint_positions(emu, device=device).chunk(2, dim=1)
     max_dist = calculate_max_course_distance(pts1, pts2)
-
+    
     score = 0
-    model = EvolvedNet(genome)
-    device = racer.device
+    model = EvolvedNet(genome).to(device)
     times = {}
     prev_time = 0
-    racer.memory = emu.memory.unsigned
-    prev_dist = racer.get_checkpoint_distance_altitude().item()
-    
-    while True:
-        prev_id = racer.get_checkpoint_details()["checkpoint"]
+    prev_dist = read_checkpoint_distance_altitude(emu, device=device).item()
+    current_id = read_current_checkpoint(emu)
 
-        racer.memory = emu.memory.unsigned
-        current_id = prev_id = racer.get_checkpoint_details()["checkpoint"]
+    while True:
+        prev_id = read_current_checkpoint(emu)
+        clock = read_clock(emu)
 
         if current_id != prev_id:
             if current_id not in times:
                 times[prev_id] = []
 
-            current_time = racer.clock
+            current_time = clock
             times[prev_id].append((current_time - prev_time, prev_dist))
             prev_time = current_time
-            prev_dist = racer.get_checkpoint_distance_altitude().item()
+            prev_dist = read_checkpoint_distance_altitude(emu, device=device).item()
 
         s1 = 60.0
-
-        inputs_dist1 = torch.cat(
-            [
-                racer.get_forward_distance_obstacle(),
-                racer.get_left_distance_obstacle(),
-                racer.get_right_distance_obstacle(),
-            ]
-        )
+        
+        forward_d = read_forward_distance_obstacle(emu, device=device)
+        left_d = read_left_distance_obstacle(emu, device=device)
+        right_d = read_right_distance_obstacle(emu, device=device)
+        inputs_dist1 = torch.tensor([forward_d, left_d, right_d], device=device)
         inputs_dist1 = torch.tanh(1 - inputs_dist1 / s1)
 
-        angle = racer.get_direction_checkpoint()
-        inputs_dist2 = torch.cat(
-            [torch.cos(angle), torch.sin(angle), -torch.sin(angle)]
-        )
+        angle = read_direction_to_checkpoint(emu, device=device)
+        forward_a = torch.cos(angle)
+        left_a = torch.sin(angle)
+        right_a = -torch.sin(angle)
+        inputs_dist2 = torch.tensor([forward_a, left_a, right_a], device=device)
 
         inputs = torch.cat([inputs_dist1, inputs_dist2])
-
+        
         logits = model(inputs)
-        for i, v in enumerate(logits.tolist()):
-            if v > 0:
-                emu.input.keypad_add_key(keymask(controls[i]))
-            else:
-                emu.input.keypad_rm_key(keymask(controls[i]))
+        
 
-        if racer.clock > max_time:
-            current_time = racer.clock
-            current_dist = racer.get_checkpoint_distance_altitude().item()
-            times[prev_id] = (current_time - prev_time, prev_dist - current_dist)
+        if clock > max_time:
+            if current_id not in times:
+                times[prev_id] = []
+            
+            current_time = clock
+            current_dist = read_checkpoint_distance_altitude(emu, device=device).item()
+            times[prev_id].append((current_time - prev_time, prev_dist - current_dist))
             break
 
-        yield None
+        
+        yield logits
 
     dist = 0
     for id, l in times.items():
@@ -112,15 +109,18 @@ def fitness(genome: Genome, emu: DeSmuME, max_time: int = 60000):
 
 
 def train(
-    emu,
+    emu: DeSmuME,
     fitness_fn,
     target_fitness=0,
     genome_pop_size=20,
     max_epoch=50,
     top_k=10,
     log_interval=5,
-):
-    global racer, device
+    device=None
+) -> Generator[torch.Tensor | None]:
+    emu.savestate.load(SAVE_STATE_ID)
+    
+    yield None
 
     min_fitness = 10000000
     pop = [Genome(in_nodes, out_nodes) for i in range(genome_pop_size)]
@@ -132,12 +132,15 @@ def train(
         # evaluate
         #
         scores = []
+        logits = None
         for g in pop:
-            for x in fitness_fn(g, emu):
-                if x is None:
-                    yield True
+            for x in fitness_fn(emu, g, device=device):
+                if x.ndim != 0:
+                    logits = x
+                    yield logits
                     continue
 
+                
                 scores.append((x, g))
 
         scores.sort(reverse=True, key=lambda x: x[0])
@@ -157,11 +160,3 @@ def train(
         pop = newpop
 
         count += 1
-
-
-def main(emu: DeSmuME):
-    train_gen = train(
-        emu, fitness, genome_pop_size=20, max_epoch=50, top_k=10, log_interval=5
-    )
-    for i in train_gen:
-        yield i

@@ -1,7 +1,9 @@
 import torch
 import torch.nn.functional as F
 import math
-from utils.emulator import SCREEN_WIDTH, SCREEN_HEIGHT
+#from utils.emulator import SCREEN_WIDTH, SCREEN_HEIGHT
+
+SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
 
 def get_mps_device() -> torch.device:
     # Check that MPS is available
