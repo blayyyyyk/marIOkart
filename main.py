@@ -7,11 +7,18 @@ import gi
 from pynput import keyboard
 from desmume.emulator import DeSmuME
 from desmume.controls import Keys, keymask
-from utils.draw import consume_draw_stack
-from utils.memory import read_clock, load_current_kcl, load_current_nkm, read_model_view
+from utils.draw import consume_draw_stack, draw_text, draw_paragraph
+from utils.memory import (
+    read_clock,
+    load_current_kcl,
+    load_current_nkm,
+    read_model_view,
+    read_forward_distance_checkpoint,
+    read_forward_distance_obstacle,
+)
 from utils.vector import get_mps_device
 from utils.overlay import (
-    clock_overlay,
+    stats_overlay,
     player_overlay,
     raycasting_overlay,
     collision_overlay,
@@ -29,9 +36,18 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
 
+# ----------------------------
+# CONSTANTS
+# ----------------------------
 device = get_mps_device()
 SCALE = 3
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
+SAVE_STATE_ID = 4
+
+
+# ----------------------------
+# GLOBAL VARIABLES
+# ----------------------------
 input_state = set()
 scene_lock = threading.Lock()
 is_running = False
@@ -91,7 +107,6 @@ def start_keyboard_listener():
     return listener
 
 
-
 # ----------------------------
 # DRAW CALLBACK
 # ----------------------------
@@ -103,17 +118,15 @@ def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
     if renderer is None:
         return False
 
-    # 1) draw base frame
     ctx.scale(SCALE, SCALE)
     renderer.screen(SCREEN_WIDTH, SCREEN_HEIGHT, ctx, 0)
 
-    # 2) build a fresh overlay surface and try to consume queued draw ops
     src_surface: cairo.ImageSurface = ctx.get_target()
 
     overlay_surface = src_surface.create_similar(
         cairo.CONTENT_COLOR_ALPHA, SCREEN_WIDTH, SCREEN_HEIGHT
     )
-    # keep HiDPI device scale in sync (prevents blur on Retina)
+
     overlay_surface.set_device_scale(*src_surface.get_device_scale())
 
     overlay_ctx = cairo.Context(overlay_surface)
@@ -124,24 +137,43 @@ def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
 
     num_calls = consume_draw_stack(overlay_ctx)
 
-    # 3) Decide which overlay to paint: cached or new
     if num_calls == 0 and overlay_surface_cache is not None:
-        # No new overlay content — reuse cached surface
+
         to_paint = overlay_surface_cache
     else:
-        # We drew a new overlay; cache it for future frames
+
         overlay_surface_cache = overlay_surface
         to_paint = overlay_surface
 
-    # 4) Composite overlay on top (nearest filter to avoid smoothing)
     pattern = cairo.SurfacePattern(to_paint)
     pattern.set_filter(cairo.FILTER_NEAREST)
     ctx.set_source(pattern)
     ctx.set_operator(cairo.OPERATOR_OVER)
-    ctx.paint()
-    
-    
 
+    assert emu_global is not None
+    clock = read_clock(emu_global)
+    checkpoint_distance = read_forward_distance_checkpoint(
+        emu_global, device=device
+    ).item()
+    obstacle_distance = read_forward_distance_obstacle(emu_global, device=device).item()
+    text = """
+Clock:               {}\n
+Checkpoint Distance: {:.2f}\n
+Obstacle Distance:   {:.2f}\n
+    """.format(
+        clock, checkpoint_distance, obstacle_distance
+    )
+    draw_paragraph(
+        ctx,
+        text,
+        pos=(5, 100),
+        color=(40 / 255, 166 / 255, 113 / 255),
+        font_size=7,
+        vertical_spacing=5,
+        alpha=0.9,
+        font_family="JetBrainsMono Nerd Font",
+    )
+    ctx.paint()
     return False
 
 
@@ -197,7 +229,7 @@ def run_emulator(generator_fn, overlays):
     global renderer, callback, emu_global, is_running
     emu = DeSmuME()
     emu.open("mariokart_ds.nds")
-    
+
     emu_global = emu
     emu.volume_set(0)
 
@@ -224,12 +256,10 @@ def run_emulator(generator_fn, overlays):
     thread.start()
     is_running = True
 
-
     def tick():
         global scene_current, scene_next
         emu.cycle()
 
-        # apply key input every frame (lightweight)
         emu.input.keypad_update(0)
         for key in input_state:
             emu.input.keypad_add_key(keymask(KEY_MAP[key]))
@@ -254,12 +284,13 @@ def run_emulator(generator_fn, overlays):
 
 
 # ----------------------------
-# TRAINER
+# EXAMPLE TRAINING PRESETS
 # ----------------------------
 def generate_trainer(emu: DeSmuME):
     global device
     return train(
         emu,
+        SAVE_STATE_ID,
         fitness,
         genome_pop_size=20,
         max_epoch=50,
@@ -281,6 +312,5 @@ if __name__ == "__main__":
             collision_overlay,
             checkpoint_overlay_1,
             checkpoint_overlay_2,
-            clock_overlay
         ],
     )
