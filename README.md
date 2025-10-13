@@ -221,11 +221,11 @@ memory.py (read_*  project_to|_screen, z_clip_mask, model-view)
 Full, in-repo documentation (recommended to place under `docs/`):
 
 - **Emulator I/O & Geometry Utilities** — API reference & examples  
-  `docs/mkds_emulator_io.md`
+  `READING_FILES.md`
 - **Standalone Parsers (`mkds`)** — NKM & KCL readers (installable)  
-  `docs/mkds_library_docs.md`
+  `READING_MEMORY.md`
 - **Overlay System** — Draw queue design & built-in overlays  
-  `docs/mkds_overlays_docs.md`
+  `OVERLAYS.md`
 
 > These were generated from our discussion. If you want, regenerate them with your preferred doc tool (Sphinx, MkDocs, pdoc) or keep them as-is.
 
@@ -235,14 +235,14 @@ Full, in-repo documentation (recommended to place under `docs/`):
 
 Default keyboard mapping (via `pynput` → `py-desmume`):
 
-| Key | DS Button |
-|---|---|
-| W/A/S/D | D-Pad Up/Left/Down/Right |
-| Z / X | B / A |
-| U / I | X / Y |
-| Q / E | L / R |
-| Space | Start |
-| Arrow keys | D-Pad |
+| Key         | DS Button                |
+|---          |---                       |
+| W/A/S/D     | D-Pad Up/Left/Down/Right |
+| Z / X       | B / A                    |
+| U / I       | X / Y                    |
+| Q / E       | L / R                    |
+| Space       | Start                    |
+| Arrow keys  | D-Pad                    |
 
 ---
 
