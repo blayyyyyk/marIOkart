@@ -8,7 +8,7 @@
 ## Quick Demo
 
 ##### Figure: Realtime overlay rendering using PyCairo + GTK (AI demo training in progress)
-![overlay_demo_clip_1.gif](https://github.com/gg-blake/marIOkart/blob/main/media/overlay_demo_clip_1.mov?raw=True)
+![overlay_demo_clip_1.gif](https://github.com/gg-blake/marIOkart/blob/main/media/overlay_demo_clip_1.mov)
 
 ---
 
