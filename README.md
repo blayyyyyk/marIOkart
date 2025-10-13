@@ -61,7 +61,7 @@ This repo brings together **three pillars**:
 ```bash
 # 1) Clone and enter the repo
 git clone https://github.com/gg-blake/marIOkart
-cd mariokart-ml
+cd marIOkart
 
 # 2) Python deps
 pip install -r requirements.txt
@@ -101,6 +101,9 @@ Platform-specific install commands vary; use your package manager (Homebrew, apt
 ├── courses/               # Extracted course assets (KCL/NKM per course)
 ├── media/                 # GIFs, screenshots
 ├── main.py                # GTK runner wiring emulator + overlays
+├── OVERLAYS.md            
+├── READING_FILES.md       
+├── READING_MEMORY.md      
 └── README.md
 ```
 
@@ -185,26 +188,26 @@ print("Prisms:", len(kcl.prisms))
 ## Architecture
 
 ```text
-                ┌──────────────────────────┐
-                │      DeSmuME (Core)     │
-                │  emu.cycle(), RAM, I/O  │
-                └────────────┬────────────┘
+               ┌───────────────────────────┐
+               │      DeSmuME (Core)       │
+               │  emu.cycle(), RAM, I/O    │
+               └─────────────┬─────────────┘
                              │
-           memory.py (read_* | project_to_screen, z_clip_mask, model-view)
+memory.py (read_*  project_to|_screen, z_clip_mask, model-view)
                              │
                ┌─────────────┴─────────────┐
                │                           │
-          overlay.py (compute, enqueue)    │
-                                           │
-                                   mkds/ (KCL/NKM parsers)
-                                           │
+               │overlay.py(compute,enqueue)│
+               │                           │
+               │  mkds/(KCL/NKM parsers)   │
+               │                           │
                └─────────────┬─────────────┘
                              │
-                      draw.py (thread-safe queue of Cairo closures)
+       draw.py (thread-safe queue of Cairo closures)
                              │
-                      GTK draw event (main.py → consume_draw_stack)
+        GTK draw event (main.py → consume_draw_stack)
                              │
-                        Composited overlay surface → window
+            Composited overlay surface → window
 ```
 
 - **Threading:** Overlays run in a worker thread and enqueue closures; the GTK thread executes them with a `cairo.Context`.
