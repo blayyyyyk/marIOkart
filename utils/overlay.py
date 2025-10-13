@@ -1,5 +1,5 @@
 from desmume.emulator import DeSmuME
-from utils.draw import draw_points, draw_text, draw_triangles, draw_lines
+from utils.draw import draw_paragraph, draw_points, draw_text, draw_triangles, draw_lines
 from utils.vector import interpolate
 import torch
 import numpy as np
@@ -185,6 +185,8 @@ def player_overlay(emu: DeSmuME, device=None):
         colors_np = np.array(colors[i])
         draw_points(object_positions_np, colors=colors_np, radius_scale=5.0)
 
-def clock_overlay(emu: DeSmuME, device=None):
+def stats_overlay(emu: DeSmuME, device=None):
     clock  = read_clock(emu)
-    draw_text(str(clock), pos=(5, 15))
+    checkpoint_distance = read_forward_distance_checkpoint(emu, device=device).item()
+    obstacle_distance = read_forward_distance_obstacle(emu, device=device).item()
+    

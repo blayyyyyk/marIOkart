@@ -17,7 +17,7 @@ course_parent_directory = "courses"
 in_nodes = 6
 out_nodes = 4
 
-SAVE_STATE_ID = 0
+
 
 max_dist = 0
 racer = None
@@ -110,6 +110,7 @@ def fitness(emu: DeSmuME, genome: Genome, max_time: int = 20000, device=None):
 
 def train(
     emu: DeSmuME,
+    save_id: int,
     fitness_fn,
     target_fitness=0,
     genome_pop_size=20,
@@ -118,7 +119,7 @@ def train(
     log_interval=5,
     device=None
 ) -> Generator[torch.Tensor | None]:
-    emu.savestate.load(SAVE_STATE_ID)
+    emu.savestate.load(save_id)
     
     yield None
 
