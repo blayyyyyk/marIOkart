@@ -10,7 +10,6 @@ dot_radius = 5
 
 
 draw_queue: Queue[Callable[[Context], None]] = Queue()
-draw_queue_mirror: Queue[Callable[[Context], None]] = Queue()
 
 
 P = ParamSpec('P')
