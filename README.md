@@ -1,4 +1,4 @@
-# MarI/O Kart — Mario Kart DS ML + Overlays
+# MarI/O Kart - Mario Kart DS ML + Overlays
 
 > **Train AI, render overlays, and read real game state from DeSmuME.**  
 > A batteries-included toolkit for **Mario Kart DS** research and tooling: memory I/O, geometry/projection, collision & map parsers, and an extensible overlay system — with optional Torch-powered acceleration.
