@@ -1,6 +1,9 @@
 import torchlens as tl
 import torch, torch.nn as nn, torch.nn.functional as F
 import random, copy
+from utils.vector import get_mps_device
+
+device = get_mps_device()
 
 class NodeGene:
     def __init__(self, nid, ntype):
@@ -70,7 +73,7 @@ class EvolvedNet(nn.Module):
                 
     
         # collect output activations as tensor
-        return torch.stack([torch.tanh(vals[o]) for o in self.outputs])
+        return torch.stack([torch.tanh(vals[o]).to(device) for o in self.outputs])
 
 if __name__ == "__main__":
     def fitness(genome) -> float:

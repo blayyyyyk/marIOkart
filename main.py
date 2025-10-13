@@ -1,269 +1,286 @@
-import torch, os
-from desmume.emulator import SCREEN_HEIGHT, SCREEN_WIDTH, DeSmuME
-from utils.emulator import run_emulator, draw_triangles, draw_points, Scene
-from utils.object import DynamicObject, GameItemObject, MapObject, RacerObject
-from utils.vector import (
-    get_mps_device,
-    sample_cone,
-    triangle_raycast_batch,
-    smooth_mean,
-    interpolate,
-    clipped_mean,
-    extrapolate,
-    intersect_ray_line_2d,
+import cairo
+import threading
+import queue
+import torch
+import os
+import gi
+from pynput import keyboard
+from desmume.emulator import DeSmuME
+from desmume.controls import Keys, keymask
+from utils.draw import consume_draw_stack
+from utils.memory import read_clock, load_current_kcl, load_current_nkm, read_model_view
+from utils.vector import get_mps_device
+from utils.overlay import (
+    clock_overlay,
+    player_overlay,
+    raycasting_overlay,
+    collision_overlay,
+    checkpoint_overlay_1,
+    checkpoint_overlay_2,
 )
-from utils.racer import Racer
-import math
-import json
-from mkds.utils import read_u8
 from utils.train import train, fitness
 
+os.environ["PKG_CONFIG_PATH"] = "/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
+os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = (
+    "/opt/homebrew/lib:$DYLD_FALLBACK_LIBRARY_PATH"
+)
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib
+
 device = get_mps_device()
+SCALE = 3
+SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
+input_state = set()
+scene_lock = threading.Lock()
+is_running = False
+scene_next = None
+renderer = None
+emu_global: DeSmuME | None = None
+callback = None
+worker_queue: queue.Queue[DeSmuME | None] = queue.Queue()
 
-course_parent_directory = "./courses"
+# ----------------------------
+# KEY MAPPING
+# ----------------------------
+KEY_MAP = {
+    "w": Keys.KEY_UP,
+    "s": Keys.KEY_DOWN,
+    "a": Keys.KEY_LEFT,
+    "d": Keys.KEY_RIGHT,
+    "z": Keys.KEY_B,
+    "x": Keys.KEY_A,
+    "u": Keys.KEY_X,
+    "i": Keys.KEY_Y,
+    "q": Keys.KEY_L,
+    "e": Keys.KEY_R,
+    " ": Keys.KEY_START,
+    "left": Keys.KEY_LEFT,
+    "right": Keys.KEY_RIGHT,
+    "up": Keys.KEY_UP,
+    "down": Keys.KEY_DOWN,
+}
 
-def init_racer(emu: DeSmuME):
-    global racer, current_point
 
-    emu.volume_set(0) # mute
-    track_id = emu.memory.unsigned.read_byte(0x23CDCD8)
-    course_id_lookup = None
-    with open("utils/courses.json", "r") as f:
-        course_id_lookup = json.load(f)
+# ----------------------------
+# ASYNC KEYBOARD HANDLER
+# ----------------------------
+def start_keyboard_listener():
+    """Starts a non-blocking keyboard listener in a separate thread."""
 
-    assert course_id_lookup is not None
-    course_directory = f"{course_parent_directory}/{course_id_lookup[str(track_id)]}"
-    kcl_path = f"{course_directory}/course_collision.kcl"
-    nkm_path = f"{course_directory}/course_map.nkm"
+    def on_press(key):
+        try:
+            name = key.char.lower() if hasattr(key, "char") else key.name
+            if name in KEY_MAP:
+                input_state.add(name)
+        except Exception:
+            pass
 
-    racer = Racer.from_path(
-        kcl_path,
-        nkm_path,
-        z_near=0.0,
-        z_far=1000.0,
-        device=device,
+    def on_release(key):
+        try:
+            name = key.char.lower() if hasattr(key, "char") else key.name
+            if name in KEY_MAP:
+                input_state.discard(name)
+        except Exception:
+            pass
+
+    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+    listener.daemon = True
+    listener.start()
+    return listener
+
+
+
+# ----------------------------
+# DRAW CALLBACK
+# ----------------------------
+overlay_surface_cache: cairo.Surface | None = None
+
+
+def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
+    global renderer, scene_current, emu_global, overlay_surface_cache
+    if renderer is None:
+        return False
+
+    # 1) draw base frame
+    ctx.scale(SCALE, SCALE)
+    renderer.screen(SCREEN_WIDTH, SCREEN_HEIGHT, ctx, 0)
+
+    # 2) build a fresh overlay surface and try to consume queued draw ops
+    src_surface: cairo.ImageSurface = ctx.get_target()
+
+    overlay_surface = src_surface.create_similar(
+        cairo.CONTENT_COLOR_ALPHA, SCREEN_WIDTH, SCREEN_HEIGHT
     )
+    # keep HiDPI device scale in sync (prevents blur on Retina)
+    overlay_surface.set_device_scale(*src_surface.get_device_scale())
 
-    current_point = torch.tensor([0, 0, 0], device=racer.device)
+    overlay_ctx = cairo.Context(overlay_surface)
+    overlay_ctx.set_operator(cairo.OPERATOR_CLEAR)
+    overlay_ctx.paint()
+    overlay_ctx.set_operator(cairo.OPERATOR_OVER)
+    overlay_ctx.set_antialias(cairo.ANTIALIAS_NONE)
 
+    num_calls = consume_draw_stack(overlay_ctx)
 
-""" Display Collision Triangles in Overlay """
-def collision_overlay(emu: DeSmuME, scene: Scene):
-    global racer
+    # 3) Decide which overlay to paint: cached or new
+    if num_calls == 0 and overlay_surface_cache is not None:
+        # No new overlay content — reuse cached surface
+        to_paint = overlay_surface_cache
+    else:
+        # We drew a new overlay; cache it for future frames
+        overlay_surface_cache = overlay_surface
+        to_paint = overlay_surface
 
-    racer.memory = emu.memory.unsigned
-    indices = racer.kcl.search_triangles(racer.position)
-    if indices is None or len(indices) == 0:
-        return
-
-    indices = torch.tensor(indices, dtype=torch.int32, device=device)
-    triangles = racer.kcl.triangles
-    color_map = [
-        (racer.kcl.prisms.is_wall, lambda x: x == 1, (1, 0, 1)),
-        # (racer.kcl.prisms.is_floor, lambda x: x == 1, (0, 0.5, 1)),
-        (
-            racer.kcl.prisms.collision_type,
-            lambda x: ((x == 3) | (x == 2) | (x == 5)),
-            (1, 0, 0.3),
-        ),
-    ]
-
-    for attr, cond, color in color_map:
-        # filter triangles by attribute condition
-        condition_mask = cond(attr[indices])
-        indices_masked = indices[condition_mask]
-        if indices_masked.shape[0] == 0:
-            continue
-
-        # project triangles to screen space
-        v1, v2, v3 = triangles[indices_masked].chunk(3, dim=1)
-        v1 = racer.project_to_screen(v1.squeeze(1))
-        v2 = racer.project_to_screen(v2.squeeze(1))
-        v3 = racer.project_to_screen(v3.squeeze(1))
-
-        # clip z
-        near = racer.camera_z_near
-        far = racer.camera_z_far
-        valid = lambda x: (x[:, 2] < -near) & (x[:, 2] > -far)
-        valid_mask = valid(v1) & valid(v2) & valid(v3)
-        v1 = torch.cat([v1[:, :2], v1[:, 3, None]], dim=-1)
-        v2 = torch.cat([v2[:, :2], v2[:, 3, None]], dim=-1)
-        v3 = torch.cat([v3[:, :2], v3[:, 3, None]], dim=-1)
-        v1 = v1[valid_mask].tolist()
-        v2 = v2[valid_mask].tolist()
-        v3 = v3[valid_mask].tolist()
-        scene.add_triangles(v1, v2, v3, color=color)
-
-
-""" Display Kart Raycasting """
-
-
-def raycasting_overlay(emu: DeSmuME, scene: Scene):
-    global racer, current_point
-    racer.memory = emu.memory.unsigned
-
-    current_point_min = racer.get_facing_point_obstacle(racer.position, racer.direction)
-    if current_point_min is None:
-        return
-
-    current_point = interpolate(current_point, current_point_min, 0.1)
-
-    forward_dist = torch.sqrt(
-        torch.sum((current_point_min - racer.position) ** 2, dim=0)
-    )
-    left_dist = racer.get_left_distance_obstacle()
-    right_dist = racer.get_right_distance_obstacle()
-
-    # print(f"Forward Distance: {forward_dist}\nLeft Distance: {left_dist}\nRight Distance: {right_dist}")
-
-
-def camera_overlay(emu: DeSmuME, scene: Scene):
-    global racer
-    racer.memory = emu.memory.unsigned
-
-    camera_target = racer.camera_target_position
-    points = racer.project_to_screen(camera_target.unsqueeze(0))
-    points = points.tolist()
-    draw_points(scene, points, color=(1, 0, 0))
-
-
-""" Displays an overlay of a line connecting checkpoint endpoints of the next checkpoint. """
-
-
-def checkpoint_overlay_1(emu: DeSmuME, scene: Scene):
-    racer.memory = emu.memory.unsigned
-
-    checkpoint = racer.get_next_checkpoint()
-    checkpoint[:, 1] = racer.position[1]
-    checkpoint_proj = racer.project_to_screen(checkpoint)
-
-    # depth filter 1
-    z_clip_mask = racer.z_clip_mask(checkpoint_proj)
-    checkpoint_proj = checkpoint_proj[z_clip_mask]
-    if checkpoint_proj.shape[0] == 0:
-        return
-    elif checkpoint_proj.shape[0] == 1:
-        p1 = checkpoint_proj[0, :3].tolist()
-        scene.add_points([p1], color=(0, 1.0, 0))
-        return
-
-    # display depth norm, preserve depth in 3d
-    depth_norm = checkpoint_proj[:, 3, None] / 3
-    depth = checkpoint_proj[:, 2, None]
-    checkpoint_proj = torch.cat([checkpoint_proj[:, :2], depth_norm, depth], dim=-1)
-    p1, p2 = checkpoint_proj[:, :3].chunk(2, dim=0)
-    p1 = p1.tolist()
-    p2 = p2.tolist()
-    scene.add_lines(p1, p2, color=(0, 1.0, 0), stroke_width=None)
-
-
-""" Displays an overlay of a ray connecting the kart and the next checkpoint boundary. """
-
-
-def checkpoint_overlay_2(emu: DeSmuME, scene: Scene):
-    racer.memory = emu.memory.unsigned
-
-    intersect = racer.get_facing_point_checkpoint(racer.position, racer.direction)
-    intersect = intersect.unsqueeze(0)
-    intersect_proj = racer.project_to_screen(intersect)
-    z_clip_mask_2 = racer.z_clip_mask(intersect_proj)
-
-    # depth filter 2
-    intersect_proj = intersect_proj[z_clip_mask_2]
-    if intersect_proj.shape[0] == 0:
-        return
-
-    # display depth norm, preserve depth in 3d
-    depth_norm = intersect_proj[:, 3, None]
-    depth = intersect_proj[:, 2, None]
-    intersect_proj = torch.cat([intersect_proj[:, :2], depth_norm, depth], dim=-1)
-    intersect_proj = intersect_proj[:, :3].tolist()
-    scene.add_points(intersect_proj, color=(0, 1.0, 0))
-
-    intersect_proj[0][2] = 0.1
-    pos_proj = racer.project_to_screen(racer.position.unsqueeze(0))
-    pos_proj = pos_proj[:, :3]
-    pos_proj[:, 2] = 0.1
-    pos_proj = pos_proj.tolist()
-    scene.add_lines(intersect_proj, pos_proj, color=(0, 0, 1.0))
-
-    angle = racer.get_direction_checkpoint()
-
-
-def player_overlay(emu: DeSmuME, scene: Scene):
-    racer.memory = emu.memory.unsigned
-
-    objects = racer.get_objects_details()
-
-    objs = [[], [], [], []]
-
-    for key, obj in objects.items():
-        if isinstance(obj, MapObject):
-            objs[1].append(obj.position)
-        elif isinstance(obj, RacerObject):
-            objs[2].append(obj.position)
-        elif isinstance(obj, GameItemObject):
-            objs[3].append(obj.position)
-        elif isinstance(obj, DynamicObject):
-            objs[4].append(obj.position)
-
-    objs_filter = []
-    for i, v in enumerate(objs):
-        if len(v) == 0:
-            continue
-
-        objs_filter.append(torch.tensor(v, device=racer.device))
-
-    colors = [(0.7, 0.1, 0.6), (0.1, 0.7, 0.6), (0.1, 0.6, 0.7), (0.6, 0.1, 0.7)]
-
-    for i, positions in enumerate(objs_filter):
-        object_positions = racer.project_to_screen(positions)
-
-        z_clip_mask = racer.z_clip_mask(object_positions)
-        object_positions = object_positions[z_clip_mask]
-        if object_positions.shape[0] == 0:
-            continue
-
-        object_positions = torch.cat(
-            [object_positions[:, :2], object_positions[:, 3, None]], dim=-1
-        )
-
-        # print(object_positions)
-        object_positions = object_positions.tolist()
-        scene.add_points(object_positions, color=colors[i])
-
-
-"""def main(emu: DeSmuME, scene: Scene):
-    # os.system("clear")
-    train_gen = train(
-        emu, 
-        fitness, 
-        genome_pop_size=20, 
-        max_epoch=50, 
-        top_k=10, 
-        log_interval=5
-    )
-    print("Test")
-    for i in train_gen:
-        
-        player_overlay(emu, scene)
-        raycasting_overlay(emu, scene)
-        collision_overlay(emu, scene)
-        checkpoint_overlay_1(emu, scene)
-        checkpoint_overlay_2(emu, scene)
-        yield i
+    # 4) Composite overlay on top (nearest filter to avoid smoothing)
+    pattern = cairo.SurfacePattern(to_paint)
+    pattern.set_filter(cairo.FILTER_NEAREST)
+    ctx.set_source(pattern)
+    ctx.set_operator(cairo.OPERATOR_OVER)
+    ctx.paint()
     
-    return False"""
     
-def main(emu: DeSmuME, scene: Scene):
-    player_overlay(emu, scene)
-    raycasting_overlay(emu, scene)
-    collision_overlay(emu, scene)
-    checkpoint_overlay_1(emu, scene)
-    checkpoint_overlay_2(emu, scene)
-    
+
+    return False
+
+
+def on_configure_main(widget: Gtk.DrawingArea, *args):
+    global renderer
+    if renderer:
+        renderer.reshape(widget, 0)
     return True
 
 
+# ----------------------------
+# GTK WINDOW
+# ----------------------------
+class EmulatorWindow(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="MarI/O Kart")
+        self.set_default_size(SCREEN_WIDTH, SCREEN_HEIGHT)
+        drawing_area = Gtk.DrawingArea()
+        drawing_area.set_size_request(SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE)
+        drawing_area.connect("draw", on_draw_main)
+        drawing_area.connect("configure-event", on_configure_main)
+        self.add(drawing_area)
+        self.drawing_area = drawing_area
+        self.connect("destroy", Gtk.main_quit)
+        self.set_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK)
+
+
+# ----------------------------
+# EMULATION WORKER
+# ----------------------------
+def worker():
+    global scene_next, callback, is_running
+    assert callback is not None
+    while True:
+        emu_instance = worker_queue.get()
+        if emu_instance is None:
+            break
+        try:
+            callback(emu_instance)
+        except Exception as e:
+            raise RuntimeError(
+                f"error on thread {threading.current_thread().name}: {e}"
+            )
+
+        worker_queue.task_done()
+    pass
+
+
+# ----------------------------
+# MAIN LOOP
+# ----------------------------
+def run_emulator(generator_fn, overlays):
+    global renderer, callback, emu_global, is_running
+    emu = DeSmuME()
+    emu.open("mariokart_ds.nds")
+    
+    emu_global = emu
+    emu.volume_set(0)
+
+    _generator = generator_fn(emu)
+    next(_generator)
+    n = load_current_nkm(emu, device=device)
+    k = load_current_kcl(emu, device=device)
+
+    from desmume.frontend.gtk_drawing_area_desmume import AbstractRenderer
+
+    renderer = AbstractRenderer.impl(emu)
+    renderer.init()
+
+    window = EmulatorWindow()
+    window.show_all()
+
+    def main_callback(emu: DeSmuME):
+        global device
+        for overlay in overlays:
+            overlay(emu, device)
+
+    callback = main_callback
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    is_running = True
+
+
+    def tick():
+        global scene_current, scene_next
+        emu.cycle()
+
+        # apply key input every frame (lightweight)
+        emu.input.keypad_update(0)
+        for key in input_state:
+            emu.input.keypad_add_key(keymask(KEY_MAP[key]))
+
+        try:
+            pass
+            # next(_generator)
+        except StopIteration:
+            pass
+
+        if not is_running:
+            Gtk.main_quit()
+
+        window.drawing_area.queue_draw()
+        worker_queue.put(emu)
+        return True
+
+    # run at 60fps, non-blocking
+    GLib.timeout_add(16, tick)
+    Gtk.main()
+    window.connect("destroy", lambda w: worker_queue.put(None))
+
+
+# ----------------------------
+# TRAINER
+# ----------------------------
+def generate_trainer(emu: DeSmuME):
+    global device
+    return train(
+        emu,
+        fitness,
+        genome_pop_size=20,
+        max_epoch=50,
+        top_k=10,
+        log_interval=5,
+        device=device,
+    )
+
+
+# ----------------------------
+# ENTRY POINT
+# ----------------------------
 if __name__ == "__main__":
-    run_emulator(2, init_racer, main, is_overlay=True)
+    start_keyboard_listener()
+    run_emulator(
+        generate_trainer,
+        [
+            # player_overlay,
+            collision_overlay,
+            checkpoint_overlay_1,
+            checkpoint_overlay_2,
+            clock_overlay
+        ],
+    )
