@@ -57,29 +57,47 @@ This repo brings together **three pillars**:
 ---
 
 ## Installation
-
+Python ≥ 3.11 required, virtual environment is recommended 
+### 1. Clone the repo
 ```bash
-# 1) Clone and enter the repo
 git clone https://github.com/gg-blake/marIOkart
 cd marIOkart
+```
 
-# 2) Python deps
+### 2. Install System Dependencies
+**Mac + Homebrew (recommended)**
+```bash
+brew install pygobject3 gtk4
+```
+**Linux (Ubuntu/Debian)**
+```bash
+sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0
+```
+> For other Linux distros consult the site [here](https://pygobject.gnome.org/getting_started.html).
+
+**Windows**
+> Windows is currently untested for this project, but you can try with installation guide [here](https://pygobject.gnome.org/getting_started.html).
+
+### 3. Install Other Python Dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-**Prereqs** (system packages):
-- GTK3 + PyGObject
-- Cairo
-- DeSmuME + py-desmume bindings
-- Python ≥ 3.10
+### 4. If using HOMEBREW, make sure that you have these environment variables set
+```bash
+export PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:
+export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib:
+```
 
 Platform-specific install commands vary; use your package manager (Homebrew, apt, pacman, etc.).
 
-> The **parsers** are separately available as `mkds`:
+> The **parsers** are separately available as [`mkds`](https://pypi.org/project/mkds/):
 >
 > ```bash
 > pip install mkds
 > ```
+
+This guide is a work in-progress, if you are having trouble with setup it to work on your machine, [message me on Discord](https://discord.com/users/410111287872323594), we'll get it fixed.
 
 ---
 
@@ -98,6 +116,7 @@ Platform-specific install commands vary; use your package manager (Homebrew, apt
 ├── mkds/                  # Standalone KCL/NKM parsing library (PyPI: mkds)
 │   ├── kcl.py
 │   └── nkm.py
+├── tests/                 # Various test scripts for experimentation
 ├── courses/               # Extracted course assets (KCL/NKM per course)
 ├── media/                 # GIFs, screenshots
 ├── main.py                # GTK runner wiring emulator + overlays
