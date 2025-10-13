@@ -70,7 +70,7 @@ from desmume.emulator import DeSmuME
 import torch
 
 # Import what you need from the module that contains this library
-from your_module import (
+from utils.memory import (
     read_position, read_direction, project_to_screen,
     read_forward_distance_checkpoint,
 )
