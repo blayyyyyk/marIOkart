@@ -54,13 +54,24 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mkds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/mkds.html">mkds package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
 </ul>
 </li>
 </ul>
@@ -137,7 +148,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="27">
 </span><span data-line="28">
 <div class="viewcode-block" id="calculate_max_course_distance">
-<a class="viewcode-back" href="../../api/utils.html#utils.train.calculate_max_course_distance">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.train.calculate_max_course_distance">[docs]</a>
 </span><span data-line="29"><span class="k">def</span><span class="w"> </span><span class="nf">calculate_max_course_distance</span><span class="p">(</span><span class="n">pts1</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">pts2</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
 </span><span data-line="30">    <span class="n">pts3</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">pts1</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">pts1</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
 </span><span data-line="31">    <span class="n">pts4</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">pts2</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">pts2</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
@@ -156,7 +167,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="43">
 </span><span data-line="44">
 <div class="viewcode-block" id="fitness">
-<a class="viewcode-back" href="../../api/utils.html#utils.train.fitness">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.train.fitness">[docs]</a>
 </span><span data-line="45"><span class="k">def</span><span class="w"> </span><span class="nf">fitness</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">genome</span><span class="p">:</span> <span class="n">Genome</span><span class="p">,</span> <span class="n">max_time</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20000</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="46">    <span class="n">emu</span><span class="o">.</span><span class="n">volume_set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </span><span data-line="47">    <span class="n">emu</span><span class="o">.</span><span class="n">savestate</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">SAVE_STATE_ID</span><span class="p">)</span>
@@ -225,7 +236,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="109">
 </span><span data-line="110">
 <div class="viewcode-block" id="train">
-<a class="viewcode-back" href="../../api/utils.html#utils.train.train">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.train.train">[docs]</a>
 </span><span data-line="111"><span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span>
 </span><span data-line="112">    <span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span>
 </span><span data-line="113">    <span class="n">save_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>

@@ -54,11 +54,26 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
+</ul>
+</li>
 </ul>
 
         </div>
@@ -107,7 +122,7 @@ data-aria-dark="Switch to auto color mode">
 <span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
 </span><span data-line="2">
 <div class="viewcode-block" id="slice_bits">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.slice_bits">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.slice_bits">[docs]</a>
 </span><span data-line="3"><span class="k">def</span><span class="w"> </span><span class="nf">slice_bits</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span data-line="4"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span data-line="5"><span class="sd">    Extracts bits from a 32-bit unsigned integer.</span>
@@ -133,7 +148,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="25">
 <div class="viewcode-block" id="read_u8">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_u8">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_u8">[docs]</a>
 </span><span data-line="26"><span class="k">def</span><span class="w"> </span><span class="nf">read_u8</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span data-line="27">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x01</span><span class="p">])</span>
 </span><span data-line="28">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;B&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -141,7 +156,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="29">
 </span><span data-line="30">
 <div class="viewcode-block" id="read_u16">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_u16">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_u16">[docs]</a>
 </span><span data-line="31"><span class="k">def</span><span class="w"> </span><span class="nf">read_u16</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span data-line="32">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x02</span><span class="p">])</span>
 </span><span data-line="33">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;H&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -149,7 +164,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="34">
 </span><span data-line="35">
 <div class="viewcode-block" id="read_u32">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_u32">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_u32">[docs]</a>
 </span><span data-line="36"><span class="k">def</span><span class="w"> </span><span class="nf">read_u32</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span data-line="37">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x04</span><span class="p">])</span>
 </span><span data-line="38">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;I&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -157,14 +172,14 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="39">
 </span><span data-line="40">
 <div class="viewcode-block" id="read_s8">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_s8">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_s8">[docs]</a>
 </span><span data-line="41"><span class="k">def</span><span class="w"> </span><span class="nf">read_s8</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span data-line="42">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x01</span><span class="p">])</span>
 </span><span data-line="43">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;b&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
 
 </span><span data-line="44">
 <div class="viewcode-block" id="read_s16">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_s16">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_s16">[docs]</a>
 </span><span data-line="45"><span class="k">def</span><span class="w"> </span><span class="nf">read_s16</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span data-line="46">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x02</span><span class="p">])</span>
 </span><span data-line="47">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;h&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -172,7 +187,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="48">
 </span><span data-line="49">
 <div class="viewcode-block" id="read_s32">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_s32">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_s32">[docs]</a>
 </span><span data-line="50"><span class="k">def</span><span class="w"> </span><span class="nf">read_s32</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span data-line="51">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x04</span><span class="p">])</span>
 </span><span data-line="52">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;i&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -180,7 +195,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="53">
 </span><span data-line="54">
 <div class="viewcode-block" id="read_f16">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_f16">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_f16">[docs]</a>
 </span><span data-line="55"><span class="k">def</span><span class="w"> </span><span class="nf">read_f16</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 </span><span data-line="56">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x02</span><span class="p">])</span>
 </span><span data-line="57">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;f&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -188,7 +203,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="58">
 </span><span data-line="59">
 <div class="viewcode-block" id="read_f32">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_f32">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_f32">[docs]</a>
 </span><span data-line="60"><span class="k">def</span><span class="w"> </span><span class="nf">read_f32</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 </span><span data-line="61">    <span class="n">data</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">addr</span> <span class="p">:</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x04</span><span class="p">])</span>
 </span><span data-line="62">    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&lt;f&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -196,21 +211,21 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="63">
 </span><span data-line="64">
 <div class="viewcode-block" id="read_fx16">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_fx16">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_fx16">[docs]</a>
 </span><span data-line="65"><span class="k">def</span><span class="w"> </span><span class="nf">read_fx16</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 </span><span data-line="66">    <span class="k">return</span> <span class="n">read_s16</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">/</span> <span class="mh">0x1000</span>  <span class="c1"># bit shift 12 bits to the left</span></div>
 
 </span><span data-line="67">
 </span><span data-line="68">
 <div class="viewcode-block" id="read_fx32">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_fx32">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_fx32">[docs]</a>
 </span><span data-line="69"><span class="k">def</span><span class="w"> </span><span class="nf">read_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 </span><span data-line="70">    <span class="k">return</span> <span class="n">read_s32</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">/</span> <span class="mh">0x1000</span>  <span class="c1"># bit shift 12 bits to the left</span></div>
 
 </span><span data-line="71">
 </span><span data-line="72">
 <div class="viewcode-block" id="read_vector_2d_fx32">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_vector_2d_fx32">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_vector_2d_fx32">[docs]</a>
 </span><span data-line="73"><span class="k">def</span><span class="w"> </span><span class="nf">read_vector_2d_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr2</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 </span><span data-line="74">    <span class="n">x</span> <span class="o">=</span> <span class="n">read_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
 </span><span data-line="75">    <span class="n">y</span> <span class="o">=</span> <span class="n">read_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x04</span> <span class="k">if</span> <span class="n">addr2</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">addr2</span><span class="p">)</span>
@@ -219,7 +234,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="77">
 </span><span data-line="78">
 <div class="viewcode-block" id="read_vector_3d_fx32">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_vector_3d_fx32">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_vector_3d_fx32">[docs]</a>
 </span><span data-line="79"><span class="k">def</span><span class="w"> </span><span class="nf">read_vector_3d_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">addr3</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 </span><span data-line="80">    <span class="n">x</span> <span class="o">=</span> <span class="n">read_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
 </span><span data-line="81">    <span class="n">y</span> <span class="o">=</span> <span class="n">read_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x04</span> <span class="k">if</span> <span class="n">addr2</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">addr2</span><span class="p">)</span>
@@ -228,7 +243,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="84">    
 <div class="viewcode-block" id="read_vector_3d_fx16">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_vector_3d_fx16">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_vector_3d_fx16">[docs]</a>
 </span><span data-line="85"><span class="k">def</span><span class="w"> </span><span class="nf">read_vector_3d_fx16</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">addr3</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 </span><span data-line="86">    <span class="n">x</span> <span class="o">=</span> <span class="n">read_fx16</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
 </span><span data-line="87">    <span class="n">y</span> <span class="o">=</span> <span class="n">read_fx16</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x02</span> <span class="k">if</span> <span class="n">addr2</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">addr2</span><span class="p">)</span>
@@ -237,7 +252,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="90">
 <div class="viewcode-block" id="read_vector_4d">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_vector_4d">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_vector_4d">[docs]</a>
 </span><span data-line="91"><span class="k">def</span><span class="w"> </span><span class="nf">read_vector_4d</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">addr3</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">addr4</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 </span><span data-line="92">    <span class="n">x</span> <span class="o">=</span> <span class="n">read_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
 </span><span data-line="93">    <span class="n">y</span> <span class="o">=</span> <span class="n">read_fx32</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">addr</span> <span class="o">+</span> <span class="mh">0x04</span> <span class="k">if</span> <span class="n">addr2</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">addr2</span><span class="p">)</span>
@@ -247,7 +262,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="97">
 <div class="viewcode-block" id="read_matrix_4d">
-<a class="viewcode-back" href="../../api/mkds.html#mkds.utils.read_matrix_4d">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/utils.html#mkds.utils.read_matrix_4d">[docs]</a>
 </span><span data-line="98"><span class="k">def</span><span class="w"> </span><span class="nf">read_matrix_4d</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span>
 </span><span data-line="99">    <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 </span><span data-line="100">    <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>

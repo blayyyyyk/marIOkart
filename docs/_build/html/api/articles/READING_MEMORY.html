@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="purple" data-content_root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MKDS Emulator I/O &amp; Geometry Utilities - MarI/O Kart documentation</title><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b1a1f93b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/shibuya.css?v=bb284d7b" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="MKDS Emulator I/O &amp; Geometry Utilities"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../index.html">
+      
+      
+      <strong>MarI/O Kart</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Welcome</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="articles.html">Research Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mkds/kcl-t.html">utils.kcl_torch module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#getting-started">Getting Started</a></li>
+<li><a class="reference internal" href="#design-conventions">Design &amp; Conventions</a><ul>
+<li><a class="reference internal" href="#coordinate-systems">Coordinate Systems</a></li>
+<li><a class="reference internal" href="#units">Units</a></li>
+<li><a class="reference internal" href="#memory-map-assets">Memory Map &amp; Assets</a></li>
+<li><a class="reference internal" href="#caching-model">Caching Model</a></li>
+<li><a class="reference internal" href="#device-handling">Device Handling</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#constants">Constants</a></li>
+<li><a class="reference internal" href="#api-reference">API Reference</a><ul>
+<li><a class="reference internal" href="#decorators">Decorators</a><ul>
+<li><a class="reference internal" href="#frame-cache-func"><code class="docutils literal notranslate"><span class="pre">frame_cache(func)</span></code></a></li>
+<li><a class="reference internal" href="#game-cache-func"><code class="docutils literal notranslate"><span class="pre">game_cache(func)</span></code></a></li>
+<li><a class="reference internal" href="#safe-object-func"><code class="docutils literal notranslate"><span class="pre">safe_object(func)</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#utility">Utility</a><ul>
+<li><a class="reference internal" href="#z-clip-mask-x-torch-tensor-torch-tensor"><code class="docutils literal notranslate"><span class="pre">z_clip_mask(x:</span> Tensor)</span> <span class="pre">-&gt;</span> Tensor</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#clock-course">Clock &amp; Course</a><ul>
+<li><a class="reference internal" href="#read-clock-ptr-emu-game-cached"><code class="docutils literal notranslate"><span class="pre">read_clock_ptr(emu)</span></code> <em>(game-cached)</em></a></li>
+<li><a class="reference internal" href="#read-clock-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_clock(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#get-current-course-id-emu"><code class="docutils literal notranslate"><span class="pre">get_current_course_id(emu)</span></code></a></li>
+<li><a class="reference internal" href="#get-course-path-id-int"><code class="docutils literal notranslate"><span class="pre">get_course_path(id:</span> <span class="pre">int)</span></code></a></li>
+<li><a class="reference internal" href="#load-current-kcl-emu-device-game-cached"><code class="docutils literal notranslate"><span class="pre">load_current_kcl(emu,</span> <span class="pre">device)</span></code> <em>(game-cached)</em></a></li>
+<li><a class="reference internal" href="#load-current-nkm-emu-device-game-cached"><code class="docutils literal notranslate"><span class="pre">load_current_nkm(emu,</span> <span class="pre">device)</span></code> <em>(game-cached)</em></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#player-objects">Player &amp; Objects</a><ul>
+<li><a class="reference internal" href="#read-racer-ptr-emu-addr-racer-ptr-addr"><code class="docutils literal notranslate"><span class="pre">read_racer_ptr(emu,</span> <span class="pre">addr=RACER_PTR_ADDR)</span></code></a></li>
+<li><a class="reference internal" href="#read-position-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-direction-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_direction(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-objects-array-max-count-emu-addr-objects-ptr-addr"><code class="docutils literal notranslate"><span class="pre">read_objects_array_max_count(emu,</span> <span class="pre">addr=OBJECTS_PTR_ADDR)</span></code></a></li>
+<li><a class="reference internal" href="#read-objects-array-ptr-emu-addr-objects-ptr-addr"><code class="docutils literal notranslate"><span class="pre">read_objects_array_ptr(emu,</span> <span class="pre">addr=OBJECTS_PTR_ADDR)</span></code></a></li>
+<li><a class="reference internal" href="#read-object-offset-emu-id"><code class="docutils literal notranslate"><span class="pre">read_object_offset(emu,</span> <span class="pre">id)</span></code></a></li>
+<li><a class="reference internal" href="#read-object-ptr-emu-id"><code class="docutils literal notranslate"><span class="pre">read_object_ptr(emu,</span> <span class="pre">id)</span></code></a></li>
+<li><a class="reference internal" href="#read-object-flags-emu-id"><code class="docutils literal notranslate"><span class="pre">read_object_flags(emu,</span> <span class="pre">id)</span></code></a></li>
+<li><a class="reference internal" href="#read-object-position-ptr-emu-id"><code class="docutils literal notranslate"><span class="pre">read_object_position_ptr(emu,</span> <span class="pre">id)</span></code></a></li>
+<li><a class="reference internal" href="#read-object-is-ignored-emu-id"><code class="docutils literal notranslate"><span class="pre">read_object_is_ignored(emu,</span> <span class="pre">id)</span></code></a></li>
+<li><a class="reference internal" href="#read-object-is-deleted-emu-id"><code class="docutils literal notranslate"><span class="pre">read_object_is_deleted(emu,</span> <span class="pre">id)</span></code></a></li>
+<li><a class="reference internal" href="#read-object-position-emu-id-device-safe-object-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_object_position(emu,</span> <span class="pre">id,</span> <span class="pre">device)</span></code> <em>(safe_object + frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-map-object-type-id-emu-id-safe-object-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_map_object_type_id(emu,</span> <span class="pre">id)</span></code> <em>(safe_object + frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-map-object-is-coin-collected-emu-id-safe-object-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_map_object_is_coin_collected(emu,</span> <span class="pre">id)</span></code> <em>(safe_object + frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-racer-object-is-ghost-emu-id-safe-object-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_racer_object_is_ghost(emu,</span> <span class="pre">id)</span></code> <em>(safe_object + frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-objects-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_objects(emu)</span></code> <em>(frame-cached)</em></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#camera-projection">Camera &amp; Projection</a><ul>
+<li><a class="reference internal" href="#read-camera-ptr-emu-addr-camera-ptr-addr-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_camera_ptr(emu,</span> <span class="pre">addr=CAMERA_PTR_ADDR)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-camera-fov-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_camera_fov(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-camera-aspect-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_camera_aspect(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-camera-position-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_camera_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-camera-target-position-emu-device"><code class="docutils literal notranslate"><span class="pre">read_camera_target_position(emu,</span> <span class="pre">device)</span></code></a></li>
+<li><a class="reference internal" href="#read-model-view-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_model_view(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#project-to-screen-emu-points-device"><code class="docutils literal notranslate"><span class="pre">project_to_screen(emu,</span> <span class="pre">points,</span> <span class="pre">device)</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#checkpoints">Checkpoints</a><ul>
+<li><a class="reference internal" href="#read-checkpoint-ptr-emu-addr-checkpoint-ptr-addr-game-cached"><code class="docutils literal notranslate"><span class="pre">read_checkpoint_ptr(emu,</span> <span class="pre">addr=CHECKPOINT_PTR_ADDR)</span></code> <em>(game-cached)</em></a></li>
+<li><a class="reference internal" href="#read-current-checkpoint-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_current_checkpoint(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-current-key-checkpoint-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_current_key_checkpoint(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-ghost-checkpoint-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_ghost_checkpoint(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-ghost-key-checkpoint-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_ghost_key_checkpoint(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-current-lap-emu-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_current_lap(emu)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-next-checkpoint-emu-checkpoint-count-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_next_checkpoint(emu,</span> <span class="pre">checkpoint_count)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-checkpoint-positions-emu-device-game-cached"><code class="docutils literal notranslate"><span class="pre">read_checkpoint_positions(emu,</span> <span class="pre">device)</span></code> <em>(game-cached)</em></a></li>
+<li><a class="reference internal" href="#read-next-checkpoint-position-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_next_checkpoint_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-current-checkpoint-position-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_current_checkpoint_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-facing-point-checkpoint-emu-direction-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_facing_point_checkpoint(emu,</span> <span class="pre">direction,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-forward-distance-checkpoint-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_forward_distance_checkpoint(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-left-distance-checkpoint-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_left_distance_checkpoint(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-direction-to-checkpoint-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_direction_to_checkpoint(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#obstacles-walls-offroad">Obstacles (Walls / Offroad)</a><ul>
+<li><a class="reference internal" href="#read-facing-point-obstacle-emu-position-none-direction-none-device-none-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_facing_point_obstacle(emu,</span> <span class="pre">position=None,</span> <span class="pre">direction=None,</span> <span class="pre">device=None)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-forward-distance-obstacle-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_forward_distance_obstacle(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-left-distance-obstacle-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_left_distance_obstacle(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-right-distance-obstacle-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_right_distance_obstacle(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+<li><a class="reference internal" href="#read-checkpoint-distance-altitude-emu-device-frame-cached"><code class="docutils literal notranslate"><span class="pre">read_checkpoint_distance_altitude(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#internal-helpers">Internal Helpers</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#project-the-player-to-screen-space">Project the Player to Screen Space</a></li>
+<li><a class="reference internal" href="#distances-to-next-checkpoint">Distances to Next Checkpoint</a></li>
+<li><a class="reference internal" href="#nearest-obstacle-ahead">Nearest Obstacle Ahead</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#edge-cases-error-handling">Edge Cases &amp; Error Handling</a></li>
+<li><a class="reference internal" href="#performance-notes">Performance Notes</a></li>
+<li><a class="reference internal" href="#faq">FAQ</a></li>
+<li><a class="reference internal" href="#license">License</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">MarI/O Kart</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">MKDS Emulator I/O &amp; Geometry Utilities</strong>
+        <meta itemprop="position" content="2" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="mkds-emulator-i-o-geometry-utilities">
+<h1>MKDS Emulator I/O &amp; Geometry Utilities<a class="headerlink" href="#mkds-emulator-i-o-geometry-utilities" title="Link to this heading">¶</a></h1>
+<blockquote>
+<div><p><strong>Mario Kart DS (MKDS) emulator-memory helpers + vectorized geometry utilities for visualization, control, and RL.</strong><br />
+Read live game state from DeSmuME, project world points to screen space, and compute distances to checkpoints and obstacles — all with PyTorch tensors and deterministic caching.</p>
+</div></blockquote>
+<hr class="docutils" />
+<section id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#overview">Overview</a></p></li>
+<li><p><a class="reference internal" href="#installation">Installation</a></p></li>
+<li><p><a class="reference internal" href="#getting-started">Getting Started</a></p></li>
+<li><p><a class="reference internal" href="#design-conventions">Design &amp; Conventions</a></p>
+<ul>
+<li><p><a class="reference internal" href="#coordinate-systems">Coordinate Systems</a></p></li>
+<li><p><a class="reference internal" href="#units">Units</a></p></li>
+<li><p><a class="reference internal" href="#memory-map-assets">Memory Map &amp; Assets</a></p></li>
+<li><p><a class="reference internal" href="#caching-model">Caching Model</a></p></li>
+<li><p><a class="reference internal" href="#device-handling">Device Handling</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#constants">Constants</a></p></li>
+<li><p><a class="reference internal" href="#api-reference">API Reference</a></p>
+<ul>
+<li><p><a class="reference internal" href="#decorators">Decorators</a></p></li>
+<li><p><a class="reference internal" href="#utility">Utility</a></p></li>
+<li><p><a class="reference internal" href="#clock-course">Clock &amp; Course</a></p></li>
+<li><p><a class="reference internal" href="#player-objects">Player &amp; Objects</a></p></li>
+<li><p><a class="reference internal" href="#camera-projection">Camera &amp; Projection</a></p></li>
+<li><p><a class="reference internal" href="#checkpoints">Checkpoints</a></p></li>
+<li><p><a class="reference internal" href="#obstacles-walls-offroad">Obstacles (Walls / Offroad)</a></p></li>
+<li><p><a class="reference internal" href="#internal-helpers">Internal Helpers</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#examples">Examples</a></p>
+<ul>
+<li><p><a class="reference internal" href="#project-the-player-to-screen-space">Project the Player to Screen Space</a></p></li>
+<li><p><a class="reference internal" href="#distances-to-next-checkpoint">Distances to Next Checkpoint</a></p></li>
+<li><p><a class="reference internal" href="#nearest-obstacle-ahead">Nearest Obstacle Ahead</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#edge-cases-error-handling">Edge Cases &amp; Error Handling</a></p></li>
+<li><p><a class="reference internal" href="#performance-notes">Performance Notes</a></p></li>
+<li><p><a class="reference internal" href="#faq">FAQ</a></p></li>
+<li><p><a class="reference internal" href="#license">License</a></p></li>
+</ul>
+<hr class="docutils" />
+</section>
+<section id="overview">
+<span id="id1"></span><h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>This library provides a high-level, vectorized interface for reading Mario Kart DS game state from a running <strong>DeSmuME</strong> emulator and for performing common <strong>3D/2D geometry</strong> operations used in overlays, analytics, and reinforcement learning.</p>
+<p>It wraps low-level memory reads (positions, directions, camera parameters, objects, checkpoints, clock) and exposes a compact API for tasks like:</p>
+<ul class="simple">
+<li><p>Projecting world-space points to screen-space (Nintendo DS 256×192),</p></li>
+<li><p>Computing distances and steering cues to the <strong>next checkpoint</strong>,</p></li>
+<li><p>Finding <strong>nearest obstacles</strong> (walls/offroad) via batched ray casting,</p></li>
+<li><p>Efficient, deterministic <strong>caching</strong> of memory-fetches per-frame and per-run.</p></li>
+</ul>
+<p>The implementation favors <strong>Torch tensors</strong> (CPU / CUDA / MPS) for fast batched math and provides explicit control over devices.</p>
+<hr class="docutils" />
+</section>
+<section id="installation">
+<span id="id2"></span><h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="c1"># Using a virtual environment is recommended</span>
+</span><span data-line="2">pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</span></pre></div>
+</div>
+<blockquote>
+<div><p>You’ll also need the DeSmuME Python bindings and project-local modules that define <code class="docutils literal notranslate"><span class="pre">KCLTensor</span></code> and <code class="docutils literal notranslate"><span class="pre">NKMTensor</span></code> (collision and map parsers).</p>
+</div></blockquote>
+<hr class="docutils" />
+</section>
+<section id="getting-started">
+<span id="id3"></span><h2>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">desmume.emulator</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeSmuME</span>
+</span><span data-line="2"><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+</span><span data-line="3">
+</span><span data-line="4"><span class="c1"># Import what you need from the module that contains this library</span>
+</span><span data-line="5"><span class="kn">from</span><span class="w"> </span><span class="nn">utils.memory</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span data-line="6">    <span class="n">read_position</span><span class="p">,</span> <span class="n">read_direction</span><span class="p">,</span> <span class="n">project_to_screen</span><span class="p">,</span>
+</span><span data-line="7">    <span class="n">read_forward_distance_checkpoint</span><span class="p">,</span>
+</span><span data-line="8"><span class="p">)</span>
+</span><span data-line="9">
+</span><span data-line="10"><span class="n">emu</span> <span class="o">=</span> <span class="n">DeSmuME</span><span class="p">()</span>
+</span><span data-line="11"><span class="c1"># emu.open(&quot;mariokart_ds.nds&quot;); emu.savestate.load(2); emu.volume_set(0)  # example lifecycle</span>
+</span><span data-line="12">
+</span><span data-line="13"><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>  <span class="c1"># or &quot;cuda&quot;, &quot;mps&quot;</span>
+</span><span data-line="14">
+</span><span data-line="15"><span class="n">pos</span> <span class="o">=</span> <span class="n">read_position</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>                 <span class="c1"># (3,)</span>
+</span><span data-line="16"><span class="nb">dir</span> <span class="o">=</span> <span class="n">read_direction</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>                <span class="c1"># (3,)</span>
+</span><span data-line="17"><span class="n">screen</span> <span class="o">=</span> <span class="n">project_to_screen</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">pos</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>  <span class="c1"># (1,4)</span>
+</span><span data-line="18"><span class="n">fwd_to_cp</span> <span class="o">=</span> <span class="n">read_forward_distance_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>  <span class="c1"># scalar tensor</span>
+</span></pre></div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="design-conventions">
+<span id="id4"></span><h2>Design &amp; Conventions<a class="headerlink" href="#design-conventions" title="Link to this heading">¶</a></h2>
+<section id="coordinate-systems">
+<span id="id5"></span><h3>Coordinate Systems<a class="headerlink" href="#coordinate-systems" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>World Space</strong>: Right-handed with <strong>Y up</strong>. Many functions assume <code class="docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">1,</span> <span class="pre">0)</span></code> as the up-like reference.</p></li>
+<li><p><strong>Camera Space → Clip → NDC → Screen</strong>: <code class="docutils literal notranslate"><span class="pre">read_model_view</span></code> builds the model-view matrix; <code class="docutils literal notranslate"><span class="pre">_project_to_screen</span></code> applies perspective projection and viewport mapping to DS resolution.</p></li>
+<li><p><strong>Screen Origin</strong>: <code class="docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">0)</span></code> is <strong>top-left</strong>. X to the right, Y down.</p></li>
+</ul>
+</section>
+<section id="units">
+<span id="id6"></span><h3>Units<a class="headerlink" href="#units" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Positions/Scalars</strong>: Converted from MKDS fixed-point memory formats (e.g., fx32) via helpers like <code class="docutils literal notranslate"><span class="pre">read_vector_3d_fx32</span></code> and <code class="docutils literal notranslate"><span class="pre">read_fx32</span></code>.</p></li>
+<li><p><strong>Angles</strong>: Camera FOV is read as 16-bit fixed-point and converted using <code class="docutils literal notranslate"><span class="pre">value</span> <span class="pre">*</span> <span class="pre">(2π</span> <span class="pre">/</span> <span class="pre">0x10000)</span></code> → radians.</p></li>
+<li><p><strong>Time</strong>: <code class="docutils literal notranslate"><span class="pre">read_clock()</span></code> returns <strong>centiseconds</strong> (10 ms units).</p></li>
+</ul>
+</section>
+<section id="memory-map-assets">
+<span id="id7"></span><h3>Memory Map &amp; Assets<a class="headerlink" href="#memory-map-assets" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Static addresses used by this module include:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">RACER_PTR_ADDR</span></code>, <code class="docutils literal notranslate"><span class="pre">COURSE_ID_ADDR</span></code>, <code class="docutils literal notranslate"><span class="pre">OBJECTS_PTR_ADDR</span></code>, <code class="docutils literal notranslate"><span class="pre">CHECKPOINT_PTR_ADDR</span></code>, <code class="docutils literal notranslate"><span class="pre">CLOCK_DATA_PTR</span></code>, <code class="docutils literal notranslate"><span class="pre">CAMERA_PTR_ADDR</span></code>.</p></li>
+</ul>
+</li>
+<li><p><strong>Courses</strong>: <code class="docutils literal notranslate"><span class="pre">courses.json</span></code> maps course IDs → directory names. Per-course assets:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">course_collision.kcl</span></code> (KCL collision)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">course_map.nkm</span></code> (NKM map/logic)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="caching-model">
+<span id="id8"></span><h3>Caching Model<a class="headerlink" href="#caching-model" title="Link to this heading">¶</a></h3>
+<p>Two decorators reduce emulator I/O:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&#64;frame_cache</span></code> — Cache <strong>once per emulator tick</strong> (<code class="docutils literal notranslate"><span class="pre">emu.get_ticks()</span></code>). Recompute on tick change.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&#64;game_cache</span></code> — Cache for the <strong>entire run</strong> (process lifetime).</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Caveat:</strong> Both caches ignore argument values and memoize a <strong>single</strong> result. Pass stable arguments (e.g., a constant <code class="docutils literal notranslate"><span class="pre">device</span></code>) or create uncached variants for argument-sensitive results.</p>
+</div></blockquote>
+</section>
+<section id="device-handling">
+<span id="id9"></span><h3>Device Handling<a class="headerlink" href="#device-handling" title="Link to this heading">¶</a></h3>
+<p>Functions that return tensors accept a <code class="docutils literal notranslate"><span class="pre">device</span></code> argument. Use consistent devices across calls for best performance and cache coherence. KCL/NKM tensors are loaded to the device used at first call and are <strong>game-cached</strong>.</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="constants">
+<span id="id10"></span><h2>Constants<a class="headerlink" href="#constants" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Value</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SCREEN_WIDTH</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">256</span></code></p></td>
+<td><p>DS top-screen width in pixels</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SCREEN_HEIGHT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">192</span></code></p></td>
+<td><p>DS top-screen height in pixels</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Z_FAR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1000.0</span></code></p></td>
+<td><p>Far-plane distance used in projection</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Z_NEAR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p>Near-plane distance used in projection</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Z_SCALE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">10.0</span></code></p></td>
+<td><p>Depth normalization scale factor</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">RACER_PTR_ADDR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x0217ACF8</span></code></p></td>
+<td><p>Memory address of racer pointer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">COURSE_ID_ADDR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x23CDCD8</span></code></p></td>
+<td><p>Current course ID (byte)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OBJECTS_PTR_ADDR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x0217B588</span></code></p></td>
+<td><p>Object array metadata base</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CHECKPOINT_PTR_ADDR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x021755FC</span></code></p></td>
+<td><p>Checkpoint manager pointer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CLOCK_DATA_PTR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x0217AA34</span></code></p></td>
+<td><p>Clock data base pointer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CAMERA_PTR_ADDR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x0217AA4C</span></code></p></td>
+<td><p>Camera pointer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FLAG_DYNAMIC</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x1000</span></code></p></td>
+<td><p>Object flag: dynamic</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FLAG_MAPOBJ</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x2000</span></code></p></td>
+<td><p>Object flag: map object</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FLAG_ITEM</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x4000</span></code></p></td>
+<td><p>Object flag: item</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FLAG_RACER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0x8000</span></code></p></td>
+<td><p>Object flag: racer</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr class="docutils" />
+</section>
+<section id="api-reference">
+<span id="id11"></span><h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h2>
+<p>The API is grouped by responsibility. Where applicable, returns are <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> on the specified <code class="docutils literal notranslate"><span class="pre">device</span></code>.</p>
+<section id="decorators">
+<span id="id12"></span><h3>Decorators<a class="headerlink" href="#decorators" title="Link to this heading">¶</a></h3>
+<section id="frame-cache-func">
+<h4><code class="docutils literal notranslate"><span class="pre">frame_cache(func)</span></code><a class="headerlink" href="#frame-cache-func" title="Link to this heading">¶</a></h4>
+<p>Caches the wrapped function’s single result <strong>per emulator tick</strong> (<code class="docutils literal notranslate"><span class="pre">emu.get_ticks()</span></code>). Recomputes on tick change. Good for expensive reads that are stable within a frame.</p>
+</section>
+<section id="game-cache-func">
+<h4><code class="docutils literal notranslate"><span class="pre">game_cache(func)</span></code><a class="headerlink" href="#game-cache-func" title="Link to this heading">¶</a></h4>
+<p>Caches the wrapped function’s single result <strong>for the entire run</strong>. Use for course files and other static data.</p>
+</section>
+<section id="safe-object-func">
+<h4><code class="docutils literal notranslate"><span class="pre">safe_object(func)</span></code><a class="headerlink" href="#safe-object-func" title="Link to this heading">¶</a></h4>
+<p>For functions taking <code class="docutils literal notranslate"><span class="pre">(emu,</span> <span class="pre">id,</span> <span class="pre">...)</span></code>, returns <code class="docutils literal notranslate"><span class="pre">None</span></code> if the object appears deleted (null position pointer). Prevents invalid memory access patterns.</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="utility">
+<span id="id13"></span><h3>Utility<a class="headerlink" href="#utility" title="Link to this heading">¶</a></h3>
+<section id="z-clip-mask-x-torch-tensor-torch-tensor">
+<h4><code class="docutils literal notranslate"><span class="pre">z_clip_mask(x:</span> <span class="pre">torch.Tensor)</span> <span class="pre">-&gt;</span> <span class="pre">torch.Tensor</span></code><a class="headerlink" href="#z-clip-mask-x-torch-tensor-torch-tensor" title="Link to this heading">¶</a></h4>
+<p>Boolean mask for rows whose camera-space <code class="docutils literal notranslate"><span class="pre">Z</span></code> is within <code class="docutils literal notranslate"><span class="pre">[-Z_FAR,</span> <span class="pre">-Z_NEAR]</span></code>. Use to cull points outside the depth range.</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="clock-course">
+<span id="id14"></span><h3>Clock &amp; Course<a class="headerlink" href="#clock-course" title="Link to this heading">¶</a></h3>
+<section id="read-clock-ptr-emu-game-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_clock_ptr(emu)</span></code> <em>(game-cached)</em><a class="headerlink" href="#read-clock-ptr-emu-game-cached" title="Link to this heading">¶</a></h4>
+<p>Base pointer to the game’s clock data struct.</p>
+</section>
+<section id="read-clock-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_clock(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-clock-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Current game time in <strong>centiseconds</strong> (10ms units).</p>
+</section>
+<section id="get-current-course-id-emu">
+<h4><code class="docutils literal notranslate"><span class="pre">get_current_course_id(emu)</span></code><a class="headerlink" href="#get-current-course-id-emu" title="Link to this heading">¶</a></h4>
+<p>Read current course ID (byte).</p>
+</section>
+<section id="get-course-path-id-int">
+<h4><code class="docutils literal notranslate"><span class="pre">get_course_path(id:</span> <span class="pre">int)</span></code><a class="headerlink" href="#get-course-path-id-int" title="Link to this heading">¶</a></h4>
+<p>Resolve a course ID to a directory path via <code class="docutils literal notranslate"><span class="pre">utils/courses.json</span></code>. Raises if missing.</p>
+</section>
+<section id="load-current-kcl-emu-device-game-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">load_current_kcl(emu,</span> <span class="pre">device)</span></code> <em>(game-cached)</em><a class="headerlink" href="#load-current-kcl-emu-device-game-cached" title="Link to this heading">¶</a></h4>
+<p>Parse and load the <strong>KCL collision</strong> file for the current course into a <code class="docutils literal notranslate"><span class="pre">KCLTensor</span></code> on <code class="docutils literal notranslate"><span class="pre">device</span></code>.</p>
+</section>
+<section id="load-current-nkm-emu-device-game-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">load_current_nkm(emu,</span> <span class="pre">device)</span></code> <em>(game-cached)</em><a class="headerlink" href="#load-current-nkm-emu-device-game-cached" title="Link to this heading">¶</a></h4>
+<p>Parse and load the <strong>NKM</strong> map file into an <code class="docutils literal notranslate"><span class="pre">NKMTensor</span></code> on <code class="docutils literal notranslate"><span class="pre">device</span></code>.</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="player-objects">
+<span id="id15"></span><h3>Player &amp; Objects<a class="headerlink" href="#player-objects" title="Link to this heading">¶</a></h3>
+<section id="read-racer-ptr-emu-addr-racer-ptr-addr">
+<h4><code class="docutils literal notranslate"><span class="pre">read_racer_ptr(emu,</span> <span class="pre">addr=RACER_PTR_ADDR)</span></code><a class="headerlink" href="#read-racer-ptr-emu-addr-racer-ptr-addr" title="Link to this heading">¶</a></h4>
+<p>Returns the address of the racer struct.</p>
+</section>
+<section id="read-position-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-position-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Player world position <code class="docutils literal notranslate"><span class="pre">(3,)</span></code> as a tensor.</p>
+</section>
+<section id="read-direction-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_direction(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-direction-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Player forward direction <code class="docutils literal notranslate"><span class="pre">(3,)</span></code> as a tensor.</p>
+</section>
+<section id="read-objects-array-max-count-emu-addr-objects-ptr-addr">
+<h4><code class="docutils literal notranslate"><span class="pre">read_objects_array_max_count(emu,</span> <span class="pre">addr=OBJECTS_PTR_ADDR)</span></code><a class="headerlink" href="#read-objects-array-max-count-emu-addr-objects-ptr-addr" title="Link to this heading">¶</a></h4>
+<p>Max number of objects in the global array.</p>
+</section>
+<section id="read-objects-array-ptr-emu-addr-objects-ptr-addr">
+<h4><code class="docutils literal notranslate"><span class="pre">read_objects_array_ptr(emu,</span> <span class="pre">addr=OBJECTS_PTR_ADDR)</span></code><a class="headerlink" href="#read-objects-array-ptr-emu-addr-objects-ptr-addr" title="Link to this heading">¶</a></h4>
+<p>Pointer to the object pointer array.</p>
+</section>
+<section id="read-object-offset-emu-id">
+<h4><code class="docutils literal notranslate"><span class="pre">read_object_offset(emu,</span> <span class="pre">id)</span></code><a class="headerlink" href="#read-object-offset-emu-id" title="Link to this heading">¶</a></h4>
+<p>Compute per-object metadata entry offset.</p>
+</section>
+<section id="read-object-ptr-emu-id">
+<h4><code class="docutils literal notranslate"><span class="pre">read_object_ptr(emu,</span> <span class="pre">id)</span></code><a class="headerlink" href="#read-object-ptr-emu-id" title="Link to this heading">¶</a></h4>
+<p>Pointer to object struct (0 if null).</p>
+</section>
+<section id="read-object-flags-emu-id">
+<h4><code class="docutils literal notranslate"><span class="pre">read_object_flags(emu,</span> <span class="pre">id)</span></code><a class="headerlink" href="#read-object-flags-emu-id" title="Link to this heading">¶</a></h4>
+<p>Unsigned short flags for the object (type/state bits).</p>
+</section>
+<section id="read-object-position-ptr-emu-id">
+<h4><code class="docutils literal notranslate"><span class="pre">read_object_position_ptr(emu,</span> <span class="pre">id)</span></code><a class="headerlink" href="#read-object-position-ptr-emu-id" title="Link to this heading">¶</a></h4>
+<p>Pointer to object’s position struct (0 if deleted).</p>
+</section>
+<section id="read-object-is-ignored-emu-id">
+<h4><code class="docutils literal notranslate"><span class="pre">read_object_is_ignored(emu,</span> <span class="pre">id)</span></code><a class="headerlink" href="#read-object-is-ignored-emu-id" title="Link to this heading">¶</a></h4>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">True</span></code> if the object is null or has the ignored bit set.</p>
+</section>
+<section id="read-object-is-deleted-emu-id">
+<h4><code class="docutils literal notranslate"><span class="pre">read_object_is_deleted(emu,</span> <span class="pre">id)</span></code><a class="headerlink" href="#read-object-is-deleted-emu-id" title="Link to this heading">¶</a></h4>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">True</span></code> if the object’s position pointer is null.</p>
+</section>
+<section id="read-object-position-emu-id-device-safe-object-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_object_position(emu,</span> <span class="pre">id,</span> <span class="pre">device)</span></code> <em>(safe_object + frame-cached)</em><a class="headerlink" href="#read-object-position-emu-id-device-safe-object-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Object world position <code class="docutils literal notranslate"><span class="pre">(3,)</span></code> or <code class="docutils literal notranslate"><span class="pre">None</span></code> if deleted.</p>
+</section>
+<section id="read-map-object-type-id-emu-id-safe-object-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_map_object_type_id(emu,</span> <span class="pre">id)</span></code> <em>(safe_object + frame-cached)</em><a class="headerlink" href="#read-map-object-type-id-emu-id-safe-object-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Signed short map-object type ID, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</section>
+<section id="read-map-object-is-coin-collected-emu-id-safe-object-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_map_object_is_coin_collected(emu,</span> <span class="pre">id)</span></code> <em>(safe_object + frame-cached)</em><a class="headerlink" href="#read-map-object-is-coin-collected-emu-id-safe-object-frame-cached" title="Link to this heading">¶</a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">True</span></code> if coin is collected, else <code class="docutils literal notranslate"><span class="pre">False</span></code>; or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</section>
+<section id="read-racer-object-is-ghost-emu-id-safe-object-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_racer_object_is_ghost(emu,</span> <span class="pre">id)</span></code> <em>(safe_object + frame-cached)</em><a class="headerlink" href="#read-racer-object-is-ghost-emu-id-safe-object-frame-cached" title="Link to this heading">¶</a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">True</span></code> if racer object is in ghost state; or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</section>
+<section id="read-objects-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_objects(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-objects-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Scan and group objects into categories: <code class="docutils literal notranslate"><span class="pre">map_objects</span></code>, <code class="docutils literal notranslate"><span class="pre">racer_objects</span></code>, <code class="docutils literal notranslate"><span class="pre">item_objects</span></code>, <code class="docutils literal notranslate"><span class="pre">dynamic_objects</span></code>. Returns <code class="docutils literal notranslate"><span class="pre">dict[str,</span> <span class="pre">list[int]]</span></code>.</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="camera-projection">
+<span id="id16"></span><h3>Camera &amp; Projection<a class="headerlink" href="#camera-projection" title="Link to this heading">¶</a></h3>
+<section id="read-camera-ptr-emu-addr-camera-ptr-addr-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_camera_ptr(emu,</span> <span class="pre">addr=CAMERA_PTR_ADDR)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-camera-ptr-emu-addr-camera-ptr-addr-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Address of the active camera struct.</p>
+</section>
+<section id="read-camera-fov-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_camera_fov(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-camera-fov-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Camera field-of-view in <strong>radians</strong> (from 16-bit fixed-point).</p>
+</section>
+<section id="read-camera-aspect-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_camera_aspect(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-camera-aspect-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Aspect ratio (width/height).</p>
+</section>
+<section id="read-camera-position-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_camera_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-camera-position-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Camera world position <code class="docutils literal notranslate"><span class="pre">(3,)</span></code> including elevation offset.</p>
+</section>
+<section id="read-camera-target-position-emu-device">
+<h4><code class="docutils literal notranslate"><span class="pre">read_camera_target_position(emu,</span> <span class="pre">device)</span></code><a class="headerlink" href="#read-camera-target-position-emu-device" title="Link to this heading">¶</a></h4>
+<p>Camera look-at target <code class="docutils literal notranslate"><span class="pre">(3,)</span></code>.</p>
+</section>
+<section id="read-model-view-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_model_view(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-model-view-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>4×4 model-view matrix (row-major), derived from camera position/target.</p>
+</section>
+<section id="project-to-screen-emu-points-device">
+<h4><code class="docutils literal notranslate"><span class="pre">project_to_screen(emu,</span> <span class="pre">points,</span> <span class="pre">device)</span></code><a class="headerlink" href="#project-to-screen-emu-points-device" title="Link to this heading">¶</a></h4>
+<p>Convenience wrapper that reads current camera, then calls the internal <code class="docutils literal notranslate"><span class="pre">_project_to_screen</span></code>. Returns <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code> → <code class="docutils literal notranslate"><span class="pre">[x_px,</span> <span class="pre">y_px,</span> <span class="pre">clip_z,</span> <span class="pre">normalized_depth]</span></code> in a <code class="docutils literal notranslate"><span class="pre">256×192</span></code> viewport.</p>
+<blockquote>
+<div><p>See also: <code class="docutils literal notranslate"><span class="pre">z_clip_mask(x)</span></code> to cull points outside view-space Z range.</p>
+</div></blockquote>
+<hr class="docutils" />
+</section>
+</section>
+<section id="checkpoints">
+<span id="id17"></span><h3>Checkpoints<a class="headerlink" href="#checkpoints" title="Link to this heading">¶</a></h3>
+<section id="read-checkpoint-ptr-emu-addr-checkpoint-ptr-addr-game-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_checkpoint_ptr(emu,</span> <span class="pre">addr=CHECKPOINT_PTR_ADDR)</span></code> <em>(game-cached)</em><a class="headerlink" href="#read-checkpoint-ptr-emu-addr-checkpoint-ptr-addr-game-cached" title="Link to this heading">¶</a></h4>
+<p>Pointer to checkpoint manager/state.</p>
+</section>
+<section id="read-current-checkpoint-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_current_checkpoint(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-current-checkpoint-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Current checkpoint index (unsigned byte).</p>
+</section>
+<section id="read-current-key-checkpoint-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_current_key_checkpoint(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-current-key-checkpoint-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Current <strong>key</strong> checkpoint index (signed byte).</p>
+</section>
+<section id="read-ghost-checkpoint-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_ghost_checkpoint(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-ghost-checkpoint-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Ghost checkpoint index (signed byte).</p>
+</section>
+<section id="read-ghost-key-checkpoint-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_ghost_key_checkpoint(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-ghost-key-checkpoint-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Ghost key checkpoint index (signed byte).</p>
+</section>
+<section id="read-current-lap-emu-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_current_lap(emu)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-current-lap-emu-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Current lap index (0-based, signed byte).</p>
+</section>
+<section id="read-next-checkpoint-emu-checkpoint-count-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_next_checkpoint(emu,</span> <span class="pre">checkpoint_count)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-next-checkpoint-emu-checkpoint-count-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Compute next checkpoint index with wrap-around to 0.</p>
+</section>
+<section id="read-checkpoint-positions-emu-device-game-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_checkpoint_positions(emu,</span> <span class="pre">device)</span></code> <em>(game-cached)</em><a class="headerlink" href="#read-checkpoint-positions-emu-device-game-cached" title="Link to this heading">¶</a></h4>
+<p>Tensor of shape <code class="docutils literal notranslate"><span class="pre">(C,</span> <span class="pre">2,</span> <span class="pre">3)</span></code> listing endpoints <code class="docutils literal notranslate"><span class="pre">[p1,</span> <span class="pre">p2]</span></code> per checkpoint in <strong>3D</strong>. Uses KCL floors to lift 2D endpoints to 3D by nearest-neighbor elevation.</p>
+</section>
+<section id="read-next-checkpoint-position-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_next_checkpoint_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-next-checkpoint-position-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Endpoints <code class="docutils literal notranslate"><span class="pre">(2,3)</span></code> for the next checkpoint segment.</p>
+</section>
+<section id="read-current-checkpoint-position-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_current_checkpoint_position(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-current-checkpoint-position-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Endpoints <code class="docutils literal notranslate"><span class="pre">(2,3)</span></code> for the current checkpoint segment.</p>
+</section>
+<section id="read-facing-point-checkpoint-emu-direction-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_facing_point_checkpoint(emu,</span> <span class="pre">direction,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-facing-point-checkpoint-emu-direction-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Intersection point of a ray (from player in <code class="docutils literal notranslate"><span class="pre">direction</span></code>) with the <strong>next checkpoint line</strong> in <strong>XZ</strong>; returns 3D point.</p>
+</section>
+<section id="read-forward-distance-checkpoint-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_forward_distance_checkpoint(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-forward-distance-checkpoint-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Forward distance to next checkpoint along player’s forward vector (scalar tensor).</p>
+</section>
+<section id="read-left-distance-checkpoint-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_left_distance_checkpoint(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-left-distance-checkpoint-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Leftward distance to the next checkpoint (scalar tensor).</p>
+</section>
+<section id="read-direction-to-checkpoint-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_direction_to_checkpoint(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-direction-to-checkpoint-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Steering angle <code class="docutils literal notranslate"><span class="pre">atan(forward</span> <span class="pre">/</span> <span class="pre">left)</span></code> toward the next checkpoint (radians).</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="obstacles-walls-offroad">
+<span id="id18"></span><h3>Obstacles (Walls / Offroad)<a class="headerlink" href="#obstacles-walls-offroad" title="Link to this heading">¶</a></h3>
+<section id="read-facing-point-obstacle-emu-position-none-direction-none-device-none-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_facing_point_obstacle(emu,</span> <span class="pre">position=None,</span> <span class="pre">direction=None,</span> <span class="pre">device=None)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-facing-point-obstacle-emu-position-none-direction-none-device-none-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Samples a <strong>cone of rays</strong> around the provided (or player’s) direction and finds the <strong>nearest</strong> intersection with <strong>wall/offroad</strong> triangles from KCL. Returns a 3D point or <code class="docutils literal notranslate"><span class="pre">None</span></code> if no intersections.</p>
+</section>
+<section id="read-forward-distance-obstacle-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_forward_distance_obstacle(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-forward-distance-obstacle-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Forward distance to the nearest wall/offroad obstacle; returns <code class="docutils literal notranslate"><span class="pre">+inf</span></code> (tensor) when no hit.</p>
+</section>
+<section id="read-left-distance-obstacle-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_left_distance_obstacle(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-left-distance-obstacle-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Leftward distance to nearest obstacle; <code class="docutils literal notranslate"><span class="pre">+inf</span></code> when no hit.</p>
+</section>
+<section id="read-right-distance-obstacle-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_right_distance_obstacle(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-right-distance-obstacle-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Rightward distance to nearest obstacle; <code class="docutils literal notranslate"><span class="pre">+inf</span></code> when no hit.</p>
+</section>
+<section id="read-checkpoint-distance-altitude-emu-device-frame-cached">
+<h4><code class="docutils literal notranslate"><span class="pre">read_checkpoint_distance_altitude(emu,</span> <span class="pre">device)</span></code> <em>(frame-cached)</em><a class="headerlink" href="#read-checkpoint-distance-altitude-emu-device-frame-cached" title="Link to this heading">¶</a></h4>
+<p>Triangle altitude given the player position and the two endpoints of the <strong>next</strong> checkpoint. Useful as a lateral proximity measure to the segment.</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="internal-helpers">
+<span id="id19"></span><h3>Internal Helpers<a class="headerlink" href="#internal-helpers" title="Link to this heading">¶</a></h3>
+<p>The following helpers are considered internal (subject to change):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_compute_orthonormal_basis(forward,</span> <span class="pre">reference=None,</span> <span class="pre">device=None)</span></code> → <code class="docutils literal notranslate"><span class="pre">(3,3)</span></code> rows <code class="docutils literal notranslate"><span class="pre">[right,</span> <span class="pre">up,</span> <span class="pre">forward]</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_compute_model_view(camera_pos,</span> <span class="pre">camera_target_pos,</span> <span class="pre">device)</span></code> → <code class="docutils literal notranslate"><span class="pre">(4,4)</span></code> model-view matrix.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_project_to_screen(world_points,</span> <span class="pre">model_view,</span> <span class="pre">fov,</span> <span class="pre">aspect,</span> <span class="pre">device=None)</span></code> → <code class="docutils literal notranslate"><span class="pre">(N,4)</span></code> screen coordinates.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_convert_2d_checkpoints(P,</span> <span class="pre">source,</span> <span class="pre">dim=0)</span></code> → lift 2D endpoints to 3D using nearest floor elevation.</p></li>
+</ul>
+<hr class="docutils" />
+</section>
+</section>
+<section id="examples">
+<span id="id20"></span><h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<section id="project-the-player-to-screen-space">
+<span id="id21"></span><h3>Project the Player to Screen Space<a class="headerlink" href="#project-the-player-to-screen-space" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="n">pos</span> <span class="o">=</span> <span class="n">read_position</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+</span><span data-line="2"><span class="n">screen_pt</span> <span class="o">=</span> <span class="n">project_to_screen</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">pos</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+</span><span data-line="3"><span class="n">x_px</span><span class="p">,</span> <span class="n">y_px</span> <span class="o">=</span> <span class="n">screen_pt</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">screen_pt</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+</span></pre></div>
+</div>
+</section>
+<section id="distances-to-next-checkpoint">
+<span id="id22"></span><h3>Distances to Next Checkpoint<a class="headerlink" href="#distances-to-next-checkpoint" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="n">d_fwd</span> <span class="o">=</span> <span class="n">read_forward_distance_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>  <span class="c1"># scalar tensor</span>
+</span><span data-line="2"><span class="n">d_left</span> <span class="o">=</span> <span class="n">read_left_distance_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>    <span class="c1"># scalar tensor</span>
+</span><span data-line="3"><span class="n">steer</span> <span class="o">=</span> <span class="n">read_direction_to_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>      <span class="c1"># radians</span>
+</span></pre></div>
+</div>
+</section>
+<section id="nearest-obstacle-ahead">
+<span id="id23"></span><h3>Nearest Obstacle Ahead<a class="headerlink" href="#nearest-obstacle-ahead" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="n">d_obs</span> <span class="o">=</span> <span class="n">read_forward_distance_obstacle</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+</span><span data-line="2"><span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">d_obs</span><span class="p">):</span>
+</span><span data-line="3">    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Obstacle ahead in </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">d_obs</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> units&quot;</span><span class="p">)</span>
+</span><span data-line="4"><span class="k">else</span><span class="p">:</span>
+</span><span data-line="5">    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No obstacle detected ahead&quot;</span><span class="p">)</span>
+</span></pre></div>
+</div>
+<hr class="docutils" />
+</section>
+</section>
+<section id="edge-cases-error-handling">
+<span id="id24"></span><h2>Edge Cases &amp; Error Handling<a class="headerlink" href="#edge-cases-error-handling" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Deleted / Ignored Objects</strong>: Functions decorated with <code class="docutils literal notranslate"><span class="pre">safe_object</span></code> return <code class="docutils literal notranslate"><span class="pre">None</span></code> for deleted objects. Check result before use.</p></li>
+<li><p><strong>No Geometry</strong>: If no wall/offroad triangles exist or raycasts miss, obstacle distances return <code class="docutils literal notranslate"><span class="pre">+inf</span></code> (tensor).</p></li>
+<li><p><strong>Empty Projection Inputs</strong>: <code class="docutils literal notranslate"><span class="pre">_project_to_screen</span></code> returns an empty tensor for empty inputs.</p></li>
+<li><p><strong>Caching Caveat</strong>: Cached functions ignore argument values. If you need different behavior per-argument, create separate uncached functions or structure your calls so arguments are stable.</p></li>
+</ul>
+<hr class="docutils" />
+</section>
+<section id="performance-notes">
+<span id="id25"></span><h2>Performance Notes<a class="headerlink" href="#performance-notes" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Caching eliminates redundant memory reads within a frame and across the run.</p></li>
+<li><p>Geometry routines (ray casting, projection, distances) are vectorized in Torch. Prefer GPU/MPS devices when available.</p></li>
+<li><p>Keep devices consistent where cached data is shared (e.g., KCL/NKM loaded once with <code class="docutils literal notranslate"><span class="pre">&#64;game_cache</span></code>).</p></li>
+</ul>
+<hr class="docutils" />
+</section>
+<section id="faq">
+<span id="id26"></span><h2>FAQ<a class="headerlink" href="#faq" title="Link to this heading">¶</a></h2>
+<p><strong>Q: Why are screen Y coordinates flipped?</strong><br />
+A: DS screen uses a top-left origin; we map NDC to pixel space with <code class="docutils literal notranslate"><span class="pre">(1</span> <span class="pre">-</span> <span class="pre">ndc_y)</span></code> to respect that convention.</p>
+<p><strong>Q: Do I need to pass <code class="docutils literal notranslate"><span class="pre">device</span></code> everywhere?</strong><br />
+A: Only to functions returning tensors. Consistency is important because some results are cached and tied to the first-used device.</p>
+<p><strong>Q: I changed args but got a cached result — bug?</strong><br />
+A: By design, <code class="docutils literal notranslate"><span class="pre">&#64;frame_cache</span></code> and <code class="docutils literal notranslate"><span class="pre">&#64;game_cache</span></code> memoize a single value and <strong>ignore</strong> argument values. Keep args stable or avoid caching for arg-sensitive functions.</p>
+<p><strong>Q: What units are returned from memory reads?</strong><br />
+A: FX32 (and similar) are converted to floats by helper functions before tensors are constructed.</p>
+<hr class="docutils" />
+</section>
+<section id="license">
+<span id="id27"></span><h2>License<a class="headerlink" href="#license" title="Link to this heading">¶</a></h2>
+<p>This documentation is provided as part of the project’s repository. See the repository’s root <code class="docutils literal notranslate"><span class="pre">LICENSE</span></code> file for terms.</p>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Blake Moody</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/shibuya.js?v=e730760c"></script></body>
+</html>

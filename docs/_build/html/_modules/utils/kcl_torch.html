@@ -54,13 +54,24 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mkds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/mkds.html">mkds package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
 </ul>
 </li>
 </ul>
@@ -115,7 +126,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="5">
 </span><span data-line="6">
 <div class="viewcode-block" id="PrismsTensor">
-<a class="viewcode-back" href="../../api/utils.html#utils.kcl_torch.PrismsTensor">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/kcl-t.html#utils.kcl_torch.PrismsTensor">[docs]</a>
 </span><span data-line="7"><span class="k">class</span><span class="w"> </span><span class="nc">PrismsTensor</span><span class="p">(</span><span class="n">PrismsBase</span><span class="p">):</span>
 </span><span data-line="8"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span data-line="9"><span class="sd">    Represents the triangular prisms section of the KCL file.</span>
@@ -207,7 +218,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="94">
 </span><span data-line="95">
 <div class="viewcode-block" id="KCLTensor">
-<a class="viewcode-back" href="../../api/utils.html#utils.kcl_torch.KCLTensor">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/kcl-t.html#utils.kcl_torch.KCLTensor">[docs]</a>
 </span><span data-line="96"><span class="k">class</span><span class="w"> </span><span class="nc">KCLTensor</span><span class="p">(</span><span class="n">KCLBase</span><span class="p">):</span>
 </span><span data-line="97"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span data-line="98"><span class="sd">    Represents a KCL (collision) file.</span>
@@ -346,7 +357,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="231">        <span class="k">return</span> <span class="n">out</span>
 </span><span data-line="232">
 <div class="viewcode-block" id="KCLTensor.search_triangles">
-<a class="viewcode-back" href="../../api/utils.html#utils.kcl_torch.KCLTensor.search_triangles">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/kcl-t.html#utils.kcl_torch.KCLTensor.search_triangles">[docs]</a>
 </span><span data-line="233">    <span class="k">def</span><span class="w"> </span><span class="nf">search_triangles</span><span class="p">(</span>
 </span><span data-line="234">        <span class="bp">self</span><span class="p">,</span>
 </span><span data-line="235">        <span class="n">point</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -379,7 +390,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="262">
 <div class="viewcode-block" id="KCLTensor.nearest_triangles">
-<a class="viewcode-back" href="../../api/utils.html#utils.kcl_torch.KCLTensor.nearest_triangles">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/kcl-t.html#utils.kcl_torch.KCLTensor.nearest_triangles">[docs]</a>
 </span><span data-line="263">    <span class="k">def</span><span class="w"> </span><span class="nf">nearest_triangles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="264">        <span class="n">tri_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_triangles</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
 </span><span data-line="265">        <span class="k">assert</span> <span class="n">tri_indices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
@@ -444,7 +455,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="323">        <span class="k">return</span> <span class="n">dist</span>
 </span><span data-line="324">
 <div class="viewcode-block" id="KCLTensor.from_file">
-<a class="viewcode-back" href="../../api/utils.html#utils.kcl_torch.KCLTensor.from_file">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/kcl-t.html#utils.kcl_torch.KCLTensor.from_file">[docs]</a>
 </span><span data-line="325">    <span class="nd">@classmethod</span>
 </span><span data-line="326">    <span class="k">def</span><span class="w"> </span><span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="327">        <span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>

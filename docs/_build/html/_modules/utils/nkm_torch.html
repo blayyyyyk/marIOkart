@@ -54,13 +54,24 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mkds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/mkds.html">mkds package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
 </ul>
 </li>
 </ul>
@@ -115,7 +126,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="5">
 </span><span data-line="6">
 <div class="viewcode-block" id="CPOITensor">
-<a class="viewcode-back" href="../../api/utils.html#utils.nkm_torch.CPOITensor">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/nkm-t.html#utils.nkm_torch.CPOITensor">[docs]</a>
 </span><span data-line="7"><span class="k">class</span><span class="w"> </span><span class="nc">CPOITensor</span><span class="p">(</span><span class="n">CPOI</span><span class="p">):</span>
 </span><span data-line="8">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="9">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
@@ -125,7 +136,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="12">
 </span><span data-line="13">
 <div class="viewcode-block" id="NKMTensor">
-<a class="viewcode-back" href="../../api/utils.html#utils.nkm_torch.NKMTensor">[docs]</a>
+<a class="viewcode-back" href="../../api/mkds/nkm-t.html#utils.nkm_torch.NKMTensor">[docs]</a>
 </span><span data-line="14"><span class="k">class</span><span class="w"> </span><span class="nc">NKMTensor</span><span class="p">(</span><span class="n">NKM</span><span class="p">):</span>
 </span><span data-line="15">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="16">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>

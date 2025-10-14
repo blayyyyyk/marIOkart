@@ -54,13 +54,24 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mkds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/mkds.html">mkds package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
 </ul>
 </li>
 </ul>
@@ -116,7 +127,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="6"><span class="n">SCREEN_WIDTH</span><span class="p">,</span> <span class="n">SCREEN_HEIGHT</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">192</span>
 </span><span data-line="7">
 <div class="viewcode-block" id="get_mps_device">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.get_mps_device">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.get_mps_device">[docs]</a>
 </span><span data-line="8"><span class="k">def</span><span class="w"> </span><span class="nf">get_mps_device</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 </span><span data-line="9">    <span class="c1"># Check that MPS is available</span>
 </span><span data-line="10">    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">mps</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
@@ -143,14 +154,14 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="30">
 </span><span data-line="31">
 <div class="viewcode-block" id="cross_product_2d">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.cross_product_2d">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.cross_product_2d">[docs]</a>
 </span><span data-line="32"><span class="k">def</span><span class="w"> </span><span class="nf">cross_product_2d</span><span class="p">(</span><span class="n">p0</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">p1</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 </span><span data-line="33">    <span class="k">return</span> <span class="n">_determinant_2d</span><span class="p">(</span><span class="n">p0</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">p0</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">p1</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">p1</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span></div>
 
 </span><span data-line="34">
 </span><span data-line="35">
 <div class="viewcode-block" id="triangle_raycast">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.triangle_raycast">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.triangle_raycast">[docs]</a>
 </span><span data-line="36"><span class="k">def</span><span class="w"> </span><span class="nf">triangle_raycast</span><span class="p">(</span>
 </span><span data-line="37">    <span class="n">ray_origin</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> 
 </span><span data-line="38">    <span class="n">ray_dir</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> 
@@ -192,7 +203,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="73"><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 </span><span data-line="74">
 <div class="viewcode-block" id="intersect_ray_line_2d">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.intersect_ray_line_2d">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.intersect_ray_line_2d">[docs]</a>
 </span><span data-line="75"><span class="k">def</span><span class="w"> </span><span class="nf">intersect_ray_line_2d</span><span class="p">(</span><span class="n">O</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
 </span><span data-line="76"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span data-line="77"><span class="sd">    Find intersection of a ray (O + tD, t&gt;=0)</span>
@@ -227,7 +238,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="106">        
 <div class="viewcode-block" id="triangle_raycast_batch">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.triangle_raycast_batch">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.triangle_raycast_batch">[docs]</a>
 </span><span data-line="107"><span class="k">def</span><span class="w"> </span><span class="nf">triangle_raycast_batch</span><span class="p">(</span>
 </span><span data-line="108">    <span class="n">ray_origin</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>  <span class="c1"># (N, 3)</span>
 </span><span data-line="109">    <span class="n">ray_dir</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>     <span class="c1"># (N, 3)</span>
@@ -288,7 +299,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="163">    
 </span><span data-line="164">
 <div class="viewcode-block" id="pairwise_distances">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.pairwise_distances">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.pairwise_distances">[docs]</a>
 </span><span data-line="165"><span class="k">def</span><span class="w"> </span><span class="nf">pairwise_distances</span><span class="p">(</span><span class="n">pts</span><span class="p">):</span>
 </span><span data-line="166">    <span class="n">norms</span> <span class="o">=</span> <span class="p">(</span><span class="n">pts</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 </span><span data-line="167">    <span class="n">G</span> <span class="o">=</span> <span class="n">pts</span> <span class="o">@</span> <span class="n">pts</span><span class="o">.</span><span class="n">T</span>
@@ -299,7 +310,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="172">    
 <div class="viewcode-block" id="pairwise_distances_cross">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.pairwise_distances_cross">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.pairwise_distances_cross">[docs]</a>
 </span><span data-line="173"><span class="k">def</span><span class="w"> </span><span class="nf">pairwise_distances_cross</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
 </span><span data-line="174">    <span class="c1"># Compute squared norms</span>
 </span><span data-line="175">    <span class="n">A_norms</span> <span class="o">=</span> <span class="p">(</span><span class="n">A</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># n x 1</span>
@@ -314,7 +325,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="184">
 <div class="viewcode-block" id="compute_orthonormal_basis">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.compute_orthonormal_basis">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.compute_orthonormal_basis">[docs]</a>
 </span><span data-line="185"><span class="k">def</span><span class="w"> </span><span class="nf">compute_orthonormal_basis</span><span class="p">(</span><span class="n">forward_vector_3d</span><span class="p">,</span> <span class="n">reference_vector_3d</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="186">    <span class="k">if</span> <span class="n">reference_vector_3d</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 </span><span data-line="187">        <span class="n">reference_vector_3d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
@@ -337,7 +348,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="204">
 <div class="viewcode-block" id="compute_model_view">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.compute_model_view">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.compute_model_view">[docs]</a>
 </span><span data-line="205"><span class="k">def</span><span class="w"> </span><span class="nf">compute_model_view</span><span class="p">(</span><span class="n">camera_pos</span><span class="p">,</span> <span class="n">camera_target_pos</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="206">    <span class="n">forward</span> <span class="o">=</span> <span class="n">camera_target_pos</span> <span class="o">-</span> <span class="n">camera_pos</span>
 </span><span data-line="207">    <span class="n">forward</span> <span class="o">/=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
@@ -354,7 +365,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="218">    
 <div class="viewcode-block" id="project_to_screen">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.project_to_screen">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.project_to_screen">[docs]</a>
 </span><span data-line="219"><span class="k">def</span><span class="w"> </span><span class="nf">project_to_screen</span><span class="p">(</span><span class="n">world_points</span><span class="p">,</span> <span class="n">model_view</span><span class="p">,</span> <span class="n">fov</span><span class="p">,</span> <span class="n">aspect</span><span class="p">,</span> <span class="n">far</span><span class="p">,</span> <span class="n">near</span><span class="p">,</span> <span class="n">z_scale</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="220">    <span class="n">N</span> <span class="o">=</span> <span class="n">world_points</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </span><span data-line="221">        
@@ -393,7 +404,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="254">
 <div class="viewcode-block" id="sample_cone">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.sample_cone">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.sample_cone">[docs]</a>
 </span><span data-line="255"><span class="k">def</span><span class="w"> </span><span class="nf">sample_cone</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
 </span><span data-line="256">    <span class="n">device</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">device</span>
 </span><span data-line="257">    <span class="n">dtype</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span>
@@ -427,7 +438,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="285">    
 <div class="viewcode-block" id="clipped_mean">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.clipped_mean">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.clipped_mean">[docs]</a>
 </span><span data-line="286"><span class="k">def</span><span class="w"> </span><span class="nf">clipped_mean</span><span class="p">(</span><span class="n">points</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">std_thresh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">):</span>
 </span><span data-line="287"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span data-line="288"><span class="sd">    Compute mean of 3D points, keeping only those within `std_thresh` stds</span>
@@ -458,20 +469,20 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="312">    
 </span><span data-line="313">
 <div class="viewcode-block" id="interpolate">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.interpolate">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.interpolate">[docs]</a>
 </span><span data-line="314"><span class="k">def</span><span class="w"> </span><span class="nf">interpolate</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
 </span><span data-line="315">    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="n">x0</span> <span class="o">+</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">x1</span><span class="p">)</span></div>
 
 </span><span data-line="316">
 <div class="viewcode-block" id="smooth_mean">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.smooth_mean">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.smooth_mean">[docs]</a>
 </span><span data-line="317"><span class="k">def</span><span class="w"> </span><span class="nf">smooth_mean</span><span class="p">(</span><span class="n">x0</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">sx1</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">std_threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
 </span><span data-line="318">    <span class="n">x1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">clipped_mean</span><span class="p">(</span><span class="n">sx1</span><span class="p">,</span> <span class="n">std_threshold</span><span class="p">)</span>
 </span><span data-line="319">    <span class="k">return</span> <span class="n">interpolate</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span></div>
 
 </span><span data-line="320">    
 <div class="viewcode-block" id="project">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.project">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.project">[docs]</a>
 </span><span data-line="321"><span class="k">def</span><span class="w"> </span><span class="nf">project</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
 </span><span data-line="322">    <span class="n">x</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
 </span><span data-line="323">    <span class="n">y</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
@@ -479,7 +490,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="325">    
 <div class="viewcode-block" id="extrapolate">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.extrapolate">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.extrapolate">[docs]</a>
 </span><span data-line="326"><span class="k">def</span><span class="w"> </span><span class="nf">extrapolate</span><span class="p">(</span><span class="n">P</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 </span><span data-line="327">    <span class="n">dim_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">!=</span> <span class="n">dim</span>
 </span><span data-line="328">    
@@ -494,7 +505,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="337">    
 <div class="viewcode-block" id="triangle_altitude">
-<a class="viewcode-back" href="../../api/utils.html#utils.vector.triangle_altitude">[docs]</a>
+<a class="viewcode-back" href="../../api/vector.html#utils.vector.triangle_altitude">[docs]</a>
 </span><span data-line="338"><span class="k">def</span><span class="w"> </span><span class="nf">triangle_altitude</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
 </span><span data-line="339">    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">==</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
 </span><span data-line="340">    

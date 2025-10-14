@@ -54,13 +54,24 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mkds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/mkds.html">mkds package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
 </ul>
 </li>
 </ul>
@@ -120,7 +131,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="10">
 </span><span data-line="11">
 <div class="viewcode-block" id="collision_overlay">
-<a class="viewcode-back" href="../../api/utils.html#utils.overlay.collision_overlay">[docs]</a>
+<a class="viewcode-back" href="../../api/visualization.html#utils.overlay.collision_overlay">[docs]</a>
 </span><span data-line="12"><span class="k">def</span><span class="w"> </span><span class="nf">collision_overlay</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="13">
 </span><span data-line="14">    <span class="n">kcl</span> <span class="o">=</span> <span class="n">load_current_kcl</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
@@ -173,7 +184,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="60">
 </span><span data-line="61">
 <div class="viewcode-block" id="raycasting_overlay">
-<a class="viewcode-back" href="../../api/utils.html#utils.overlay.raycasting_overlay">[docs]</a>
+<a class="viewcode-back" href="../../api/visualization.html#utils.overlay.raycasting_overlay">[docs]</a>
 </span><span data-line="62"><span class="k">def</span><span class="w"> </span><span class="nf">raycasting_overlay</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="63">    <span class="k">global</span> <span class="n">current_point</span>
 </span><span data-line="64">    <span class="k">if</span> <span class="n">current_point</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -200,7 +211,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="84">
 </span><span data-line="85">
 <div class="viewcode-block" id="camera_overlay">
-<a class="viewcode-back" href="../../api/utils.html#utils.overlay.camera_overlay">[docs]</a>
+<a class="viewcode-back" href="../../api/visualization.html#utils.overlay.camera_overlay">[docs]</a>
 </span><span data-line="86"><span class="k">def</span><span class="w"> </span><span class="nf">camera_overlay</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="87">    <span class="k">global</span> <span class="n">racer</span><span class="p">,</span> <span class="n">current_point</span>
 </span><span data-line="88">
@@ -215,7 +226,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="96">
 </span><span data-line="97">
 <div class="viewcode-block" id="checkpoint_overlay_1">
-<a class="viewcode-back" href="../../api/utils.html#utils.overlay.checkpoint_overlay_1">[docs]</a>
+<a class="viewcode-back" href="../../api/visualization.html#utils.overlay.checkpoint_overlay_1">[docs]</a>
 </span><span data-line="98"><span class="k">def</span><span class="w"> </span><span class="nf">checkpoint_overlay_1</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="99">    <span class="k">global</span> <span class="n">current_point</span>
 </span><span data-line="100">    <span class="n">position</span> <span class="o">=</span> <span class="n">read_position</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
@@ -250,7 +261,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="128">
 </span><span data-line="129">
 <div class="viewcode-block" id="checkpoint_overlay_2">
-<a class="viewcode-back" href="../../api/utils.html#utils.overlay.checkpoint_overlay_2">[docs]</a>
+<a class="viewcode-back" href="../../api/visualization.html#utils.overlay.checkpoint_overlay_2">[docs]</a>
 </span><span data-line="130"><span class="k">def</span><span class="w"> </span><span class="nf">checkpoint_overlay_2</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="131">    <span class="n">position</span> <span class="o">=</span> <span class="n">read_position</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 </span><span data-line="132">    <span class="n">direction</span> <span class="o">=</span> <span class="n">read_direction</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
@@ -283,7 +294,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="158">
 </span><span data-line="159">
 <div class="viewcode-block" id="player_overlay">
-<a class="viewcode-back" href="../../api/utils.html#utils.overlay.player_overlay">[docs]</a>
+<a class="viewcode-back" href="../../api/visualization.html#utils.overlay.player_overlay">[docs]</a>
 </span><span data-line="160"><span class="k">def</span><span class="w"> </span><span class="nf">player_overlay</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="161">    <span class="n">objects</span> <span class="o">=</span> <span class="n">read_objects</span><span class="p">(</span><span class="n">emu</span><span class="p">)</span>
 </span><span data-line="162">
@@ -314,7 +325,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="187">
 <div class="viewcode-block" id="stats_overlay">
-<a class="viewcode-back" href="../../api/utils.html#utils.overlay.stats_overlay">[docs]</a>
+<a class="viewcode-back" href="../../api/visualization.html#utils.overlay.stats_overlay">[docs]</a>
 </span><span data-line="188"><span class="k">def</span><span class="w"> </span><span class="nf">stats_overlay</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span data-line="189">    <span class="n">clock</span>  <span class="o">=</span> <span class="n">read_clock</span><span class="p">(</span><span class="n">emu</span><span class="p">)</span>
 </span><span data-line="190">    <span class="n">checkpoint_distance</span> <span class="o">=</span> <span class="n">read_forward_distance_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>

@@ -54,13 +54,24 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mkds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/mkds.html">mkds package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
 </ul>
 </li>
 </ul>
@@ -116,7 +127,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="6"><span class="n">device</span> <span class="o">=</span> <span class="n">get_mps_device</span><span class="p">()</span>
 </span><span data-line="7">
 <div class="viewcode-block" id="NodeGene">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.NodeGene">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.NodeGene">[docs]</a>
 </span><span data-line="8"><span class="k">class</span><span class="w"> </span><span class="nc">NodeGene</span><span class="p">:</span>
 </span><span data-line="9">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nid</span><span class="p">,</span> <span class="n">ntype</span><span class="p">):</span>
 </span><span data-line="10">        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">nid</span>
@@ -124,7 +135,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="12">
 <div class="viewcode-block" id="ConnGene">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.ConnGene">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.ConnGene">[docs]</a>
 </span><span data-line="13"><span class="k">class</span><span class="w"> </span><span class="nc">ConnGene</span><span class="p">:</span>
 </span><span data-line="14">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_id</span><span class="p">,</span> <span class="n">out_id</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 </span><span data-line="15">        <span class="bp">self</span><span class="o">.</span><span class="n">in_id</span> <span class="o">=</span> <span class="n">in_id</span>
@@ -134,7 +145,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="19">
 <div class="viewcode-block" id="Genome">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.Genome">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.Genome">[docs]</a>
 </span><span data-line="20"><span class="k">class</span><span class="w"> </span><span class="nc">Genome</span><span class="p">:</span>
 </span><span data-line="21">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_outputs</span><span class="p">):</span>
 </span><span data-line="22">        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">NodeGene</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;input&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">)]</span> <span class="o">+</span> \
@@ -143,7 +154,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="25">        <span class="bp">self</span><span class="o">.</span><span class="n">next_node_id</span> <span class="o">=</span> <span class="n">n_inputs</span> <span class="o">+</span> <span class="n">n_outputs</span>
 </span><span data-line="26">
 <div class="viewcode-block" id="Genome.mutate_weight">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.Genome.mutate_weight">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.Genome.mutate_weight">[docs]</a>
 </span><span data-line="27">    <span class="k">def</span><span class="w"> </span><span class="nf">mutate_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 </span><span data-line="28">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">conns</span><span class="p">:</span>
 </span><span data-line="29">            <span class="n">c</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conns</span><span class="p">)</span>
@@ -151,7 +162,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="31">
 <div class="viewcode-block" id="Genome.mutate_add_conn">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.Genome.mutate_add_conn">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.Genome.mutate_add_conn">[docs]</a>
 </span><span data-line="32">    <span class="k">def</span><span class="w"> </span><span class="nf">mutate_add_conn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 </span><span data-line="33">        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 </span><span data-line="34">        <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;output&quot;</span> <span class="ow">or</span> <span class="n">b</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="k">return</span>
@@ -159,7 +170,7 @@ data-aria-dark="Switch to auto color mode">
 
 </span><span data-line="36">
 <div class="viewcode-block" id="Genome.mutate_add_node">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.Genome.mutate_add_node">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.Genome.mutate_add_node">[docs]</a>
 </span><span data-line="37">    <span class="k">def</span><span class="w"> </span><span class="nf">mutate_add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 </span><span data-line="38">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">conns</span><span class="p">:</span> <span class="k">return</span>
 </span><span data-line="39">        <span class="n">conn</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conns</span><span class="p">)</span>
@@ -175,7 +186,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="47">
 </span><span data-line="48">
 <div class="viewcode-block" id="EvolvedNet">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.EvolvedNet">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.EvolvedNet">[docs]</a>
 </span><span data-line="49"><span class="k">class</span><span class="w"> </span><span class="nc">EvolvedNet</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 </span><span data-line="50">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">genome</span><span class="p">):</span>
 </span><span data-line="51">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -188,7 +199,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="58">        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">genome</span><span class="o">.</span><span class="n">nodes</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">type</span><span class="o">==</span><span class="s2">&quot;output&quot;</span><span class="p">]</span>
 </span><span data-line="59">
 <div class="viewcode-block" id="EvolvedNet.forward">
-<a class="viewcode-back" href="../../api/utils.html#utils.model.EvolvedNet.forward">[docs]</a>
+<a class="viewcode-back" href="../../api/training.html#utils.model.EvolvedNet.forward">[docs]</a>
 </span><span data-line="60">    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
 </span><span data-line="61">        <span class="c1"># map node IDs to torch tensors</span>
 </span><span data-line="62">        <span class="n">vals</span> <span class="o">=</span> <span class="p">{</span><span class="n">nid</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">nid</span> <span class="ow">in</span> <span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">]}</span>

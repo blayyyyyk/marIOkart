@@ -16,15 +16,17 @@ class PrismsBase:
 
     Each prism is a 0x10 byte structure with the following layout:
 
-    Offset | Type | Name      | Description
-    -------|------|----------|---------------------------------------------
-    0x00   | f32  | height   | Prism height from vertex 1 to opposite side
-    0x04   | u16  | pos_i    | Index of first vertex in positions array
-    0x06   | u16  | fnrm_i   | Face normal index
-    0x08   | u16  | enrm1_i  | Edge normal A index
-    0x0A   | u16  | enrm2_i  | Edge normal B index
-    0x0C   | u16  | enrm3_i  | Edge normal C index
-    0x0E   | u16  | attributes | Collision attributes
+    +-------+------+-----------+--------------------------------------------+
+    |Offset | Type | Name      | Description                                |
+    +=======+======+===========+============================================+
+    |0x00   | f32  | height    | Prism height from vertex 1 to opposite side|
+    |0x04   | u16  | pos_i     | Index of first vertex in positions array   |
+    |0x06   | u16  | fnrm_i    | Face normal index                          |
+    |0x08   | u16  | enrm1_i   | Edge normal A index                        |
+    |0x0A   | u16  | enrm2_i   | Edge normal B index                        |
+    |0x0C   | u16  | enrm3_i   | Edge normal C index                        |
+    |0x0E   | u16  | attributes| Collision attributes                       |
+    +-------+------+-----------+--------------------------------------------+
 
     Attributes
     ----------
@@ -89,20 +91,31 @@ class PrismsBase:
 
 class KCLBase:
     """
-    Represents the triangular prisms section of the KCL file.
+    Represents a KCL (collision) file.
 
-    Each prism is a 0x10 byte structure with the following layout:
+    KCL files store simplified model data for collision detection in games
+    such as Mario Kart Wii / DS. They consist of a header, positions, normals,
+    triangular prisms, and octree blocks.
 
-    Offset | Type | Name      | Description
-    -------|------|----------|---------------------------------------------
-    0x00   | f32  | height   | Prism height from vertex 1 to opposite side
-    0x04   | u16  | pos_i    | Index of first vertex in positions array
-    0x06   | u16  | fnrm_i   | Face normal index
-    0x08   | u16  | enrm1_i  | Edge normal A index
-    0x0A   | u16  | enrm2_i  | Edge normal B index
-    0x0C   | u16  | enrm3_i  | Edge normal C index
-    0x0E   | u16  | attributes | Collision attributes
-
+    Header Layout
+    +--------+-------+------------------------+--------------------------------------------+
+    |Offset  | Type  | Name                   | Description                                |
+    +========+=======+========================+============================================+
+    |0x00    | u32   | positions_offset       | Offset to vertex positions section         |
+    |0x04    | u32   | normals_offset         | Offset to normal vectors section           |
+    |0x08    | u32   | prisms_offset          | Offset to triangular prisms section        |
+    |0x0C    | u32   | block_data_offset      | Offset to octree blocks                    |
+    |0x10    | f32   | prism_thickness        | Depth of triangular prism along normal     |
+    |0x14    | Vec3  | area_min_pos           | Minimum coordinates of model bounding box  |
+    |0x20    | u32   | area_x_width_mask      | X-axis mask for octree                     |
+    |0x24    | u32   | area_y_width_mask      | Y-axis mask for octree                     |
+    |0x28    | u32   | area_z_width_mask      | Z-axis mask for octree                     |
+    |0x2C    | u32   | block_width_shift      | Octree leaf block size shift               |
+    |0x30    | u32   | area_x_blocks_shift    | Root child index shift (Y axis)            |
+    |0x34    | u32   | area_xy_blocks_shift   | Root child index shift (Z axis)            |
+    |0x38    | f32?  | sphere_radius          | Optional: max sphere radius for collisions |
+    +--------+-------+------------------------+--------------------------------------------+
+    
     Attributes
     ----------
     _height : list[float]
@@ -319,15 +332,17 @@ class Prisms(PrismsBase):
 
     Each prism is a 0x10 byte structure with the following layout:
 
-    Offset | Type | Name      | Description
-    -------|------|----------|---------------------------------------------
-    0x00   | f32  | height   | Prism height from vertex 1 to opposite side
-    0x04   | u16  | pos_i    | Index of first vertex in positions array
-    0x06   | u16  | fnrm_i   | Face normal index
-    0x08   | u16  | enrm1_i  | Edge normal A index
-    0x0A   | u16  | enrm2_i  | Edge normal B index
-    0x0C   | u16  | enrm3_i  | Edge normal C index
-    0x0E   | u16  | attributes | Collision attributes
+    +-------+------+-----------+--------------------------------------------+
+    |Offset | Type | Name      | Description                                |
+    +=======+======+===========+============================================+
+    |0x00   | f32  | height    | Prism height from vertex 1 to opposite side|
+    |0x04   | u16  | pos_i     | Index of first vertex in positions array   |
+    |0x06   | u16  | fnrm_i    | Face normal index                          |
+    |0x08   | u16  | enrm1_i   | Edge normal A index                        |
+    |0x0A   | u16  | enrm2_i   | Edge normal B index                        |
+    |0x0C   | u16  | enrm3_i   | Edge normal C index                        |
+    |0x0E   | u16  | attributes| Collision attributes                       |
+    +-------+------+-----------+--------------------------------------------+
 
     Attributes
     ----------
@@ -405,23 +420,24 @@ class KCL(KCLBase):
     triangular prisms, and octree blocks.
 
     Header Layout
-    -------------
-    Offset  | Type  | Name                   | Description
-    --------|-------|-----------------------|--------------------------------------------
-    0x00    | u32   | positions_offset       | Offset to vertex positions section
-    0x04    | u32   | normals_offset         | Offset to normal vectors section
-    0x08    | u32   | prisms_offset          | Offset to triangular prisms section
-    0x0C    | u32   | block_data_offset      | Offset to octree blocks
-    0x10    | f32   | prism_thickness        | Depth of triangular prism along normal
-    0x14    | Vec3  | area_min_pos           | Minimum coordinates of model bounding box
-    0x20    | u32   | area_x_width_mask      | X-axis mask for octree
-    0x24    | u32   | area_y_width_mask      | Y-axis mask for octree
-    0x28    | u32   | area_z_width_mask      | Z-axis mask for octree
-    0x2C    | u32   | block_width_shift      | Octree leaf block size shift
-    0x30    | u32   | area_x_blocks_shift    | Root child index shift (Y axis)
-    0x34    | u32   | area_xy_blocks_shift   | Root child index shift (Z axis)
-    0x38    | f32?  | sphere_radius          | Optional: max sphere radius for collisions
-
+    +--------+-------+------------------------+--------------------------------------------+
+    |Offset  | Type  | Name                   | Description                                |
+    +========+=======+========================+============================================+
+    |0x00    | u32   | positions_offset       | Offset to vertex positions section         |
+    |0x04    | u32   | normals_offset         | Offset to normal vectors section           |
+    |0x08    | u32   | prisms_offset          | Offset to triangular prisms section        |
+    |0x0C    | u32   | block_data_offset      | Offset to octree blocks                    |
+    |0x10    | f32   | prism_thickness        | Depth of triangular prism along normal     |
+    |0x14    | Vec3  | area_min_pos           | Minimum coordinates of model bounding box  |
+    |0x20    | u32   | area_x_width_mask      | X-axis mask for octree                     |
+    |0x24    | u32   | area_y_width_mask      | Y-axis mask for octree                     |
+    |0x28    | u32   | area_z_width_mask      | Z-axis mask for octree                     |
+    |0x2C    | u32   | block_width_shift      | Octree leaf block size shift               |
+    |0x30    | u32   | area_x_blocks_shift    | Root child index shift (Y axis)            |
+    |0x34    | u32   | area_xy_blocks_shift   | Root child index shift (Z axis)            |
+    |0x38    | f32?  | sphere_radius          | Optional: max sphere radius for collisions |
+    +--------+-------+------------------------+--------------------------------------------+
+    
     Attributes
     ----------
     _positions_offset : int

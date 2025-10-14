@@ -54,13 +54,24 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mkds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/mkds.html">mkds package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/articles/articles.html">Articles</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visualization.html">Visulization Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vector.html">utils.vector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/memory.html">utils.memory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/training.html">AI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mkds.html">MKDS File Parsing Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm.html">mkds.nkm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl.html">mkds.kcl module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/utils.html">mkds.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/nkm-t.html">utils.nkm_torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/mkds/kcl-t.html">utils.kcl_torch module</a></li>
 </ul>
 </li>
 </ul>
@@ -376,7 +387,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="266">
 </span><span data-line="267">
 <div class="viewcode-block" id="frame_cache">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.frame_cache">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.frame_cache">[docs]</a>
 </span><span data-line="268"><span class="k">def</span><span class="w"> </span><span class="nf">frame_cache</span><span class="p">(</span>
 </span><span data-line="269">    <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="n">Concatenate</span><span class="p">[</span><span class="n">DeSmuME</span><span class="p">,</span> <span class="n">P</span><span class="p">],</span> <span class="n">R</span><span class="p">],</span>
 </span><span data-line="270"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="n">Concatenate</span><span class="p">[</span><span class="n">DeSmuME</span><span class="p">,</span> <span class="n">P</span><span class="p">],</span> <span class="n">R</span><span class="p">]:</span>
@@ -408,7 +419,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="295">
 </span><span data-line="296">
 <div class="viewcode-block" id="game_cache">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.game_cache">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.game_cache">[docs]</a>
 </span><span data-line="297"><span class="k">def</span><span class="w"> </span><span class="nf">game_cache</span><span class="p">(</span>
 </span><span data-line="298">    <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="n">Concatenate</span><span class="p">[</span><span class="n">DeSmuME</span><span class="p">,</span> <span class="n">P</span><span class="p">],</span> <span class="n">R</span><span class="p">],</span>
 </span><span data-line="299"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="n">Concatenate</span><span class="p">[</span><span class="n">DeSmuME</span><span class="p">,</span> <span class="n">P</span><span class="p">],</span> <span class="n">R</span><span class="p">]:</span>
@@ -438,7 +449,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="322">
 </span><span data-line="323">
 <div class="viewcode-block" id="z_clip_mask">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.z_clip_mask">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.z_clip_mask">[docs]</a>
 </span><span data-line="324"><span class="k">def</span><span class="w"> </span><span class="nf">z_clip_mask</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 </span><span data-line="325"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute a boolean mask for points within the view frustum Z range.</span>
 </span><span data-line="326">
@@ -453,7 +464,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="334">
 </span><span data-line="335">
 <div class="viewcode-block" id="read_clock_ptr">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_clock_ptr">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_clock_ptr">[docs]</a>
 </span><span data-line="336"><span class="nd">@game_cache</span>
 </span><span data-line="337"><span class="k">def</span><span class="w"> </span><span class="nf">read_clock_ptr</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="338"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the base pointer to the game&#39;s clock data structure.</span>
@@ -469,7 +480,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="347">
 </span><span data-line="348">
 <div class="viewcode-block" id="read_clock">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_clock">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_clock">[docs]</a>
 </span><span data-line="349"><span class="nd">@frame_cache</span>
 </span><span data-line="350"><span class="k">def</span><span class="w"> </span><span class="nf">read_clock</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="351"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the current game clock value.</span>
@@ -489,7 +500,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="364">
 </span><span data-line="365">
 <div class="viewcode-block" id="get_current_course_id">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.get_current_course_id">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.get_current_course_id">[docs]</a>
 </span><span data-line="366"><span class="k">def</span><span class="w"> </span><span class="nf">get_current_course_id</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="367"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the current course ID from memory.</span>
 </span><span data-line="368">
@@ -504,7 +515,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="376">
 </span><span data-line="377">
 <div class="viewcode-block" id="get_course_path">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.get_course_path">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.get_course_path">[docs]</a>
 </span><span data-line="378"><span class="k">def</span><span class="w"> </span><span class="nf">get_course_path</span><span class="p">(</span><span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="379"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span data-line="380"><span class="sd">    Resolve a course ID to the local filesystem path for its assets.</span>
@@ -529,7 +540,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="398">
 </span><span data-line="399">
 <div class="viewcode-block" id="load_current_kcl">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.load_current_kcl">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.load_current_kcl">[docs]</a>
 </span><span data-line="400"><span class="nd">@game_cache</span>
 </span><span data-line="401"><span class="k">def</span><span class="w"> </span><span class="nf">load_current_kcl</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="402"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load and parse the KCL collision file for the current course.</span>
@@ -553,7 +564,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="419">
 </span><span data-line="420">
 <div class="viewcode-block" id="load_current_nkm">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.load_current_nkm">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.load_current_nkm">[docs]</a>
 </span><span data-line="421"><span class="nd">@game_cache</span>
 </span><span data-line="422"><span class="k">def</span><span class="w"> </span><span class="nf">load_current_nkm</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="423"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load and parse the NKM map file for the current course.</span>
@@ -577,7 +588,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="440">
 </span><span data-line="441">
 <div class="viewcode-block" id="read_racer_ptr">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_racer_ptr">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_racer_ptr">[docs]</a>
 </span><span data-line="442"><span class="k">def</span><span class="w"> </span><span class="nf">read_racer_ptr</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">RACER_PTR_ADDR</span><span class="p">):</span>
 </span><span data-line="443"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the pointer to the player&#39;s racer object.</span>
 </span><span data-line="444">
@@ -593,7 +604,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="453">
 </span><span data-line="454">
 <div class="viewcode-block" id="read_position">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_position">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_position">[docs]</a>
 </span><span data-line="455"><span class="nd">@frame_cache</span>
 </span><span data-line="456"><span class="k">def</span><span class="w"> </span><span class="nf">read_position</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="457"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the player&#39;s world-space position.</span>
@@ -613,7 +624,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="470">
 </span><span data-line="471">
 <div class="viewcode-block" id="read_direction">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_direction">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_direction">[docs]</a>
 </span><span data-line="472"><span class="nd">@frame_cache</span>
 </span><span data-line="473"><span class="k">def</span><span class="w"> </span><span class="nf">read_direction</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="474"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the player&#39;s forward direction vector (world-space).</span>
@@ -633,7 +644,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="487">
 </span><span data-line="488">
 <div class="viewcode-block" id="read_objects_array_max_count">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_objects_array_max_count">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_objects_array_max_count">[docs]</a>
 </span><span data-line="489"><span class="k">def</span><span class="w"> </span><span class="nf">read_objects_array_max_count</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">OBJECTS_PTR_ADDR</span><span class="p">):</span>
 </span><span data-line="490"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the maximum number of objects in the global object array.</span>
 </span><span data-line="491">
@@ -649,7 +660,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="500">
 </span><span data-line="501">
 <div class="viewcode-block" id="read_objects_array_ptr">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_objects_array_ptr">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_objects_array_ptr">[docs]</a>
 </span><span data-line="502"><span class="k">def</span><span class="w"> </span><span class="nf">read_objects_array_ptr</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">OBJECTS_PTR_ADDR</span><span class="p">):</span>
 </span><span data-line="503"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the pointer to the global object pointer array.</span>
 </span><span data-line="504">
@@ -665,7 +676,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="513">
 </span><span data-line="514">
 <div class="viewcode-block" id="read_object_offset">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_object_offset">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_object_offset">[docs]</a>
 </span><span data-line="515"><span class="k">def</span><span class="w"> </span><span class="nf">read_object_offset</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="516"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the memory offset of an object entry within the array.</span>
 </span><span data-line="517">
@@ -681,7 +692,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="526">
 </span><span data-line="527">
 <div class="viewcode-block" id="read_object_ptr">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_object_ptr">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_object_ptr">[docs]</a>
 </span><span data-line="528"><span class="k">def</span><span class="w"> </span><span class="nf">read_object_ptr</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="529"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the object instance pointer for a given object ID.</span>
 </span><span data-line="530">
@@ -698,7 +709,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="540">
 </span><span data-line="541">
 <div class="viewcode-block" id="read_object_flags">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_object_flags">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_object_flags">[docs]</a>
 </span><span data-line="542"><span class="k">def</span><span class="w"> </span><span class="nf">read_object_flags</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="543"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the object&#39;s flags (type/category bits, state, etc.).</span>
 </span><span data-line="544">
@@ -715,7 +726,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="554">
 </span><span data-line="555">
 <div class="viewcode-block" id="read_object_position_ptr">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_object_position_ptr">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_object_position_ptr">[docs]</a>
 </span><span data-line="556"><span class="k">def</span><span class="w"> </span><span class="nf">read_object_position_ptr</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="557"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the pointer to an object&#39;s position vector in memory.</span>
 </span><span data-line="558">
@@ -732,7 +743,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="568">
 </span><span data-line="569">
 <div class="viewcode-block" id="read_object_is_ignored">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_object_is_ignored">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_object_is_ignored">[docs]</a>
 </span><span data-line="570"><span class="k">def</span><span class="w"> </span><span class="nf">read_object_is_ignored</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="571"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Determine if an object should be ignored (null or ignored-flag set).</span>
 </span><span data-line="572">
@@ -750,7 +761,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="583">
 </span><span data-line="584">
 <div class="viewcode-block" id="read_object_is_deleted">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_object_is_deleted">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_object_is_deleted">[docs]</a>
 </span><span data-line="585"><span class="k">def</span><span class="w"> </span><span class="nf">read_object_is_deleted</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="586"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if the object has been deleted (position pointer is null).</span>
 </span><span data-line="587">
@@ -767,7 +778,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="597">
 </span><span data-line="598">
 <div class="viewcode-block" id="safe_object">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.safe_object">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.safe_object">[docs]</a>
 </span><span data-line="599"><span class="k">def</span><span class="w"> </span><span class="nf">safe_object</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
 </span><span data-line="600"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decorator that skips object reads when the object appears deleted.</span>
 </span><span data-line="601">
@@ -787,7 +798,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="614">
 </span><span data-line="615">
 <div class="viewcode-block" id="read_object_position">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_object_position">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_object_position">[docs]</a>
 </span><span data-line="616"><span class="nd">@frame_cache</span>
 </span><span data-line="617"><span class="nd">@safe_object</span>
 </span><span data-line="618"><span class="k">def</span><span class="w"> </span><span class="nf">read_object_position</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
@@ -808,7 +819,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="632">
 </span><span data-line="633">
 <div class="viewcode-block" id="read_map_object_type_id">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_map_object_type_id">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_map_object_type_id">[docs]</a>
 </span><span data-line="634"><span class="nd">@frame_cache</span>
 </span><span data-line="635"><span class="nd">@safe_object</span>
 </span><span data-line="636"><span class="k">def</span><span class="w"> </span><span class="nf">read_map_object_type_id</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
@@ -827,7 +838,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="648">
 </span><span data-line="649">
 <div class="viewcode-block" id="read_map_object_is_coin_collected">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_map_object_is_coin_collected">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_map_object_is_coin_collected">[docs]</a>
 </span><span data-line="650"><span class="nd">@frame_cache</span>
 </span><span data-line="651"><span class="nd">@safe_object</span>
 </span><span data-line="652"><span class="k">def</span><span class="w"> </span><span class="nf">read_map_object_is_coin_collected</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
@@ -846,7 +857,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="664">
 </span><span data-line="665">
 <div class="viewcode-block" id="read_racer_object_is_ghost">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_racer_object_is_ghost">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_racer_object_is_ghost">[docs]</a>
 </span><span data-line="666"><span class="nd">@frame_cache</span>
 </span><span data-line="667"><span class="nd">@safe_object</span>
 </span><span data-line="668"><span class="k">def</span><span class="w"> </span><span class="nf">read_racer_object_is_ghost</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
@@ -866,7 +877,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="681">
 </span><span data-line="682">
 <div class="viewcode-block" id="read_objects">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_objects">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_objects">[docs]</a>
 </span><span data-line="683"><span class="nd">@frame_cache</span>
 </span><span data-line="684"><span class="k">def</span><span class="w"> </span><span class="nf">read_objects</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="685"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Scan the global object table and group object indices by category.</span>
@@ -915,7 +926,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="727">
 </span><span data-line="728">
 <div class="viewcode-block" id="read_camera_ptr">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_camera_ptr">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_camera_ptr">[docs]</a>
 </span><span data-line="729"><span class="nd">@frame_cache</span>
 </span><span data-line="730"><span class="k">def</span><span class="w"> </span><span class="nf">read_camera_ptr</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">CAMERA_PTR_ADDR</span><span class="p">):</span>
 </span><span data-line="731"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the pointer to the active camera structure.</span>
@@ -932,7 +943,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="741">
 </span><span data-line="742">
 <div class="viewcode-block" id="read_camera_fov">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_camera_fov">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_camera_fov">[docs]</a>
 </span><span data-line="743"><span class="nd">@frame_cache</span>
 </span><span data-line="744"><span class="k">def</span><span class="w"> </span><span class="nf">read_camera_fov</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="745"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the current camera field-of-view (radians).</span>
@@ -951,7 +962,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="757">
 </span><span data-line="758">
 <div class="viewcode-block" id="read_camera_aspect">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_camera_aspect">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_camera_aspect">[docs]</a>
 </span><span data-line="759"><span class="nd">@frame_cache</span>
 </span><span data-line="760"><span class="k">def</span><span class="w"> </span><span class="nf">read_camera_aspect</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="761"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the camera aspect ratio from memory.</span>
@@ -968,7 +979,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="771">
 </span><span data-line="772">
 <div class="viewcode-block" id="read_camera_position">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_camera_position">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_camera_position">[docs]</a>
 </span><span data-line="773"><span class="nd">@frame_cache</span>
 </span><span data-line="774"><span class="k">def</span><span class="w"> </span><span class="nf">read_camera_position</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="775"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the camera world position, including elevation offset.</span>
@@ -989,7 +1000,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="789">
 </span><span data-line="790">
 <div class="viewcode-block" id="read_camera_target_position">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_camera_target_position">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_camera_target_position">[docs]</a>
 </span><span data-line="791"><span class="k">def</span><span class="w"> </span><span class="nf">read_camera_target_position</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="792"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the camera&#39;s target/look-at position in world space.</span>
 </span><span data-line="793">
@@ -1074,7 +1085,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="871">
 </span><span data-line="872">
 <div class="viewcode-block" id="read_model_view">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_model_view">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_model_view">[docs]</a>
 </span><span data-line="873"><span class="nd">@frame_cache</span>
 </span><span data-line="874"><span class="k">def</span><span class="w"> </span><span class="nf">read_model_view</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="875"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute and cache the camera model-view matrix for the current frame.</span>
@@ -1141,7 +1152,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="935">
 </span><span data-line="936">
 <div class="viewcode-block" id="project_to_screen">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.project_to_screen">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.project_to_screen">[docs]</a>
 </span><span data-line="937"><span class="k">def</span><span class="w"> </span><span class="nf">project_to_screen</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="938"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convenience wrapper to project points using the current camera state.</span>
 </span><span data-line="939">
@@ -1164,7 +1175,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="955">
 </span><span data-line="956">
 <div class="viewcode-block" id="read_checkpoint_ptr">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_checkpoint_ptr">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_checkpoint_ptr">[docs]</a>
 </span><span data-line="957"><span class="nd">@game_cache</span>
 </span><span data-line="958"><span class="k">def</span><span class="w"> </span><span class="nf">read_checkpoint_ptr</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">CHECKPOINT_PTR_ADDR</span><span class="p">):</span>
 </span><span data-line="959"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the pointer to the checkpoint manager/state.</span>
@@ -1181,7 +1192,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="969">
 </span><span data-line="970">
 <div class="viewcode-block" id="read_current_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_current_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_current_checkpoint">[docs]</a>
 </span><span data-line="971"><span class="nd">@frame_cache</span>
 </span><span data-line="972"><span class="k">def</span><span class="w"> </span><span class="nf">read_current_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="973"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the index of the current checkpoint.</span>
@@ -1198,7 +1209,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="983">
 </span><span data-line="984">
 <div class="viewcode-block" id="read_current_key_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_current_key_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_current_key_checkpoint">[docs]</a>
 </span><span data-line="985"><span class="nd">@frame_cache</span>
 </span><span data-line="986"><span class="k">def</span><span class="w"> </span><span class="nf">read_current_key_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="987"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the current key checkpoint index (special/lap-related).</span>
@@ -1215,7 +1226,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="997">
 </span><span data-line="998">
 <div class="viewcode-block" id="read_ghost_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_ghost_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_ghost_checkpoint">[docs]</a>
 </span><span data-line="999"><span class="nd">@frame_cache</span>
 </span><span data-line="1000"><span class="k">def</span><span class="w"> </span><span class="nf">read_ghost_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="1001"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the recorded ghost&#39;s current checkpoint index.</span>
@@ -1232,7 +1243,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1011">
 </span><span data-line="1012">
 <div class="viewcode-block" id="read_ghost_key_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_ghost_key_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_ghost_key_checkpoint">[docs]</a>
 </span><span data-line="1013"><span class="nd">@frame_cache</span>
 </span><span data-line="1014"><span class="k">def</span><span class="w"> </span><span class="nf">read_ghost_key_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="1015"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the recorded ghost&#39;s current key checkpoint index.</span>
@@ -1249,7 +1260,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1025">
 </span><span data-line="1026">
 <div class="viewcode-block" id="read_current_lap">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_current_lap">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_current_lap">[docs]</a>
 </span><span data-line="1027"><span class="nd">@frame_cache</span>
 </span><span data-line="1028"><span class="k">def</span><span class="w"> </span><span class="nf">read_current_lap</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">):</span>
 </span><span data-line="1029"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the current lap number.</span>
@@ -1266,7 +1277,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1039">
 </span><span data-line="1040">
 <div class="viewcode-block" id="read_next_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_next_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_next_checkpoint">[docs]</a>
 </span><span data-line="1041"><span class="nd">@frame_cache</span>
 </span><span data-line="1042"><span class="k">def</span><span class="w"> </span><span class="nf">read_next_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">checkpoint_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 </span><span data-line="1043"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the next checkpoint index (wrapping to 0 at the end).</span>
@@ -1314,7 +1325,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1084">
 </span><span data-line="1085">
 <div class="viewcode-block" id="read_checkpoint_positions">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_checkpoint_positions">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_checkpoint_positions">[docs]</a>
 </span><span data-line="1086"><span class="nd">@game_cache</span>
 </span><span data-line="1087"><span class="k">def</span><span class="w"> </span><span class="nf">read_checkpoint_positions</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="1088"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a tensor of checkpoint segment endpoints in 3D.</span>
@@ -1346,7 +1357,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1113">
 </span><span data-line="1114">
 <div class="viewcode-block" id="read_next_checkpoint_position">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_next_checkpoint_position">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_next_checkpoint_position">[docs]</a>
 </span><span data-line="1115"><span class="nd">@frame_cache</span>
 </span><span data-line="1116"><span class="k">def</span><span class="w"> </span><span class="nf">read_next_checkpoint_position</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="1117"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the 3D endpoints of the next checkpoint segment.</span>
@@ -1367,7 +1378,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1131">
 </span><span data-line="1132">
 <div class="viewcode-block" id="read_current_checkpoint_position">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_current_checkpoint_position">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_current_checkpoint_position">[docs]</a>
 </span><span data-line="1133"><span class="nd">@frame_cache</span>
 </span><span data-line="1134"><span class="k">def</span><span class="w"> </span><span class="nf">read_current_checkpoint_position</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="1135"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the 3D endpoints of the current checkpoint segment.</span>
@@ -1386,7 +1397,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1147">
 </span><span data-line="1148">
 <div class="viewcode-block" id="read_facing_point_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_facing_point_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_facing_point_checkpoint">[docs]</a>
 </span><span data-line="1149"><span class="nd">@frame_cache</span>
 </span><span data-line="1150"><span class="k">def</span><span class="w"> </span><span class="nf">read_facing_point_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">direction</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="1151"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Raycast from the player along a direction to the next checkpoint line (XZ).</span>
@@ -1414,7 +1425,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1172">
 </span><span data-line="1173">
 <div class="viewcode-block" id="read_forward_distance_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_forward_distance_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_forward_distance_checkpoint">[docs]</a>
 </span><span data-line="1174"><span class="nd">@frame_cache</span>
 </span><span data-line="1175"><span class="k">def</span><span class="w"> </span><span class="nf">read_forward_distance_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="1176"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute forward distance from player to the next checkpoint line.</span>
@@ -1434,7 +1445,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1189">
 </span><span data-line="1190">
 <div class="viewcode-block" id="read_left_distance_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_left_distance_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_left_distance_checkpoint">[docs]</a>
 </span><span data-line="1191"><span class="nd">@frame_cache</span>
 </span><span data-line="1192"><span class="k">def</span><span class="w"> </span><span class="nf">read_left_distance_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="1193"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute leftward distance from player to the next checkpoint line.</span>
@@ -1456,7 +1467,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1208">
 </span><span data-line="1209">
 <div class="viewcode-block" id="read_direction_to_checkpoint">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_direction_to_checkpoint">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_direction_to_checkpoint">[docs]</a>
 </span><span data-line="1210"><span class="nd">@frame_cache</span>
 </span><span data-line="1211"><span class="k">def</span><span class="w"> </span><span class="nf">read_direction_to_checkpoint</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 </span><span data-line="1212"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute a steering angle toward the next checkpoint from forward/left distances.</span>
@@ -1481,7 +1492,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1230">
 </span><span data-line="1231">
 <div class="viewcode-block" id="read_facing_point_obstacle">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_facing_point_obstacle">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_facing_point_obstacle">[docs]</a>
 </span><span data-line="1232"><span class="nd">@frame_cache</span>
 </span><span data-line="1233"><span class="k">def</span><span class="w"> </span><span class="nf">read_facing_point_obstacle</span><span class="p">(</span>
 </span><span data-line="1234">    <span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span>
@@ -1554,7 +1565,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1300">
 </span><span data-line="1301">
 <div class="viewcode-block" id="read_forward_distance_obstacle">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_forward_distance_obstacle">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_forward_distance_obstacle">[docs]</a>
 </span><span data-line="1302"><span class="nd">@frame_cache</span>
 </span><span data-line="1303"><span class="k">def</span><span class="w"> </span><span class="nf">read_forward_distance_obstacle</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 </span><span data-line="1304"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute forward distance to the nearest wall/offroad obstacle.</span>
@@ -1577,7 +1588,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1320">
 </span><span data-line="1321">
 <div class="viewcode-block" id="read_left_distance_obstacle">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_left_distance_obstacle">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_left_distance_obstacle">[docs]</a>
 </span><span data-line="1322"><span class="nd">@frame_cache</span>
 </span><span data-line="1323"><span class="k">def</span><span class="w"> </span><span class="nf">read_left_distance_obstacle</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 </span><span data-line="1324"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute leftward distance to the nearest wall/offroad obstacle.</span>
@@ -1603,7 +1614,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1343">
 </span><span data-line="1344">
 <div class="viewcode-block" id="read_right_distance_obstacle">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_right_distance_obstacle">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_right_distance_obstacle">[docs]</a>
 </span><span data-line="1345"><span class="nd">@frame_cache</span>
 </span><span data-line="1346"><span class="k">def</span><span class="w"> </span><span class="nf">read_right_distance_obstacle</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 </span><span data-line="1347"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute rightward distance to the nearest wall/offroad obstacle.</span>
@@ -1629,7 +1640,7 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="1366">
 </span><span data-line="1367">
 <div class="viewcode-block" id="read_checkpoint_distance_altitude">
-<a class="viewcode-back" href="../../api/utils.html#utils.memory.read_checkpoint_distance_altitude">[docs]</a>
+<a class="viewcode-back" href="../../api/memory.html#utils.memory.read_checkpoint_distance_altitude">[docs]</a>
 </span><span data-line="1368"><span class="nd">@frame_cache</span>
 </span><span data-line="1369"><span class="k">def</span><span class="w"> </span><span class="nf">read_checkpoint_distance_altitude</span><span class="p">(</span><span class="n">emu</span><span class="p">:</span> <span class="n">DeSmuME</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 </span><span data-line="1370"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the altitude (height) of the triangle formed by player and checkpoint endpoints.</span>
