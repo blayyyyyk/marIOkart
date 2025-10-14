@@ -19,6 +19,8 @@ jobs:
           pip install sphinx sphinx_rtd_theme myst_parser shibuya
       - name: Sphinx build
         run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          rm -rf _build
           sphinx-build docs _build
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
