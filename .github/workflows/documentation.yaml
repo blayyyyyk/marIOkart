@@ -15,7 +15,6 @@ jobs:
           python-version: 3.11
       - name: Install Shibuya
           pip install shibuya
-          cp docs/conf.py docs/_conf.py
       - name: Sphinx Publisher
         # You may pin to the exact commit or the version.
         # uses: Kjuly/sphinx-publisher@a8da5906cef366409f1f9f611d165338c9e6728b
