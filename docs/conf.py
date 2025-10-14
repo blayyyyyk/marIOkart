@@ -1,5 +1,4 @@
-import sys, os
-sys.path.insert(0, os.path.abspath("../src"))
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
