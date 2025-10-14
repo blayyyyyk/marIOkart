@@ -32,7 +32,7 @@ autodoc_default_options = {
     'show-inheritance': True,
 }
 # conf.py
-autodoc_mock_imports = ['gi', 'cairo']
+autodoc_mock_imports = ['gi', 'cairo', 'torch', 'desmume', 'numpy']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
