@@ -98,7 +98,7 @@ fwd_to_cp = read_forward_distance_checkpoint(emu, device=device)  # scalar tenso
 
 ### Units
 
-- **Positions/Scalars**: Converted from MKDS fixed-point memory formats (e.g., FX32) via helpers like `read_vector_3d_fx32` and `read_fx32`.
+- **Positions/Scalars**: Converted from MKDS fixed-point memory formats (e.g., fx32) via helpers like `read_vector_3d_fx32` and `read_fx32`.
 - **Angles**: Camera FOV is read as 16-bit fixed-point and converted using `value * (2π / 0x10000)` → radians.
 - **Time**: `read_clock()` returns **centiseconds** (10 ms units).
 
