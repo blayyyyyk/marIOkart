@@ -14,8 +14,6 @@ author = 'Blake Moody'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
-
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests']
 
@@ -32,7 +30,8 @@ autodoc_default_options = {
     'undoc-members': True,
     'show-inheritance': True,
 }
-
+# conf.py
+autodoc_mock_imports = ['gi', 'cairo']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
