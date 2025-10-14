@@ -16,7 +16,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install sphinx sphinx_rtd_theme myst_parser shibuya mkds
-          pip install -e .
+          pip install .
+      - name: Test
+          pwd
       - name: Sphinx build
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
