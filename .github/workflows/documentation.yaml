@@ -25,5 +25,5 @@ jobs:
           # The default language, which will be placed under the build directory, no subdirectory will be created. Default is 'en'.
           default_lang: en # optional, default is en
           # Newline-separated list of folder & language mappings to build. e.g., en:en zh-Hans:zh_CN If you don't provide one, will just build for `default_lang`.
-          lang_mappings: default_lang # optional, default is 
+          
           
