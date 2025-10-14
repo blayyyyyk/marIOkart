@@ -5,3 +5,4 @@ __pycache__
 rom
 *.nds
 **/*/venv
+**/*/_build
