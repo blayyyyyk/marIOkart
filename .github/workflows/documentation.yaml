@@ -20,6 +20,7 @@ jobs:
       - name: Test
         run: |
           pwd
+          ls -a
       - name: Sphinx build
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
