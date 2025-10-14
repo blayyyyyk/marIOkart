@@ -6,3 +6,6 @@ description = "project files"
 [build-system]
 build-backend = "flit_core.buildapi"
 requires = ["flit_core >=3.2,<4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
