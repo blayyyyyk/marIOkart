@@ -1,0 +1,9 @@
+|Offset | Type | Name      | Description |
+|---|---|---|---|
+|0x00   | f32  | height   | Prism height from vertex 1 to opposite side|
+|0x04   | u16  | pos_i    | Index of first vertex in positions array|
+|0x06   | u16  | fnrm_i   | Face normal index|
+|0x08   | u16  | enrm1_i  | Edge normal A index|
+|0x0A   | u16  | enrm2_i  | Edge normal B index|
+|0x0C   | u16  | enrm3_i  | Edge normal C index|
+|0x0E   | u16  | attributes | Collision attributes|

@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="purple" data-content_root="../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>utils package - MarI/O Kart 0.0.1 documentation</title><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b1a1f93b" />
+    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=bb284d7b" />
+    <link media="print" rel="stylesheet" type="text/css" href="../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="utils package"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../index.html">
+      
+      
+      <strong>MarI/O Kart</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-utils.draw">utils.draw module</a><ul>
+<li><a class="reference internal" href="#utils.draw.consume_draw_stack"><code class="docutils literal notranslate"><span class="pre">consume_draw_stack()</span></code></a></li>
+<li><a class="reference internal" href="#utils.draw.draw_lines"><code class="docutils literal notranslate"><span class="pre">draw_lines()</span></code></a></li>
+<li><a class="reference internal" href="#utils.draw.draw_paragraph"><code class="docutils literal notranslate"><span class="pre">draw_paragraph()</span></code></a></li>
+<li><a class="reference internal" href="#utils.draw.draw_points"><code class="docutils literal notranslate"><span class="pre">draw_points()</span></code></a></li>
+<li><a class="reference internal" href="#utils.draw.draw_stack_op"><code class="docutils literal notranslate"><span class="pre">draw_stack_op()</span></code></a></li>
+<li><a class="reference internal" href="#utils.draw.draw_text"><code class="docutils literal notranslate"><span class="pre">draw_text()</span></code></a></li>
+<li><a class="reference internal" href="#utils.draw.draw_triangles"><code class="docutils literal notranslate"><span class="pre">draw_triangles()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils.kcl_torch">utils.kcl_torch module</a><ul>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor"><code class="docutils literal notranslate"><span class="pre">KCLTensor</span></code></a><ul>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._positions_offset"><code class="docutils literal notranslate">_positions_offset</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._normals_offset"><code class="docutils literal notranslate">_normals_offset</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._prisms_offset"><code class="docutils literal notranslate">_prisms_offset</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._block_data_offset"><code class="docutils literal notranslate">_block_data_offset</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._prism_thickness"><code class="docutils literal notranslate">_prism_thickness</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._area_min_pos"><code class="docutils literal notranslate">_area_min_pos</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._area_x_width_mask"><code class="docutils literal notranslate">_area_x_width_mask</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._area_y_width_mask"><code class="docutils literal notranslate">_area_y_width_mask</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._area_z_width_mask"><code class="docutils literal notranslate">_area_z_width_mask</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._block_width_shift"><code class="docutils literal notranslate">_block_width_shift</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._area_x_blocks_shift"><code class="docutils literal notranslate">_area_x_blocks_shift</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._area_xy_blocks_shift"><code class="docutils literal notranslate">_area_xy_blocks_shift</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._sphere_radius"><code class="docutils literal notranslate">_sphere_radius</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._prisms"><code class="docutils literal notranslate">_prisms</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._positions"><code class="docutils literal notranslate">_positions</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor._normals"><code class="docutils literal notranslate">_normals</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor.from_file"><code class="docutils literal notranslate">from_file()</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor.nearest_triangles"><code class="docutils literal notranslate">nearest_triangles()</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor.prism_cls"><code class="docutils literal notranslate">prism_cls</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.KCLTensor.search_triangles"><code class="docutils literal notranslate">search_triangles()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor"><code class="docutils literal notranslate"><span class="pre">PrismsTensor</span></code></a><ul>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor._height"><code class="docutils literal notranslate">_height</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor._pos_i"><code class="docutils literal notranslate">_pos_i</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor._fnrm_i"><code class="docutils literal notranslate">_fnrm_i</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor._enrm1_i"><code class="docutils literal notranslate">_enrm1_i</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor._enrm2_i"><code class="docutils literal notranslate">_enrm2_i</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor._enrm3_i"><code class="docutils literal notranslate">_enrm3_i</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor._attributes"><code class="docutils literal notranslate">_attributes</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.collision_type"><code class="docutils literal notranslate">collision_type</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.collision_variant"><code class="docutils literal notranslate">collision_variant</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.ignore_drivers"><code class="docutils literal notranslate">ignore_drivers</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.ignore_items"><code class="docutils literal notranslate">ignore_items</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.is_floor"><code class="docutils literal notranslate">is_floor</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.is_wall"><code class="docutils literal notranslate">is_wall</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.light_id"><code class="docutils literal notranslate">light_id</span></code></a></li>
+<li><a class="reference internal" href="#utils.kcl_torch.PrismsTensor.map_2d_shadow"><code class="docutils literal notranslate">map_2d_shadow</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils.memory">utils.memory module</a><ul>
+<li><a class="reference internal" href="#utils.memory.frame_cache"><code class="docutils literal notranslate"><span class="pre">frame_cache()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.game_cache"><code class="docutils literal notranslate"><span class="pre">game_cache()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.get_course_path"><code class="docutils literal notranslate"><span class="pre">get_course_path()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.get_current_course_id"><code class="docutils literal notranslate"><span class="pre">get_current_course_id()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.load_current_kcl"><code class="docutils literal notranslate"><span class="pre">load_current_kcl()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.load_current_nkm"><code class="docutils literal notranslate"><span class="pre">load_current_nkm()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.project_to_screen"><code class="docutils literal notranslate"><span class="pre">project_to_screen()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_camera_aspect"><code class="docutils literal notranslate"><span class="pre">read_camera_aspect()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_camera_fov"><code class="docutils literal notranslate"><span class="pre">read_camera_fov()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_camera_position"><code class="docutils literal notranslate"><span class="pre">read_camera_position()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_camera_ptr"><code class="docutils literal notranslate"><span class="pre">read_camera_ptr()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_camera_target_position"><code class="docutils literal notranslate"><span class="pre">read_camera_target_position()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_checkpoint_distance_altitude"><code class="docutils literal notranslate"><span class="pre">read_checkpoint_distance_altitude()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_checkpoint_positions"><code class="docutils literal notranslate"><span class="pre">read_checkpoint_positions()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_checkpoint_ptr"><code class="docutils literal notranslate"><span class="pre">read_checkpoint_ptr()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_clock"><code class="docutils literal notranslate"><span class="pre">read_clock()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_clock_ptr"><code class="docutils literal notranslate"><span class="pre">read_clock_ptr()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_current_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_current_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_current_checkpoint_position"><code class="docutils literal notranslate"><span class="pre">read_current_checkpoint_position()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_current_key_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_current_key_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_current_lap"><code class="docutils literal notranslate"><span class="pre">read_current_lap()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_direction"><code class="docutils literal notranslate"><span class="pre">read_direction()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_direction_to_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_direction_to_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_facing_point_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_facing_point_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_facing_point_obstacle"><code class="docutils literal notranslate"><span class="pre">read_facing_point_obstacle()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_forward_distance_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_forward_distance_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_forward_distance_obstacle"><code class="docutils literal notranslate"><span class="pre">read_forward_distance_obstacle()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_ghost_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_ghost_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_ghost_key_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_ghost_key_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_left_distance_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_left_distance_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_left_distance_obstacle"><code class="docutils literal notranslate"><span class="pre">read_left_distance_obstacle()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_map_object_is_coin_collected"><code class="docutils literal notranslate"><span class="pre">read_map_object_is_coin_collected()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_map_object_type_id"><code class="docutils literal notranslate"><span class="pre">read_map_object_type_id()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_model_view"><code class="docutils literal notranslate"><span class="pre">read_model_view()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_next_checkpoint"><code class="docutils literal notranslate"><span class="pre">read_next_checkpoint()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_next_checkpoint_position"><code class="docutils literal notranslate"><span class="pre">read_next_checkpoint_position()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_object_flags"><code class="docutils literal notranslate"><span class="pre">read_object_flags()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_object_is_deleted"><code class="docutils literal notranslate"><span class="pre">read_object_is_deleted()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_object_is_ignored"><code class="docutils literal notranslate"><span class="pre">read_object_is_ignored()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_object_offset"><code class="docutils literal notranslate"><span class="pre">read_object_offset()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_object_position"><code class="docutils literal notranslate"><span class="pre">read_object_position()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_object_position_ptr"><code class="docutils literal notranslate"><span class="pre">read_object_position_ptr()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_object_ptr"><code class="docutils literal notranslate"><span class="pre">read_object_ptr()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_objects"><code class="docutils literal notranslate"><span class="pre">read_objects()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_objects_array_max_count"><code class="docutils literal notranslate"><span class="pre">read_objects_array_max_count()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_objects_array_ptr"><code class="docutils literal notranslate"><span class="pre">read_objects_array_ptr()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_position"><code class="docutils literal notranslate"><span class="pre">read_position()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_racer_object_is_ghost"><code class="docutils literal notranslate"><span class="pre">read_racer_object_is_ghost()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_racer_ptr"><code class="docutils literal notranslate"><span class="pre">read_racer_ptr()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.read_right_distance_obstacle"><code class="docutils literal notranslate"><span class="pre">read_right_distance_obstacle()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.safe_object"><code class="docutils literal notranslate"><span class="pre">safe_object()</span></code></a></li>
+<li><a class="reference internal" href="#utils.memory.z_clip_mask"><code class="docutils literal notranslate"><span class="pre">z_clip_mask()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils.model">utils.model module</a><ul>
+<li><a class="reference internal" href="#utils.model.ConnGene"><code class="docutils literal notranslate"><span class="pre">ConnGene</span></code></a></li>
+<li><a class="reference internal" href="#utils.model.EvolvedNet"><code class="docutils literal notranslate"><span class="pre">EvolvedNet</span></code></a><ul>
+<li><a class="reference internal" href="#utils.model.EvolvedNet.forward"><code class="docutils literal notranslate">forward()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#utils.model.Genome"><code class="docutils literal notranslate"><span class="pre">Genome</span></code></a><ul>
+<li><a class="reference internal" href="#utils.model.Genome.mutate_add_conn"><code class="docutils literal notranslate">mutate_add_conn()</span></code></a></li>
+<li><a class="reference internal" href="#utils.model.Genome.mutate_add_node"><code class="docutils literal notranslate">mutate_add_node()</span></code></a></li>
+<li><a class="reference internal" href="#utils.model.Genome.mutate_weight"><code class="docutils literal notranslate">mutate_weight()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#utils.model.NodeGene"><code class="docutils literal notranslate"><span class="pre">NodeGene</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils.nkm_torch">utils.nkm_torch module</a><ul>
+<li><a class="reference internal" href="#utils.nkm_torch.CPOITensor"><code class="docutils literal notranslate"><span class="pre">CPOITensor</span></code></a></li>
+<li><a class="reference internal" href="#utils.nkm_torch.NKMTensor"><code class="docutils literal notranslate"><span class="pre">NKMTensor</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils.overlay">utils.overlay module</a><ul>
+<li><a class="reference internal" href="#utils.overlay.camera_overlay"><code class="docutils literal notranslate"><span class="pre">camera_overlay()</span></code></a></li>
+<li><a class="reference internal" href="#utils.overlay.checkpoint_overlay_1"><code class="docutils literal notranslate"><span class="pre">checkpoint_overlay_1()</span></code></a></li>
+<li><a class="reference internal" href="#utils.overlay.checkpoint_overlay_2"><code class="docutils literal notranslate"><span class="pre">checkpoint_overlay_2()</span></code></a></li>
+<li><a class="reference internal" href="#utils.overlay.collision_overlay"><code class="docutils literal notranslate"><span class="pre">collision_overlay()</span></code></a></li>
+<li><a class="reference internal" href="#utils.overlay.player_overlay"><code class="docutils literal notranslate"><span class="pre">player_overlay()</span></code></a></li>
+<li><a class="reference internal" href="#utils.overlay.raycasting_overlay"><code class="docutils literal notranslate"><span class="pre">raycasting_overlay()</span></code></a></li>
+<li><a class="reference internal" href="#utils.overlay.stats_overlay"><code class="docutils literal notranslate"><span class="pre">stats_overlay()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils.train">utils.train module</a><ul>
+<li><a class="reference internal" href="#utils.train.calculate_max_course_distance"><code class="docutils literal notranslate"><span class="pre">calculate_max_course_distance()</span></code></a></li>
+<li><a class="reference internal" href="#utils.train.fitness"><code class="docutils literal notranslate"><span class="pre">fitness()</span></code></a></li>
+<li><a class="reference internal" href="#utils.train.train"><code class="docutils literal notranslate"><span class="pre">train()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils.vector">utils.vector module</a><ul>
+<li><a class="reference internal" href="#utils.vector.clipped_mean"><code class="docutils literal notranslate"><span class="pre">clipped_mean()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.compute_model_view"><code class="docutils literal notranslate"><span class="pre">compute_model_view()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.compute_orthonormal_basis"><code class="docutils literal notranslate"><span class="pre">compute_orthonormal_basis()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.cross_product_2d"><code class="docutils literal notranslate"><span class="pre">cross_product_2d()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.extrapolate"><code class="docutils literal notranslate"><span class="pre">extrapolate()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.get_mps_device"><code class="docutils literal notranslate"><span class="pre">get_mps_device()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.interpolate"><code class="docutils literal notranslate"><span class="pre">interpolate()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.intersect_ray_line_2d"><code class="docutils literal notranslate"><span class="pre">intersect_ray_line_2d()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.pairwise_distances"><code class="docutils literal notranslate"><span class="pre">pairwise_distances()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.pairwise_distances_cross"><code class="docutils literal notranslate"><span class="pre">pairwise_distances_cross()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.project"><code class="docutils literal notranslate"><span class="pre">project()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.project_to_screen"><code class="docutils literal notranslate"><span class="pre">project_to_screen()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.sample_cone"><code class="docutils literal notranslate"><span class="pre">sample_cone()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.smooth_mean"><code class="docutils literal notranslate"><span class="pre">smooth_mean()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.triangle_altitude"><code class="docutils literal notranslate"><span class="pre">triangle_altitude()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.triangle_raycast"><code class="docutils literal notranslate"><span class="pre">triangle_raycast()</span></code></a></li>
+<li><a class="reference internal" href="#utils.vector.triangle_raycast_batch"><code class="docutils literal notranslate"><span class="pre">triangle_raycast_batch()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-utils">Module contents</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">MarI/O Kart</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">utils package</strong>
+        <meta itemprop="position" content="2" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="utils-package">
+<h1>utils package<a class="headerlink" href="#utils-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-utils.draw">
+<span id="utils-draw-module"></span><h2>utils.draw module<a class="headerlink" href="#module-utils.draw" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.draw.consume_draw_stack">
+<span class="sig-prename descclassname"><span class="pre">utils.draw.</span></span><span class="sig-name descname"><span class="pre">consume_draw_stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="../_modules/utils/draw.html#consume_draw_stack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.draw.consume_draw_stack" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.draw.draw_lines">
+<span class="sig-prename descclassname"><span class="pre">utils.draw.</span></span><span class="sig-name descname"><span class="pre">draw_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/draw.html#draw_lines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.draw.draw_lines" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.draw.draw_paragraph">
+<span class="sig-prename descclassname"><span class="pre">utils.draw.</span></span><span class="sig-name descname"><span class="pre">draw_paragraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1.0,</span> <span class="pre">0.5,</span> <span class="pre">0.34)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">font_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vertical_spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">font_family</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Sans'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/draw.html#draw_paragraph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.draw.draw_paragraph" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.draw.draw_points">
+<span class="sig-prename descclassname"><span class="pre">utils.draw.</span></span><span class="sig-name descname"><span class="pre">draw_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/draw.html#draw_points"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.draw.draw_points" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.draw.draw_stack_op">
+<span class="sig-prename descclassname"><span class="pre">utils.draw.</span></span><span class="sig-name descname"><span class="pre">draw_stack_op</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Concatenate</span><span class="p"><span class="pre">[</span></span><span class="pre">Context</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/utils/draw.html#draw_stack_op"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.draw.draw_stack_op" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.draw.draw_text">
+<span class="sig-prename descclassname"><span class="pre">utils.draw.</span></span><span class="sig-name descname"><span class="pre">draw_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1.0,</span> <span class="pre">0.5,</span> <span class="pre">0.34)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">font_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">font_family</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Sans'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/draw.html#draw_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.draw.draw_text" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.draw.draw_triangles">
+<span class="sig-prename descclassname"><span class="pre">utils.draw.</span></span><span class="sig-name descname"><span class="pre">draw_triangles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/draw.html#draw_triangles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.draw.draw_triangles" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-utils.kcl_torch">
+<span id="utils-kcl-torch-module"></span><h2>utils.kcl_torch module<a class="headerlink" href="#module-utils.kcl_torch" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.kcl_torch.</span></span><span class="sig-name descname"><span class="pre">KCLTensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prisms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#utils.kcl_torch.PrismsTensor" title="utils.kcl_torch.PrismsTensor"><span class="pre">PrismsTensor</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_positions_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_normals_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_prisms_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_block_data_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_prism_thickness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_area_min_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_area_x_width_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_area_y_width_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_area_z_width_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_block_width_shift</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_area_x_blocks_shift</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_area_xy_blocks_shift</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_sphere_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/kcl_torch.html#KCLTensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.kcl_torch.KCLTensor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="mkds.html#mkds.kcl.KCLBase" title="mkds.kcl.KCLBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">KCLBase</span></code></a></p>
+<p>Represents a KCL (collision) file.</p>
+<p>KCL files store simplified model data for collision detection in games
+such as Mario Kart Wii / DS. They consist of a header, positions, normals,
+triangular prisms, and octree blocks.</p>
+<section id="header-layout">
+<h3>Header Layout<a class="headerlink" href="#header-layout" title="Link to this heading">¶</a></h3>
+<p>Offset  | Type  | Name                   | Description
+——–<a href="#id3"><span class="problematic" id="id4">|-------|</span></a>———————–<a href="#id1"><span class="problematic" id="id2">|</span></a>——————————————–
+0x00    | u32   | positions_offset       | Offset to vertex positions section
+0x04    | u32   | normals_offset         | Offset to normal vectors section
+0x08    | u32   | prisms_offset          | Offset to triangular prisms section
+0x0C    | u32   | block_data_offset      | Offset to octree blocks
+0x10    | f32   | prism_thickness        | Depth of triangular prism along normal
+0x14    | Vec3  | area_min_pos           | Minimum coordinates of model bounding box
+0x20    | u32   | area_x_width_mask      | X-axis mask for octree
+0x24    | u32   | area_y_width_mask      | Y-axis mask for octree
+0x28    | u32   | area_z_width_mask      | Z-axis mask for octree
+0x2C    | u32   | block_width_shift      | Octree leaf block size shift
+0x30    | u32   | area_x_blocks_shift    | Root child index shift (Y axis)
+0x34    | u32   | area_xy_blocks_shift   | Root child index shift (Z axis)
+0x38    | f32?  | sphere_radius          | Optional: max sphere radius for collisions</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._positions_offset">
+<span class="sig-name descname"><span class="pre">_positions_offset</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._positions_offset" title="Link to this definition">¶</a></dt>
+<dd><p>File offset to position vectors</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._normals_offset">
+<span class="sig-name descname"><span class="pre">_normals_offset</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._normals_offset" title="Link to this definition">¶</a></dt>
+<dd><p>File offset to normal vectors</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._prisms_offset">
+<span class="sig-name descname"><span class="pre">_prisms_offset</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._prisms_offset" title="Link to this definition">¶</a></dt>
+<dd><p>File offset to prism data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._block_data_offset">
+<span class="sig-name descname"><span class="pre">_block_data_offset</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._block_data_offset" title="Link to this definition">¶</a></dt>
+<dd><p>File offset to octree blocks</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._prism_thickness">
+<span class="sig-name descname"><span class="pre">_prism_thickness</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._prism_thickness" title="Link to this definition">¶</a></dt>
+<dd><p>Depth of each prism</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._area_min_pos">
+<span class="sig-name descname"><span class="pre">_area_min_pos</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._area_min_pos" title="Link to this definition">¶</a></dt>
+<dd><p>Minimum coordinates of the collision area</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._area_x_width_mask">
+<span class="sig-name descname"><span class="pre">_area_x_width_mask</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._area_x_width_mask" title="Link to this definition">¶</a></dt>
+<dd><p>X-axis mask for octree</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._area_y_width_mask">
+<span class="sig-name descname"><span class="pre">_area_y_width_mask</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._area_y_width_mask" title="Link to this definition">¶</a></dt>
+<dd><p>Y-axis mask for octree</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._area_z_width_mask">
+<span class="sig-name descname"><span class="pre">_area_z_width_mask</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._area_z_width_mask" title="Link to this definition">¶</a></dt>
+<dd><p>Z-axis mask for octree</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._block_width_shift">
+<span class="sig-name descname"><span class="pre">_block_width_shift</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._block_width_shift" title="Link to this definition">¶</a></dt>
+<dd><p>Octree leaf size shift</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._area_x_blocks_shift">
+<span class="sig-name descname"><span class="pre">_area_x_blocks_shift</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._area_x_blocks_shift" title="Link to this definition">¶</a></dt>
+<dd><p>Root block child index shift (Y)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._area_xy_blocks_shift">
+<span class="sig-name descname"><span class="pre">_area_xy_blocks_shift</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._area_xy_blocks_shift" title="Link to this definition">¶</a></dt>
+<dd><p>Root block child index shift (Z)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._sphere_radius">
+<span class="sig-name descname"><span class="pre">_sphere_radius</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._sphere_radius" title="Link to this definition">¶</a></dt>
+<dd><p>Optional maximum sphere radius for collisions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._prisms">
+<span class="sig-name descname"><span class="pre">_prisms</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._prisms" title="Link to this definition">¶</a></dt>
+<dd><p>Parsed prism objects</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="mkds.html#mkds.kcl.Prisms" title="mkds.kcl.Prisms">Prisms</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._positions">
+<span class="sig-name descname"><span class="pre">_positions</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._positions" title="Link to this definition">¶</a></dt>
+<dd><p>List of vertex positions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor._normals">
+<span class="sig-name descname"><span class="pre">_normals</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor._normals" title="Link to this definition">¶</a></dt>
+<dd><p>List of normal vectors</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor.from_file">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/kcl_torch.html#KCLTensor.from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.kcl_torch.KCLTensor.from_file" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor.nearest_triangles">
+<span class="sig-name descname"><span class="pre">nearest_triangles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/kcl_torch.html#KCLTensor.nearest_triangles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.kcl_torch.KCLTensor.nearest_triangles" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor.prism_cls">
+<span class="sig-name descname"><span class="pre">prism_cls</span></span><a class="headerlink" href="#utils.kcl_torch.KCLTensor.prism_cls" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#utils.kcl_torch.PrismsTensor" title="utils.kcl_torch.PrismsTensor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PrismsTensor</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.kcl_torch.KCLTensor.search_triangles">
+<span class="sig-name descname"><span class="pre">search_triangles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_attribute_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/kcl_torch.html#KCLTensor.search_triangles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.kcl_torch.KCLTensor.search_triangles" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.kcl_torch.</span></span><span class="sig-name descname"><span class="pre">PrismsTensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_pos_i</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_fnrm_i</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_enrm1_i</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_enrm2_i</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_enrm3_i</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_attributes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/kcl_torch.html#PrismsTensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.kcl_torch.PrismsTensor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="mkds.html#mkds.kcl.PrismsBase" title="mkds.kcl.PrismsBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">PrismsBase</span></code></a></p>
+<p>Represents the triangular prisms section of the KCL file.</p>
+<p>Each prism is a 0x10 byte structure with the following layout:</p>
+<p><a href="#id5"><span class="problematic" id="id6">|Offset | Type | Name      | Description |
+|---|</span></a>—<a href="#id7"><span class="problematic" id="id8">|---|</span></a>—|
+<a href="#id9"><span class="problematic" id="id10">|0x00   | f32  | height   | Prism height from vertex 1 to opposite side|</span></a>
+<a href="#id11"><span class="problematic" id="id12">|0x04   | u16  | pos_i    | Index of first vertex in positions array|</span></a>
+<a href="#id13"><span class="problematic" id="id14">|0x06   | u16  | fnrm_i   | Face normal index|</span></a>
+<a href="#id15"><span class="problematic" id="id16">|0x08   | u16  | enrm1_i  | Edge normal A index|</span></a>
+<a href="#id17"><span class="problematic" id="id18">|0x0A   | u16  | enrm2_i  | Edge normal B index|</span></a>
+<a href="#id19"><span class="problematic" id="id20">|0x0C   | u16  | enrm3_i  | Edge normal C index|</span></a>
+<a href="#id21"><span class="problematic" id="id22">|0x0E   | u16  | attributes | Collision attributes|</span></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor._height">
+<span class="sig-name descname"><span class="pre">_height</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor._height" title="Link to this definition">¶</a></dt>
+<dd><p>Prism heights</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor._pos_i">
+<span class="sig-name descname"><span class="pre">_pos_i</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor._pos_i" title="Link to this definition">¶</a></dt>
+<dd><p>Vertex indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor._fnrm_i">
+<span class="sig-name descname"><span class="pre">_fnrm_i</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor._fnrm_i" title="Link to this definition">¶</a></dt>
+<dd><p>Face normal indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor._enrm1_i">
+<span class="sig-name descname"><span class="pre">_enrm1_i</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor._enrm1_i" title="Link to this definition">¶</a></dt>
+<dd><p>Edge normal 1 indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor._enrm2_i">
+<span class="sig-name descname"><span class="pre">_enrm2_i</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor._enrm2_i" title="Link to this definition">¶</a></dt>
+<dd><p>Edge normal 2 indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor._enrm3_i">
+<span class="sig-name descname"><span class="pre">_enrm3_i</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor._enrm3_i" title="Link to this definition">¶</a></dt>
+<dd><p>Edge normal 3 indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor._attributes">
+<span class="sig-name descname"><span class="pre">_attributes</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor._attributes" title="Link to this definition">¶</a></dt>
+<dd><p>Collision attribute flags</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.collision_type">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">collision_type</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.collision_type" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.collision_variant">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">collision_variant</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.collision_variant" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.ignore_drivers">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ignore_drivers</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.ignore_drivers" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.ignore_items">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ignore_items</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.ignore_items" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.is_floor">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_floor</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.is_floor" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.is_wall">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_wall</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.is_wall" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.light_id">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">light_id</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.light_id" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="utils.kcl_torch.PrismsTensor.map_2d_shadow">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">map_2d_shadow</span></span><a class="headerlink" href="#utils.kcl_torch.PrismsTensor.map_2d_shadow" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-utils.memory">
+<span id="utils-memory-module"></span><h2>utils.memory module<a class="headerlink" href="#module-utils.memory" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.frame_cache">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">frame_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Concatenate</span><span class="p"><span class="pre">[</span></span><span class="pre">DeSmuME</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Concatenate</span><span class="p"><span class="pre">[</span></span><span class="pre">DeSmuME</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/utils/memory.html#frame_cache"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.frame_cache" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator that caches a function’s return value once per emulator tick.</p>
+<p>The wrapped function will only be re-executed when <cite>emu.get_ticks()</cite> changes.
+Useful for expensive reads that don’t change within a single frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>func</strong> – A function whose first argument is a <cite>DeSmuME</cite> instance.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A wrapped function with identical signature that returns a cached result per tick.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.game_cache">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">game_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Concatenate</span><span class="p"><span class="pre">[</span></span><span class="pre">DeSmuME</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Concatenate</span><span class="p"><span class="pre">[</span></span><span class="pre">DeSmuME</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">P</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/utils/memory.html#game_cache"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.game_cache" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator that caches a function’s return value for the process lifetime.</p>
+<p>The wrapped function executes once and its result is reused thereafter.
+Appropriate for data that remains constant across a run (e.g., course files).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>func</strong> – A function whose first argument is a <cite>DeSmuME</cite> instance.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A wrapped function with identical signature that returns a cached result.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.get_course_path">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">get_course_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#get_course_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.get_course_path" title="Link to this definition">¶</a></dt>
+<dd><p>Resolve a course ID to the local filesystem path for its assets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> – Course ID.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>String path relative to ./courses/ for the given course.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>AssertionError</strong> – If the course ID is not present in the lookup table.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.get_current_course_id">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">get_current_course_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#get_current_course_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.get_current_course_id" title="Link to this definition">¶</a></dt>
+<dd><p>Read the current course ID from memory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emu</strong> – Emulator instance.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Integer course ID (byte).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.load_current_kcl">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">load_current_kcl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#load_current_kcl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.load_current_kcl" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>game_cache</cite> to memoize across the entire run.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.load_current_nkm">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">load_current_nkm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#load_current_nkm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.load_current_nkm" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>game_cache</cite> to memoize across the entire run.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.project_to_screen">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">project_to_screen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#project_to_screen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.project_to_screen" title="Link to this definition">¶</a></dt>
+<dd><p>Convenience wrapper to project points using the current camera state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>points</strong> – Tensor shape (N,3) of world-space points.</p></li>
+<li><p><strong>device</strong> – Torch device.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tensor shape (N,4) in screen space (see <cite>_project_to_screen</cite>).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_camera_aspect">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_camera_aspect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_camera_aspect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_camera_aspect" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_camera_fov">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_camera_fov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_camera_fov"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_camera_fov" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_camera_position">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_camera_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_camera_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_camera_position" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_camera_ptr">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_camera_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_camera_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_camera_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_camera_target_position">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_camera_target_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_camera_target_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_camera_target_position" title="Link to this definition">¶</a></dt>
+<dd><p>Read the camera’s target/look-at position in world space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>device</strong> – Torch device for the returned tensor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>torch.Tensor shape (3,) target (x, y, z).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_checkpoint_distance_altitude">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_checkpoint_distance_altitude</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_checkpoint_distance_altitude"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_checkpoint_distance_altitude" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_checkpoint_positions">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_checkpoint_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_checkpoint_positions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_checkpoint_positions" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>game_cache</cite> to memoize across the entire run.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_checkpoint_ptr">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_checkpoint_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_checkpoint_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_checkpoint_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>game_cache</cite> to memoize across the entire run.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_clock">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_clock</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_clock"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_clock" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_clock_ptr">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_clock_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_clock_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_clock_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>game_cache</cite> to memoize across the entire run.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_current_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_current_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_current_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_current_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_current_checkpoint_position">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_current_checkpoint_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_current_checkpoint_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_current_checkpoint_position" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_current_key_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_current_key_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_current_key_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_current_key_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_current_lap">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_current_lap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_current_lap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_current_lap" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_direction">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_direction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_direction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_direction" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_direction_to_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_direction_to_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_direction_to_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_direction_to_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_facing_point_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_facing_point_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_facing_point_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_facing_point_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_facing_point_obstacle">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_facing_point_obstacle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_facing_point_obstacle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_facing_point_obstacle" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_forward_distance_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_forward_distance_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_forward_distance_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_forward_distance_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_forward_distance_obstacle">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_forward_distance_obstacle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_forward_distance_obstacle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_forward_distance_obstacle" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_ghost_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_ghost_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_ghost_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_ghost_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_ghost_key_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_ghost_key_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_ghost_key_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_ghost_key_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_left_distance_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_left_distance_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_left_distance_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_left_distance_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_left_distance_obstacle">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_left_distance_obstacle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_left_distance_obstacle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_left_distance_obstacle" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_map_object_is_coin_collected">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_map_object_is_coin_collected</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_map_object_is_coin_collected"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_map_object_is_coin_collected" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_map_object_type_id">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_map_object_type_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_map_object_type_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_map_object_type_id" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_model_view">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_model_view</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_model_view"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_model_view" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_next_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_next_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_next_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_next_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_next_checkpoint_position">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_next_checkpoint_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_next_checkpoint_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_next_checkpoint_position" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_object_flags">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_object_flags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_object_flags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_object_flags" title="Link to this definition">¶</a></dt>
+<dd><p>Read the object’s flags (type/category bits, state, etc.).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>id</strong> – Object index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Unsigned short flags value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_object_is_deleted">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_object_is_deleted</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_object_is_deleted"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_object_is_deleted" title="Link to this definition">¶</a></dt>
+<dd><p>Check if the object has been deleted (position pointer is null).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>id</strong> – Object index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if deleted; False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_object_is_ignored">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_object_is_ignored</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_object_is_ignored"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_object_is_ignored" title="Link to this definition">¶</a></dt>
+<dd><p>Determine if an object should be ignored (null or ignored-flag set).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>id</strong> – Object index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if object ptr is 0 or ignored bit is set; False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_object_offset">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_object_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_object_offset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_object_offset" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the memory offset of an object entry within the array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>id</strong> – Object index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Integer byte offset to the object’s metadata entry.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_object_position">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_object_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_object_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_object_position" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_object_position_ptr">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_object_position_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_object_position_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_object_position_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Read the pointer to an object’s position vector in memory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>id</strong> – Object index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Integer address for the object’s position struct (0 if deleted).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_object_ptr">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_object_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_object_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_object_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Read the object instance pointer for a given object ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>id</strong> – Object index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Integer address of the object struct (0 if null).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_objects">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_objects" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_objects_array_max_count">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_objects_array_max_count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">35108232</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_objects_array_max_count"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_objects_array_max_count" title="Link to this definition">¶</a></dt>
+<dd><p>Read the maximum number of objects in the global object array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>addr</strong> – Base address of the object array metadata.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Signed integer max count.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_objects_array_ptr">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_objects_array_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">35108232</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_objects_array_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_objects_array_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Read the pointer to the global object pointer array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>addr</strong> – Base address of the object array metadata.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Signed integer address of the object pointer array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_position">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_position" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_racer_object_is_ghost">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_racer_object_is_ghost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_racer_object_is_ghost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_racer_object_is_ghost" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_racer_ptr">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_racer_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">35106040</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#read_racer_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_racer_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Read the pointer to the player’s racer object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emu</strong> – Emulator instance.</p></li>
+<li><p><strong>addr</strong> – Memory address where the racer pointer is stored.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Integer address of the racer structure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.read_right_distance_obstacle">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">read_right_distance_obstacle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu:</span> <span class="pre">~desmume.emulator.DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*args:</span> <span class="pre">~typing.~P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.~P</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">R</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#read_right_distance_obstacle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.read_right_distance_obstacle" title="Link to this definition">¶</a></dt>
+<dd><p>Internal wrapper used by <cite>frame_cache</cite> to perform per-tick memoization.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.safe_object">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">safe_object</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/memory.html#safe_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.safe_object" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator that skips object reads when the object appears deleted.</p>
+<p>The wrapped function receives <cite>(emu, id, *args, **kwargs)</cite>. If the object
+is deleted (null position pointer), the wrapper returns <cite>None</cite>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.memory.z_clip_mask">
+<span class="sig-prename descclassname"><span class="pre">utils.memory.</span></span><span class="sig-name descname"><span class="pre">z_clip_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/utils/memory.html#z_clip_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.memory.z_clip_mask" title="Link to this definition">¶</a></dt>
+<dd><p>Compute a boolean mask for points within the view frustum Z range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> – Tensor of shape (N, 3+) where x[:, 2] is the camera-space Z.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A boolean tensor of shape (N,) where True indicates Z is between -Z_FAR and -Z_NEAR.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-utils.model">
+<span id="utils-model-module"></span><h2>utils.model module<a class="headerlink" href="#module-utils.model" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.model.ConnGene">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.model.</span></span><span class="sig-name descname"><span class="pre">ConnGene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#ConnGene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.ConnGene" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.model.EvolvedNet">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.model.</span></span><span class="sig-name descname"><span class="pre">EvolvedNet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">genome</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#EvolvedNet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.EvolvedNet" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.model.EvolvedNet.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#EvolvedNet.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.EvolvedNet.forward" title="Link to this definition">¶</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.model.Genome">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.model.</span></span><span class="sig-name descname"><span class="pre">Genome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_outputs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#Genome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.Genome" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.model.Genome.mutate_add_conn">
+<span class="sig-name descname"><span class="pre">mutate_add_conn</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#Genome.mutate_add_conn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.Genome.mutate_add_conn" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.model.Genome.mutate_add_node">
+<span class="sig-name descname"><span class="pre">mutate_add_node</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#Genome.mutate_add_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.Genome.mutate_add_node" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.model.Genome.mutate_weight">
+<span class="sig-name descname"><span class="pre">mutate_weight</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#Genome.mutate_weight"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.Genome.mutate_weight" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.model.NodeGene">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.model.</span></span><span class="sig-name descname"><span class="pre">NodeGene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntype</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/model.html#NodeGene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.model.NodeGene" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+</section>
+<section id="module-utils.nkm_torch">
+<span id="utils-nkm-torch-module"></span><h2>utils.nkm_torch module<a class="headerlink" href="#module-utils.nkm_torch" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.nkm_torch.CPOITensor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.nkm_torch.</span></span><span class="sig-name descname"><span class="pre">CPOITensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/nkm_torch.html#CPOITensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.nkm_torch.CPOITensor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="mkds.html#mkds.nkm.CPOI" title="mkds.nkm.CPOI"><code class="xref py py-class docutils literal notranslate"><span class="pre">CPOI</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.nkm_torch.NKMTensor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.nkm_torch.</span></span><span class="sig-name descname"><span class="pre">NKMTensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/nkm_torch.html#NKMTensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.nkm_torch.NKMTensor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="mkds.html#mkds.nkm.NKM" title="mkds.nkm.NKM"><code class="xref py py-class docutils literal notranslate"><span class="pre">NKM</span></code></a></p>
+</dd></dl>
+
+</section>
+<section id="module-utils.overlay">
+<span id="utils-overlay-module"></span><h2>utils.overlay module<a class="headerlink" href="#module-utils.overlay" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.overlay.camera_overlay">
+<span class="sig-prename descclassname"><span class="pre">utils.overlay.</span></span><span class="sig-name descname"><span class="pre">camera_overlay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/overlay.html#camera_overlay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.overlay.camera_overlay" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.overlay.checkpoint_overlay_1">
+<span class="sig-prename descclassname"><span class="pre">utils.overlay.</span></span><span class="sig-name descname"><span class="pre">checkpoint_overlay_1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/overlay.html#checkpoint_overlay_1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.overlay.checkpoint_overlay_1" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.overlay.checkpoint_overlay_2">
+<span class="sig-prename descclassname"><span class="pre">utils.overlay.</span></span><span class="sig-name descname"><span class="pre">checkpoint_overlay_2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/overlay.html#checkpoint_overlay_2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.overlay.checkpoint_overlay_2" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.overlay.collision_overlay">
+<span class="sig-prename descclassname"><span class="pre">utils.overlay.</span></span><span class="sig-name descname"><span class="pre">collision_overlay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/overlay.html#collision_overlay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.overlay.collision_overlay" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.overlay.player_overlay">
+<span class="sig-prename descclassname"><span class="pre">utils.overlay.</span></span><span class="sig-name descname"><span class="pre">player_overlay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/overlay.html#player_overlay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.overlay.player_overlay" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.overlay.raycasting_overlay">
+<span class="sig-prename descclassname"><span class="pre">utils.overlay.</span></span><span class="sig-name descname"><span class="pre">raycasting_overlay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/overlay.html#raycasting_overlay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.overlay.raycasting_overlay" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.overlay.stats_overlay">
+<span class="sig-prename descclassname"><span class="pre">utils.overlay.</span></span><span class="sig-name descname"><span class="pre">stats_overlay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/overlay.html#stats_overlay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.overlay.stats_overlay" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-utils.train">
+<span id="utils-train-module"></span><h2>utils.train module<a class="headerlink" href="#module-utils.train" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.train.calculate_max_course_distance">
+<span class="sig-prename descclassname"><span class="pre">utils.train.</span></span><span class="sig-name descname"><span class="pre">calculate_max_course_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pts1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pts2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/train.html#calculate_max_course_distance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.train.calculate_max_course_distance" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.train.fitness">
+<span class="sig-prename descclassname"><span class="pre">utils.train.</span></span><span class="sig-name descname"><span class="pre">fitness</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#utils.model.Genome" title="utils.model.Genome"><span class="pre">Genome</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/train.html#fitness"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.train.fitness" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.train.train">
+<span class="sig-prename descclassname"><span class="pre">utils.train.</span></span><span class="sig-name descname"><span class="pre">train</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DeSmuME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fitness_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_fitness</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_pop_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Generator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/utils/train.html#train"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.train.train" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-utils.vector">
+<span id="utils-vector-module"></span><h2>utils.vector module<a class="headerlink" href="#module-utils.vector" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.clipped_mean">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">clipped_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#clipped_mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.clipped_mean" title="Link to this definition">¶</a></dt>
+<dd><p>Compute mean of 3D points, keeping only those within <cite>std_thresh</cite> stds
+of the mean.</p>
+<p>points: (N,3) tensor
+std_thresh: threshold in standard deviations</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.compute_model_view">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">compute_model_view</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">camera_pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">camera_target_pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#compute_model_view"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.compute_model_view" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.compute_orthonormal_basis">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">compute_orthonormal_basis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forward_vector_3d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_vector_3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#compute_orthonormal_basis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.compute_orthonormal_basis" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.cross_product_2d">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">cross_product_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/utils/vector.html#cross_product_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.cross_product_2d" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.extrapolate">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">extrapolate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#extrapolate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.extrapolate" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.get_mps_device">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">get_mps_device</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">device</span></span></span><a class="reference internal" href="../_modules/utils/vector.html#get_mps_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.get_mps_device" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.interpolate">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">interpolate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#interpolate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.interpolate" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.intersect_ray_line_2d">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">intersect_ray_line_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">O</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#intersect_ray_line_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.intersect_ray_line_2d" title="Link to this definition">¶</a></dt>
+<dd><p>Find intersection of a ray (O + tD, t&gt;=0)
+with a line segment between P1 and P2.</p>
+<p>All inputs are torch tensors of shape (…, 2)
+and can be batched.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.pairwise_distances">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">pairwise_distances</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#pairwise_distances"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.pairwise_distances" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.pairwise_distances_cross">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">pairwise_distances_cross</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#pairwise_distances_cross"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.pairwise_distances_cross" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.project">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#project"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.project" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.project_to_screen">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">project_to_screen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">world_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_view</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fov</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aspect</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">far</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">near</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#project_to_screen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.project_to_screen" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.sample_cone">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">sample_cone</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#sample_cone"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.sample_cone" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.smooth_mean">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">smooth_mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sx1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#smooth_mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.smooth_mean" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.triangle_altitude">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">triangle_altitude</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/utils/vector.html#triangle_altitude"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.triangle_altitude" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.triangle_raycast">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">triangle_raycast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ray_origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ray_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v3</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/utils/vector.html#triangle_raycast"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.triangle_raycast" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.vector.triangle_raycast_batch">
+<span class="sig-prename descclassname"><span class="pre">utils.vector.</span></span><span class="sig-name descname"><span class="pre">triangle_raycast_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ray_origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ray_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v3</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/utils/vector.html#triangle_raycast_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.vector.triangle_raycast_batch" title="Link to this definition">¶</a></dt>
+<dd><p>Batched ray-triangle intersection using Möller–Trumbore.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ray_origin</strong> – (N, 3) origins</p></li>
+<li><p><strong>ray_dir</strong> – (N, 3) directions (normalized)</p></li>
+<li><p><strong>v1</strong> – (M, 3) triangle vertices</p></li>
+<li><p><strong>v2</strong> – (M, 3) triangle vertices</p></li>
+<li><p><strong>v3</strong> – (M, 3) triangle vertices</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(N, M, 3) intersection points (NaN if no hit)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>intersections</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-utils">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-utils" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Blake Moody</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/shibuya.js?v=e730760c"></script></body>
+</html>
