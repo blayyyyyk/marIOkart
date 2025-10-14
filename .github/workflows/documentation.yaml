@@ -18,6 +18,7 @@ jobs:
           pip install sphinx sphinx_rtd_theme myst_parser shibuya mkds
           pip install .
       - name: Test
+        run: |
           pwd
       - name: Sphinx build
         run: |
