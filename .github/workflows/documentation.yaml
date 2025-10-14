@@ -19,12 +19,9 @@ jobs:
           pip install .
       - name: Test
         run: |
-          pwd
-          ls -a
+          python -c "import importlib.util; print('found' if importlib.util.find_spec('src') else 'not found')"
       - name: Sphinx build
         run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          rm -rf _build
           sphinx-build docs _build
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
