@@ -8,3 +8,4 @@ rom
 *.nds
 **/*/venv
 **/*/_build
+**/*/_build/*
