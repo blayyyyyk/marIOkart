@@ -1,37 +1,19 @@
-mkds package
-============
+MKDS File Parsing Library
+=========================
 
 Submodules
 ----------
 
-mkds.kcl module
----------------
+.. toctree::
+   :maxdepth: 2
+   :caption: MKDS
 
-.. automodule:: mkds.kcl
-   :members:
-   :show-inheritance:
-   :undoc-members:
+   mkds/nkm
+   mkds/kcl
+   mkds/utils
+   mkds/nkm-t
+   mkds/kcl-t
 
-mkds.nkm module
----------------
 
-.. automodule:: mkds.nkm
-   :members:
-   :show-inheritance:
-   :undoc-members:
 
-mkds.utils module
------------------
 
-.. automodule:: mkds.utils
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-Module contents
----------------
-
-.. automodule:: mkds
-   :members:
-   :show-inheritance:
-   :undoc-members:
