@@ -6,3 +6,4 @@ MKDS Info.lua
 pyrightconfig.json
 rom
 *.nds
+**/*/venv

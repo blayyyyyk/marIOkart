@@ -1,0 +1,22 @@
+.. MarI/O Kart documentation master file, created by
+   sphinx-quickstart on Mon Oct 13 23:44:59 2025.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+MarI/O Kart documentation
+=========================
+
+Add your content using ``reStructuredText`` syntax. See the
+`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
+documentation for details.
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Documentation
+   
+   Overlays <OVERLAYS>
+   Reading Game Memory <READING_MEMORY>
+   Reading ROM Files <READING_FILES>
+   NKM/KCL Parser `mkds` <api/modules>
+   Utilities <api/utils>
