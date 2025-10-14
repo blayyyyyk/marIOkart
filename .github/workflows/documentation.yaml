@@ -15,7 +15,7 @@ jobs:
           python-version: 3.11
       - name: Install dependencies
         run: |
-          pip install sphinx sphinx_rtd_theme myst_parser shibuya mkds torch-types
+          pip install sphinx sphinx_rtd_theme myst_parser shibuya mkds types-torch
           pip install .
       - name: Test
         run: |
