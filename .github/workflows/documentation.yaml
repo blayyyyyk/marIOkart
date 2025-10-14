@@ -13,10 +13,16 @@ jobs:
       - uses: actions/setup-python@v5
       - name: Install dependencies
         run: |
-          pip install ..
-          pip install sphinx sphinx_rtd_theme myst_parser shibuya mkds
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew install pygobject3 gtk4
+          pip install -r requirements.txt
+          export PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:
+          export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib:
+          pip install sphinx sphinx_rtd_theme myst_parser shibuya
       - name: Sphinx build
         run: |
+          export PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:
+          
           sphinx-build docs docs/_build
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
