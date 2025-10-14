@@ -39,7 +39,8 @@ from gi.repository import Gtk, Gdk, GLib
 # ----------------------------
 # CONSTANTS
 # ----------------------------
-device = get_mps_device()
+#device = get_mps_device()
+device = None
 SCALE = 3
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
 SAVE_STATE_ID = 4
