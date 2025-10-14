@@ -2,7 +2,7 @@
 <html lang="en" data-accent-color="purple" data-content_root="./">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MKDS Overlay System — Extensible Overlays for Mario Kart DS - MarI/O Kart 0.0.1 documentation</title><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="mkds — Mario Kart DS NKM &amp; KCL Readers" href="READING_FILES.html" /><link rel="prev" title="MarI/O Kart documentation" href="index.html" /><script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MKDS Overlay System — Extensible Overlays for Mario Kart DS - MarI/O Kart documentation</title><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="mkds — Mario Kart DS NKM &amp; KCL Readers" href="READING_FILES.html" /><link rel="prev" title="MarI/O Kart documentation" href="index.html" /><script>
     function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
     setColorMode(localStorage._theme||"auto");
   </script><link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b1a1f93b" />
@@ -160,23 +160,23 @@ Compute geometry from live emulator memory, project to screen space, and enqueue
 <li><p><a class="reference internal" href="#coordinate-system--screen-space"><span class="xref myst">Coordinate System &amp; Screen Space</span></a></p></li>
 <li><p><a class="reference internal" href="#overlay-api-built-ins"><span class="xref myst">Overlay API (Built-ins)</span></a></p>
 <ul>
-<li><p><a class="reference internal" href="api/utils.html#utils.overlay.collision_overlay" title="utils.overlay.collision_overlay"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">collision_overlay</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.overlay.raycasting_overlay" title="utils.overlay.raycasting_overlay"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">raycasting_overlay</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.overlay.camera_overlay" title="utils.overlay.camera_overlay"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">camera_overlay</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.overlay.checkpoint_overlay_1" title="utils.overlay.checkpoint_overlay_1"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">checkpoint_overlay_1</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.overlay.checkpoint_overlay_2" title="utils.overlay.checkpoint_overlay_2"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">checkpoint_overlay_2</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.overlay.player_overlay" title="utils.overlay.player_overlay"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">player_overlay</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.overlay.stats_overlay" title="utils.overlay.stats_overlay"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">stats_overlay</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#collision_overlay"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">collision_overlay</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#raycasting_overlay"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">raycasting_overlay</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#camera_overlay"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">camera_overlay</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#checkpoint_overlay_1"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">checkpoint_overlay_1</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#checkpoint_overlay_2"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">checkpoint_overlay_2</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#player_overlay"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">player_overlay</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#stats_overlay"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">stats_overlay</span></code></span></a></p></li>
 </ul>
 </li>
 <li><p><a class="reference internal" href="#drawing-primitives--queue"><span class="xref myst">Drawing Primitives &amp; Queue</span></a></p>
 <ul>
-<li><p><a class="reference internal" href="api/utils.html#utils.draw.draw_points" title="utils.draw.draw_points"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">draw_points</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.draw.draw_lines" title="utils.draw.draw_lines"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">draw_lines</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.draw.draw_triangles" title="utils.draw.draw_triangles"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">draw_triangles</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.draw.draw_text" title="utils.draw.draw_text"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">draw_text</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.draw.draw_paragraph" title="utils.draw.draw_paragraph"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">draw_paragraph</span></code></span></a></p></li>
-<li><p><a class="reference internal" href="api/utils.html#utils.draw.consume_draw_stack" title="utils.draw.consume_draw_stack"><span class="xref myst py py-func"><code class="docutils literal notranslate"><span class="pre">consume_draw_stack</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#draw_points"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">draw_points</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#draw_lines"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">draw_lines</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#draw_triangles"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">draw_triangles</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#draw_text"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">draw_text</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#draw_paragraph"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">draw_paragraph</span></code></span></a></p></li>
+<li><p><a class="reference internal" href="#consume_draw_stack"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">consume_draw_stack</span></code></span></a></p></li>
 <li><p><a class="reference internal" href="#decorator-draw_stack_op"><span class="xref myst">Decorator: <code class="docutils literal notranslate"><span class="pre">draw_stack_op</span></code></span></a></p></li>
 </ul>
 </li>
@@ -579,7 +579,7 @@ A: Use module-level globals (as <code class="docutils literal notranslate"><span
     </div>
   </div>
 </footer>
-      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="_static/shibuya.js?v=e730760c"></script></body>

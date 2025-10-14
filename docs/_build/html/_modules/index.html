@@ -2,7 +2,7 @@
 <html lang="en" data-accent-color="purple" data-content_root="../">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Overview: module code - MarI/O Kart 0.0.1 documentation</title><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Overview: module code - MarI/O Kart documentation</title><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><script>
     function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
     setColorMode(localStorage._theme||"auto");
   </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b1a1f93b" />
@@ -54,11 +54,16 @@ data-aria-dark="Switch to auto color mode">
   <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
     <div class="sy-lside-inner md:sticky">
       <div class="sy-scrollbar p-6">
-        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../OVERLAYS.html">MKDS Overlay System — Extensible Overlays for Mario Kart DS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../READING_FILES.html"><code class="docutils literal notranslate"><span class="pre">mkds</span></code> — Mario Kart DS NKM &amp; KCL Readers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../READING_MEMORY.html">MKDS Emulator I/O &amp; Geometry Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../OVERLAYS.html">Overlays</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../READING_MEMORY.html">Reading Game Memory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../READING_FILES.html">Reading ROM Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/modules.html">NKM/KCL Parser `mkds`</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/mkds.html">mkds package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/utils.html">Utilities</a></li>
 </ul>
 
         </div>
@@ -100,9 +105,11 @@ data-aria-dark="Switch to auto color mode">
       <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
         <article class="yue" role="main">
           <h1>All modules for which code is available</h1>
-<ul><li><a href="mkds/kcl.html">mkds.kcl</a></li>
+<ul><li><a href="main.html">main</a></li>
+<li><a href="mkds/kcl.html">mkds.kcl</a></li>
 <li><a href="mkds/nkm.html">mkds.nkm</a></li>
 <li><a href="mkds/utils.html">mkds.utils</a></li>
+<li><a href="tests/decode_triangles.html">tests.decode_triangles</a></li>
 <li><a href="utils/draw.html">utils.draw</a></li>
 <li><a href="utils/kcl_torch.html">utils.kcl_torch</a></li>
 <li><a href="utils/memory.html">utils.memory</a></li>
@@ -138,7 +145,7 @@ data-aria-dark="Switch to auto color mode">
     </div>
   </div>
 </footer>
-      <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../_static/shibuya.js?v=e730760c"></script></body>
