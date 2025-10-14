@@ -11,8 +11,6 @@ Submodules
    mkds/nkm
    mkds/kcl
    mkds/utils
-   mkds/nkm-t
-   mkds/kcl-t
 
 
 
