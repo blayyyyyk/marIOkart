@@ -1,3 +1,4 @@
+from __future__ import annotations
 import cairo
 import threading
 import queue

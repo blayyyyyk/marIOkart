@@ -1,3 +1,4 @@
+from __future__ import annotations
 import torch
 from cairo import Context
 import cairo
