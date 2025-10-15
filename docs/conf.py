@@ -30,6 +30,7 @@ autodoc_default_options = {
     'undoc-members': True,
     'show-inheritance': True,
 }
+autodoc_member_order = 'bysource'
 # conf.py
 autodoc_mock_imports = ['gi', 'cairo', 'torch', 'desmume', 'numpy', 'pynput', 'torchlens', 'cv2']
 # -- Options for HTML output -------------------------------------------------
