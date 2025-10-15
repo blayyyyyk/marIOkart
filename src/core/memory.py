@@ -226,8 +226,8 @@ Compatibility
   supported APIs.
 
 """
+from __future__ import annotations
 import sys, os
-
 from desmume.emulator import SCREEN_WIDTH, DeSmuME
 from mkds.kcl import read_fx32
 from src.mkds_extensions.kcl_torch import KCLTensor

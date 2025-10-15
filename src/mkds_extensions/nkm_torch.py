@@ -1,3 +1,4 @@
+from __future__ import annotations
 from mkds.nkm import NKM, CPOI
 from src.utils.vector import extrapolate
 import torch
