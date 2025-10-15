@@ -93,20 +93,38 @@ class KCLBase:
     
     Attributes
     ----------
-    _height : list[float]
-        Prism heights
-    _pos_i : list[int]
-        Vertex indices
-    _fnrm_i : list[int]
-        Face normal indices
-    _enrm1_i : list[int]
-        Edge normal 1 indices
-    _enrm2_i : list[int]
-        Edge normal 2 indices
-    _enrm3_i : list[int]
-        Edge normal 3 indices
-    _attributes : list[int]
-        Collision attribute flags
+    _positions_offset : int
+        File offset to position vectors
+    _normals_offset : int
+        File offset to normal vectors
+    _prisms_offset : int
+        File offset to prism data
+    _block_data_offset : int
+        File offset to octree blocks
+    _prism_thickness : float
+        Depth of each prism
+    _area_min_pos : list[float]
+        Minimum coordinates of the collision area
+    _area_x_width_mask : int
+        X-axis mask for octree
+    _area_y_width_mask : int
+        Y-axis mask for octree
+    _area_z_width_mask : int
+        Z-axis mask for octree
+    _block_width_shift : int
+        Octree leaf size shift
+    _area_x_blocks_shift : int
+        Root block child index shift (Y)
+    _area_xy_blocks_shift : int
+        Root block child index shift (Z)
+    _sphere_radius : float or None
+        Optional maximum sphere radius for collisions
+    _prisms : Prisms
+        Parsed prism objects
+    _positions : list
+        List of vertex positions
+    _normals : list
+        List of normal vectors
     """
     prism_cls = PrismsBase
     
