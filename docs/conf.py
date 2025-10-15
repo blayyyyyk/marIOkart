@@ -36,9 +36,5 @@ autodoc_mock_imports = ['gi', 'cairo', 'torch', 'desmume', 'numpy', 'pynput', 't
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'shibuya'
+html_theme = 'furo'
 html_static_path = ['_static']
-
-html_theme_options = {
-  "accent_color": "purple",
-}
