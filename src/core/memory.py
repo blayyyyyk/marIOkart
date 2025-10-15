@@ -98,8 +98,26 @@ results (KCL/NKM tensors are created on the device used at first call).
 Public API Overview
 -------------------------------------------------------------------------------
 
++-------+------+------------+--------------------------------------------+
+|Offset | Type | Name       | Description                                |
++=======+======+============+============================================+
+|`0x00` |`f32` |`height`    | Prism height from vertex 1 to opposite side|
++-------+------+------------+--------------------------------------------+
+|`0x04` |`u16` |`pos_i`     | Index of first vertex in positions array   |
++-------+------+------------+--------------------------------------------+
+|`0x06` |`u16` |`fnrm_i`    | Face normal index                          |
++-------+------+------------+--------------------------------------------+
+|`0x08` |`u16` |`enrm1_i`   | Edge normal A index                        |
++-------+------+------------+--------------------------------------------+
+|`0x0A` |`u16` |`enrm2_i`   | Edge normal B index                        |
++-------+------+------------+--------------------------------------------+
+|`0x0C` |`u16` |`enrm3_i`   | Edge normal C index                        |
++-------+------+------------+--------------------------------------------+
+|`0x0E` |`u16` |`attributes`| Collision attributes                       |
++-------+------+------------+--------------------------------------------+
+
 Clock & Course
-~~~~~~~~~~~~~~
+--------------
 * `read_clock_ptr(emu)` — Base pointer to clock data (cached for game lifetime).
 * `read_clock(emu)` — Current clock in 10 ms units (cached per frame).
 * `get_current_course_id(emu)` — Current course ID (byte).
@@ -108,7 +126,7 @@ Clock & Course
 * `load_current_nkm(emu, device)` — Parsed NKM map data (game-cached).
 
 Player & Objects
-~~~~~~~~~~~~~~~~
+----------------
 * `read_racer_ptr(emu)` — Pointer to the player racer struct.
 * `read_position(emu, device)` — Player world position `(3,)`.
 * `read_direction(emu, device)` — Player forward direction `(3,)`.
@@ -116,7 +134,7 @@ Player & Objects
   - `safe_object` decorator returns `None` for deleted objects.
 
 Camera & Projection
-~~~~~~~~~~~~~~~~~~~
+-------------------
 * `read_camera_ptr(emu)` — Pointer to camera struct.
 * `read_camera_fov(emu)` — FOV in radians.
 * `read_camera_aspect(emu)` — Aspect ratio (W/H).

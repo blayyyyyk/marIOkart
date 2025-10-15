@@ -14,9 +14,9 @@ from .utils import (
 class Section:
     """
     Base class for sections in an NKM file.
-
+    
     Overview
-    --------
+    ========
     Most NKM sections (all except STAG) begin with an 8-byte section header:
       - 0x00 (4 bytes): Section magic (ASCII, e.g., "OBJI").
       - 0x04 (4 bytes): Number of entries in the section (UInt32).
@@ -38,6 +38,7 @@ class Section:
     * Many sections have fields where 0xFFFF or 0xFF indicates "unused" or
       "none" — callers should treat those sentinel values accordingly.
     """
+
     def __init__(self, data, size):
         self.data = data
         self.iter = range(0x08, len(data), size)
@@ -67,17 +68,10 @@ class OBJI(Section):
     objects, obstacle instances, item boxes, etc. These objects are instantiated
     by the game engine and can be linked to PATH routes.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector (VecFx32) — 3D position (X, Y, Z). Units are FX32 format.
-    0x0C: Vector — 3D rotation vector (often treated as Euler-like or direction).
-    0x18: Vector — 3D scale vector.
-    0x24: UInt16 — Object ID (index into object database). Value selects the
-                     model/behavior (see community object lists).
-    0x26: UInt16 — Route ID (0xFFFF indicates "no route").
-    0x28..0x37: UInt32[4] — Object-specific settings (four 32-bit words). Their
-                          meaning depends entirely on the object ID.
-    0x38: UInt32 — Show in Time Trials flag (1 = visible, 0 = hidden).
+
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-obji:
+      :end-before: .. _nkm-table-path:
 
     Gameplay Context
     ----------------
@@ -129,11 +123,9 @@ class PATH(Section):
     Describes metadata for routes used by objects and cameras. Each PATH entry
     points to a sequence of POIT entries (control points) that define the route.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Byte — Route ID.
-    0x01: Byte — Loop flag (1 if the route loops, 0 otherwise).
-    0x02: UInt16 — Number of points for the route (number of POIT entries).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-path:
+      :end-before: .. _nkm-table-poit:
 
     Gameplay Context
     ----------------
@@ -174,14 +166,9 @@ class POIT(Section):
     Stores the actual 3D points used by PATH routes. Points are grouped by route
     using the counts stored in PATH plus the various *PAT grouping sections.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position (VecFx32).
-    0x0C: Byte — Point index in the route (order index).
-    0x0D: Byte — Unknown / padding.
-    0x0E: Int16 — Point duration (signed). Not always used; may control timing
-                   between points (for camera/object interpolation).
-    0x10: UInt32 — Unknown (possibly reserved or flags).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-poit:
+      :end-before: .. _nkm-table-stag:
 
     Gameplay Context
     ----------------
@@ -221,25 +208,10 @@ class STAG:
     -------
     Contains global track settings: track ID, default lap count, fog settings,
     colors used by KCL (collision visual palettes), and other miscellaneous bytes.
-
-    Offsets / Fields (STAG 0x00..0x2B)
-    ---------------------------------
-    0x00: String (4 bytes) — Section magic "STAG" (present in file).
-    0x04: UInt16 — Track ID.
-    0x06: UInt16 — Amount of laps.
-    0x08: Byte — Unknown (seen set to small integers).
-    0x09: Byte — Fog enabled (1 = enabled, 0 = disabled).
-    0x0A: Byte — Fog table generation mode.
-    0x0B: Byte — Fog slope.
-    0x0C..0x13: Byte[8] — Unknown region (padding or extra flags).
-    0x14: Fx32 — Fog distance (fixed-point).
-    0x18: GXRgb — Fog color (not yet implemented).
-    0x1A: UInt16 — Fog alpha (0..15 typical range).
-    0x1C: GXRgb — KCL color 1.
-    0x1E: GXRgb — KCL color 2.
-    0x20: GXRgb — KCL color 3.
-    0x22: GXRgb — KCL color 4.
-    0x24..0x2B: Byte[8] — Another unknown block.
+    
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-stag:
+      :end-before: .. _nkm-table-ktps:
 
     Gameplay Context
     ----------------
@@ -288,13 +260,9 @@ class KTPS(Section):
     Defines start positions (spawn/starting grid) for players/racers. Typically
     used for the main race starts; can also be used in battle or mission modes.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position (VecFx32) for the starting spawn.
-    0x0C: Vector — 3D rotation vector (direction the racer initially faces).
-    0x18: UInt16 — Padding (usually 0xFFFF).
-    0x1A: UInt16 — Start position index (used in battle/mission mode; 0xFFFF
-                       for normal race courses).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-ktps:
+      :end-before: .. _nkm-table-ktpj:
 
     Gameplay Context
     ----------------
@@ -332,13 +300,9 @@ class KTPJ(Section):
     certain scripted events. Contains references to enemy/item points (EPOI/IPOI)
     to determine nearby behavior or AI context.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector.
-    0x0C: Vector — 3D rotation vector.
-    0x18: UInt16 — Enemy position ID (EPOI index).
-    0x1A: UInt16 — Item position ID (IPOI index).
-    0x1C: UInt32 — Respawn ID (not present in the oldest beta versions).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-ktpj:
+      :end-before: .. _nkm-table-ktp2:
 
     Gameplay Context
     ----------------
@@ -379,12 +343,9 @@ class KTP2(Section):
     Defines the "lap gate" points that the engine checks to determine whether a
     player completed a lap. Usually combined with timing/ordering checks.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector.
-    0x0C: Vector — 3D rotation vector.
-    0x18: UInt16 — Padding (0xFFFF).
-    0x1A: UInt16 — Index (commonly 0xFFFF).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-ktp2:
+      :end-before: .. _nkm-table-ktpc:
 
     Gameplay Context
     ----------------
@@ -415,12 +376,9 @@ class KTPC(Section):
     Describes destinations for cannons/pipes used in certain stages (mostly
     in battle stages). Cannon indices are used by specialized collision types.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector (destination).
-    0x0C: Vector — 3D rotation vector.
-    0x18: UInt16 — Unknown field (investigate for specific behaviors).
-    0x1A: UInt16 — Cannon index (used by 'Cannon Activator' collision types).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-ktpc:
+      :end-before: .. _nkm-table-ktpm:
 
     Gameplay Context
     ----------------
@@ -451,12 +409,9 @@ class KTPM(Section):
     Points used by mission objectives (mission mode). They often resemble
     KTPS/KTP2 entries but have mission-specific indexing.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector.
-    0x0C: Vector — 3D rotation vector.
-    0x18: UInt16 — Padding (0xFFFF).
-    0x1A: UInt16 — Index (used to map to mission logic).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-ktpm:
+      :end-before: .. _nkm-table-cpoi:
 
     Gameplay Context
     ----------------
@@ -488,21 +443,9 @@ class CPOI(Section):
     respawn logic. CPOI includes two 2D positions and precomputed trig/distance
     values used by the engine to determine crossing and checkpoint ordering.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector2D — Position 1 (VecFx32 2D).
-    0x08: Vector2D — Position 2 (VecFx32 2D) — typically the other edge of checkpoint.
-    0x10: Fx32 — Precomputed sinus (used for orientation math).
-    0x14: Fx32 — Precomputed cosinus.
-    0x18: Fx32 — Distance between position1 and position2 (checkpoint length).
-    0x1C: Int16 — Section data 1 (unknown; may encode connectivity).
-    0x1E: Int16 — Section data 2 (unknown).
-    0x20: UInt16 — Key ID:
-             0x0000 = lap counter,
-             0x0001..0xFFFE = keyed checkpoint,
-             0xFFFF = no key.
-    0x22: Byte — Respawn ID.
-    0x23: Byte — Unknown/padding.
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-cpoi:
+      :end-before: .. _nkm-table-cpat:
 
     Gameplay Context
     ----------------
@@ -544,13 +487,9 @@ class CPAT(Section):
     entry points to a contiguous block of CPOI points and describes adjacency
     (previous/next groups) and section order.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: UInt16 — Point start index into global CPOI array.
-    0x02: UInt16 — Point length (number of CPOI points).
-    0x04..0x06: Byte[3] — Next group indices (up to 3). 0xFF = unused.
-    0x07..0x09: Byte[3] — Previous group indices (up to 3). 0xFF = unused.
-    0x0A: Int16 — Section order (signed; determines ordering among groups).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-cpat:
+      :end-before: .. _nkm-table-ipoi:
 
     Gameplay Context
     ----------------
@@ -590,11 +529,9 @@ class IPOI(Section):
     follow a path along a route. IPOI entries are often referenced by KTPJ
     (respawn) or object logic.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector.
-    0x0C: Fx32 — Point scale (fixed point value, used for size or weighting).
-    0x10: UInt32 — Unknown; reserved or object-specific.
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-ipoi:
+      :end-before: .. _nkm-table-ipat:
 
     Gameplay Context
     ----------------
@@ -624,13 +561,9 @@ class IPAT(Section):
     Group IPOI entries into contiguous point ranges and define adjacency, much
     like CPAT but for item points.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: UInt16 — Point start index into IPOI array.
-    0x02: UInt16 — Point length.
-    0x04..0x06: Byte[3] — Next group indices (0xFF unused).
-    0x07..0x09: Byte[3] — Previous group indices (0xFF unused).
-    0x0A: Int16 — Section order.
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-ipat:
+      :end-before: .. _nkm-table-epoi:
 
     Gameplay Context
     ----------------
@@ -662,13 +595,9 @@ class EPOI(Section):
     Defines points that the CPU opponents use for their routing (AI paths).
     These influence how CPUs drive the course (lines, drifting behavior, etc).
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector.
-    0x0C: Fx32 — Point scale (used for weight or radius).
-    0x10: Int16 — Drifting parameter (signed).
-    0x12: UInt16 — Unknown (padding/flags).
-    0x14: UInt32 — Unknown (engine-specific metadata).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-epoi:
+      :end-before: .. _nkm-table-epat:
 
     Gameplay Context
     ----------------
@@ -701,13 +630,9 @@ class EPAT(Section):
     Groups EPOI points into contiguous blocks and defines adjacency (next/prev
     groups) and section ordering. Used by CPU pathing code to navigate routes.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: UInt16 — Point start into EPOI array.
-    0x02: UInt16 — Point length.
-    0x04..0x06: Byte[3] — Next groups (0xFF unused).
-    0x07..0x09: Byte[3] — Previous groups (0xFF unused).
-    0x0A: Int16 — Section order.
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-epat:
+      :end-before: .. _nkm-table-mepo:
 
     Gameplay Context
     ----------------
@@ -740,12 +665,9 @@ class MEPO(Section):
     Similar to EPOI but used by specific mini-games; describes where minigame
     entities spawn/move.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position.
-    0x0C: Fx32 — Point scale.
-    0x10: Int32 — Drifting (signed; larger type vs EPOI).
-    0x14: UInt32 — Unknown.
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-mepo:
+      :end-before: .. _nkm-table-mepa:
 
     Gameplay Context
     ----------------
@@ -771,12 +693,9 @@ class MEPA(Section):
     Groups MEPO points into sequences. MEPA entries support up to 8 next and
     8 previous groups (Byte[8]) because mini-games may have richer topology.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: UInt16 — Point start index into MEPO array.
-    0x02: UInt16 — Point length.
-    0x04..0x0B: Byte[8] — Next group indices (0xFF unused).
-    0x0C..0x13: Byte[8] — Previous group indices (0xFF unused).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-mepa:
+      :end-before: .. _nkm-table-nkm:
 
     Gameplay Context
     ----------------
@@ -809,26 +728,9 @@ class AREA(Section):
     axes/length vectors (defining an oriented bounding box), and metadata such
     as area type and camera ID.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector (center).
-    0x0C: Vector — Length vector (extent in X/Y/Z possibly).
-    0x18: Vector — X-vector (orientation).
-    0x24: Vector — Y-vector.
-    0x30: Vector — Z-vector.
-    0x3C: Int16 — Unknown.
-    0x3E: Int16 — Unknown.
-    0x40: Int16 — Unknown.
-    0x42: Byte  — Unknown.
-    0x43: Byte  — Camera ID (index into CAME).
-    0x44: Byte  — Area type:
-             - 0x00: Unknown
-             - 0x01: Camera
-             - 0x02: (unknown)
-             - 0x03: (unknown)
-             - 0x04: Waterfall sound area
-    0x45: Int16 — Unknown.
-    0x47: Byte  — Unknown.
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-area:
+      :end-before: .. _nkm-table-came:
 
     Gameplay Context
     ----------------
@@ -871,40 +773,16 @@ class CAME(Section):
     intros, and dynamic in-game camera triggers. Camera entries are often linked
     by AREA zones or object routes.
 
-    Offsets (per-entry)
-    -------------------
-    0x00: Vector — 3D position vector 1 (primary).
-    0x0C: Vector — 3D rotation vector.
-    0x18: Vector — 3D position vector 2 (secondary/look-at).
-    0x24: Vector — 3D position vector 3 (tertiary/intermediate).
-    0x30: Int16  — FOV begin (field-of-view start).
-    0x32: Fx16  — FOV begin sine (precomputed).
-    0x34: Fx16  — FOV begin cosine.
-    0x36: Int16  — FOV end.
-    0x38: Fx16  — FOV end sine.
-    0x3A: Fx16  — FOV end cosine.
-    0x3C: UInt16 — Camera zoom.
-    0x3E: UInt16 — Camera type (see camera type table below).
-    0x40: UInt16 — Linked route (0xFFFF if none).
-    0x42: UInt16 — Route speed.
-    0x44: UInt16 — Point speed.
-    0x46: UInt16 — Camera duration (in 1/60s units).
-    0x48: UInt16 — Next camera (0xFFFF if last).
-    0x4A: Byte   — Intro pan first camera indicator:
-    0x00 = none, 0x01 = top screen, 0x02 = bottom screen.
-    0x4B: Byte   — Unknown (1 if camera type == 5 in some tracks).
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-came:
+      :end-before: .. _nkm-table-came-again:
 
-    Camera Type (common):
-    0x00: After race camera
-    0x01: Unknown (with route)
-    0x02: Unknown
-    0x03: Intro camera (top screen)
-    0x04: Intro camera (bottom screen)
-    0x05: Unknown
-    0x06: Unknown
-    0x07: Battle mode camera
-    0x08: Mission finish camera
+    .. include:: /_includes/nkm_tables.rst
+      :start-after: .. _nkm-table-came-again:
+      :end-before: .. _nkm-table-end:
 
+    
+    
     Gameplay Context
     ----------------
     - CAME entries drive cinematic camera movement during intros, cutscenes,

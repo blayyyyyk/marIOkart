@@ -306,6 +306,7 @@ def generate_trainer(emu: DeSmuME):
 # ENTRY POINT
 # ----------------------------
 if __name__ == "__main__":
+    device = get_mps_device()
     start_keyboard_listener()
     run_emulator(
         generate_trainer,
