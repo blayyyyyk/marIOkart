@@ -1,3 +1,4 @@
+from __future__ import annotations
 import torchlens as tl
 import torch, torch.nn as nn, torch.nn.functional as F
 import random, copy

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from desmume.emulator import DeSmuME
 from src.visualization.draw import draw_paragraph, draw_points, draw_text, draw_triangles, draw_lines
 from src.utils.vector import interpolate

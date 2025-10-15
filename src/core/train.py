@@ -1,3 +1,4 @@
+from __future__ import annotations
 from types import GeneratorType
 from src.core.memory import *
 from src.core.model import EvolvedNet, Genome, NodeGene, ConnGene

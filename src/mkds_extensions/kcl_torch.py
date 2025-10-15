@@ -1,3 +1,4 @@
+from __future__ import annotations
 from mkds.kcl import KCLBase, PrismsBase
 from mkds.utils import read_u16, read_u32
 from typing import Sequence
