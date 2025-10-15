@@ -4,7 +4,8 @@ import torch, torch.nn as nn, torch.nn.functional as F
 import random, copy
 from src.utils.vector import get_mps_device
 
-device = get_mps_device()
+device = None
+
 
 class NodeGene:
     def __init__(self, nid, ntype):
@@ -77,6 +78,7 @@ class EvolvedNet(nn.Module):
         return torch.stack([torch.tanh(vals[o]).to(device) for o in self.outputs])
 
 if __name__ == "__main__":
+    device = get_mps_device()
     def fitness(genome) -> float:
         net = EvolvedNet(genome)
         
