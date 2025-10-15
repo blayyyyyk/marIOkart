@@ -5,6 +5,12 @@
 
 ---
 
+## Documentation
+Docs and research articles can be found:
+[https://gg-blake.github.io/marIOkart/](https://gg-blake.github.io/marIOkart)
+
+---
+
 ## Quick Demo
 
 ##### Figure: Realtime overlay rendering using PyCairo + GTK (AI demo training in progress)
