@@ -111,24 +111,30 @@ This guide is a work in-progress, if you are having trouble with setup it to wor
 
 ```
 .
-├── utils/
-│   ├── memory.py          # Emulator memory reads + camera & projection
-│   ├── overlay.py         # Built-in overlays (collision, checkpoints, etc.)
-│   ├── draw.py            # Draw queue & Cairo primitives
-│   ├── vector.py          # Geometry helpers (rays, intersections, sampling)
-│   ├── kcl_torch.py       # Torch KCL (triangles, nearest queries)
-│   ├── nkm_torch.py       # Torch NKM (tensorized checkpoints)
-│   └── ...                # misc helpers
 ├── mkds/                  # Standalone KCL/NKM parsing library (PyPI: mkds)
-│   ├── kcl.py
-│   └── nkm.py
+│   └── mkds/                  # Standalone KCL/NKM parsing library (PyPI: mkds)
+│       ├── kcl.py
+│       ├── nkm.py
+│       └── utils.py
+├── src/
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── memory.py      # Emulator memory reads + camera & projection
+│   │   ├── model.py       # Geometry helpers (rays, intersections, sampling)
+│   │   └── train.py
+│   ├── main.py            # GTK runner wiring emulator + overlays     
+│   ├── misc/
+│   │   └── courses.json
+│   ├── mkds_extensions/
+│   │   ├── kcl_torch.py   # Torch KCL (triangles, nearest queries)
+│   │   └── nkm_torch.py   # Torch NKM (tensorized checkpoints)
+│   ├── utils/
+│   │   └── vector.py
+│   └── visualization/
+│       ├── draw.py        # Draw queue & Cairo primitives
+│       └── overlay.py     # Built-in overlays (collision, checkpoints, etc.)
 ├── tests/                 # Various test scripts for experimentation
-├── courses/               # Extracted course assets (KCL/NKM per course)
-├── media/                 # GIFs, screenshots
-├── main.py                # GTK runner wiring emulator + overlays
-├── OVERLAYS.md            
-├── READING_FILES.md       
-├── READING_MEMORY.md      
+├── courses/               # Extracted course assets (KCL/NKM per course)               
 └── README.md
 ```
 
