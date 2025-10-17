@@ -2,12 +2,14 @@ from __future__ import annotations
 from types import GeneratorType
 from src.core.memory import *
 from src.core.model import EvolvedNet, Genome, NodeGene, ConnGene
+from src.main import SAVE_STATE_ID
 from src.utils.vector import get_mps_device
 import random, copy
 from desmume.emulator import DeSmuME
 import torch
 from desmume.controls import Keys, keymask
 import os
+
 
 
 from typing import Generator
@@ -18,7 +20,7 @@ course_parent_directory = "courses"
 in_nodes = 6
 out_nodes = 4
 
-
+SAVE_STATE_ID = 2
 
 max_dist = 0
 racer = None
@@ -44,6 +46,7 @@ def calculate_max_course_distance(pts1: torch.Tensor, pts2: torch.Tensor):
 
 
 def fitness(emu: DeSmuME, genome: Genome, max_time: int = 20000, device=None):
+    global scores
     emu.volume_set(0)
     emu.savestate.load(SAVE_STATE_ID)
     pts1, pts2 = read_checkpoint_positions(emu, device=device).chunk(2, dim=1)
@@ -105,8 +108,8 @@ def fitness(emu: DeSmuME, genome: Genome, max_time: int = 20000, device=None):
         dist += sum([t for t, _ in l]) / len(l)
 
     score = dist / max_dist
-
-    yield score
+    scores.append((score, genome))
+    
 
 
 def train(
@@ -131,19 +134,10 @@ def train(
 
     count = 0
     while min_fitness > target_fitness or count < max_epoch:
-        # evaluate
-        #
+        global scores
         scores = []
-        logits = None
         for g in pop:
-            for x in fitness_fn(emu, g, device=device):
-                if x.ndim != 0:
-                    logits = x
-                    yield logits
-                    continue
-
-                
-                scores.append((x, g))
+            yield from fitness_fn(emu, g, device=device)
 
         scores.sort(reverse=True, key=lambda x: x[0])
         if scores[0][0] < min_fitness:
@@ -162,3 +156,9 @@ def train(
         pop = newpop
 
         count += 1
+
+
+
+
+    
+    
