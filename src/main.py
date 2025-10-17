@@ -262,6 +262,7 @@ def run_emulator(generator_fn, overlays):
         global scene_current, scene_next
         emu.cycle()
 
+        print(read_clock(emu))
         emu.input.keypad_update(0)
         for key in input_state:
             emu.input.keypad_add_key(keymask(KEY_MAP[key]))

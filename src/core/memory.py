@@ -244,6 +244,7 @@ from src.utils.vector import (
     triangle_altitude,
 )
 from typing import Callable, Concatenate, TypeVar, ParamSpec
+from functools import wraps
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -266,7 +267,6 @@ FLAG_MAPOBJ = 0x2000
 FLAG_ITEM = 0x4000
 FLAG_RACER = 0x8000
 
-
 def frame_cache(
     func: Callable[Concatenate[DeSmuME, P], R],
 ) -> Callable[Concatenate[DeSmuME, P], R]:
@@ -283,9 +283,9 @@ def frame_cache(
     """
     val = None
     frame_count = 0
-
+    @wraps(func)
     def wrapper(emu: DeSmuME, *args: P.args, **kwargs: P.kwargs) -> R:
-        """Internal wrapper used by `frame_cache` to perform per-tick memoization."""
+        wrapper.__doc__ = func.__doc__
         nonlocal frame_count, val
         if emu.get_ticks() != frame_count or val is None:
             frame_count = emu.get_ticks()
@@ -311,9 +311,9 @@ def game_cache(
         A wrapped function with identical signature that returns a cached result.
     """
     val = None
-
+    @wraps(func)
     def wrapper(emu: DeSmuME, *args: P.args, **kwargs: P.kwargs) -> R:
-        """Internal wrapper used by `game_cache` to memoize across the entire run."""
+        wrapper.__doc__ = func.__doc__
         nonlocal val
         if val is None:
             val = func(emu, *args, **kwargs)
