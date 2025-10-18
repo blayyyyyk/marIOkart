@@ -6,11 +6,22 @@ import torch
 import numpy as np
 from src.core.memory import *
 from src.utils.vector import project_to_screen as _project_to_screen
+import torch
+from typing import TypeAlias, Union
+from functools import wraps
+
+DeviceLikeType: TypeAlias = Union[str, torch.device, int]
+
+AVAILABLE_OVERLAYS: list[Callable[[DeSmuME, DeviceLikeType | None], None]] = []
+
+def register_overlay(func: Callable[[DeSmuME, DeviceLikeType | None], None]):
+    AVAILABLE_OVERLAYS.append(func)
+    return func
 
 """ Display Collision Triangles in Overlay """
 
-
-def collision_overlay(emu: DeSmuME, device=None):
+@register_overlay
+def collision_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
 
     kcl = load_current_kcl(emu, device=device)
     position = read_position(emu, device=device)
@@ -59,8 +70,8 @@ def collision_overlay(emu: DeSmuME, device=None):
 """ Display Kart Raycasting """
 current_point = None
 
-
-def raycasting_overlay(emu: DeSmuME, device=None):
+@register_overlay
+def raycasting_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
     global current_point
     if current_point is None:
         current_point = torch.tensor(
@@ -83,8 +94,8 @@ def raycasting_overlay(emu: DeSmuME, device=None):
 
     # print(f"Forward Distance: {forward_dist}\nLeft Distance: {left_dist}\nRight Distance: {right_dist}")
 
-
-def camera_overlay(emu: DeSmuME, device=None):
+@register_overlay
+def camera_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
     global racer, current_point
 
     camera_target = read_camera_target_position(emu, device=device)
@@ -95,8 +106,8 @@ def camera_overlay(emu: DeSmuME, device=None):
 
 """ Displays an overlay of a line connecting checkpoint endpoints of the next checkpoint. """
 
-
-def checkpoint_overlay_1(emu: DeSmuME, device=None):
+@register_overlay
+def checkpoint_overlay_1(emu: DeSmuME, device: DeviceLikeType | None = None):
     global current_point
     position = read_position(emu, device=device)
     
@@ -127,8 +138,8 @@ def checkpoint_overlay_1(emu: DeSmuME, device=None):
 
 """ Displays an overlay of a ray connecting the kart and the next checkpoint boundary. """
 
-
-def checkpoint_overlay_2(emu: DeSmuME, device=None):
+@register_overlay
+def checkpoint_overlay_2(emu: DeSmuME, device: DeviceLikeType | None = None):
     position = read_position(emu, device=device)
     direction = read_direction(emu, device=device)
     intersect = read_facing_point_checkpoint(emu, direction, device=device)
@@ -157,8 +168,8 @@ def checkpoint_overlay_2(emu: DeSmuME, device=None):
     
     draw_lines(intersect_proj_np, pos_proj_np, colors=np.array([0.0, 0.0, 1.0]), stroke_width_scale=1.0)
 
-
-def player_overlay(emu: DeSmuME, device=None):
+@register_overlay
+def player_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
     objects = read_objects(emu)
 
     objs = [[], [], [], []]
@@ -185,9 +196,4 @@ def player_overlay(emu: DeSmuME, device=None):
         object_positions_np = object_positions.detach().cpu().numpy()
         colors_np = np.array(colors[i])
         draw_points(object_positions_np, colors=colors_np, radius_scale=5.0)
-
-def stats_overlay(emu: DeSmuME, device=None):
-    clock  = read_clock(emu)
-    checkpoint_distance = read_forward_distance_checkpoint(emu, device=device).item()
-    obstacle_distance = read_forward_distance_obstacle(emu, device=device).item()
     

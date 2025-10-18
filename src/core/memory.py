@@ -888,7 +888,7 @@ def read_model_view(emu: DeSmuME, device):
     return _compute_model_view(camera_pos, camera_target_pos, device=device)
 
 
-def _project_to_screen(world_points, model_view, fov, aspect, device=None):
+def _project_to_screen(world_points, model_view, fov, aspect, screen_dim: tuple[int, int], device=None):
     """Project world-space points to screen coordinates using perspective projection.
 
     Args:
@@ -929,14 +929,15 @@ def _project_to_screen(world_points, model_view, fov, aspect, device=None):
 
     ndc = clip_space[:, :3] / clip_space[:, 3, None]
 
-    screen_x = (ndc[:, 0] + 1) / 2 * SCREEN_WIDTH
-    screen_y = (1 - ndc[:, 1]) / 2 * SCREEN_HEIGHT
+    screen_width, screen_height = screen_dim
+    screen_x = (ndc[:, 0] + 1) / 2 * screen_width
+    screen_y = (1 - ndc[:, 1]) / 2 * screen_height
     screen_depth = clip_space[:, 2]
     screen_depth_norm = -Z_FAR / (-Z_FAR + Z_SCALE * clip_space[:, 2])
     return torch.stack([screen_x, screen_y, screen_depth, screen_depth_norm], dim=-1)
 
 
-def project_to_screen(emu: DeSmuME, points: torch.Tensor, device):
+def project_to_screen(emu: DeSmuME, points: torch.Tensor, device, screen_dim=(SCREEN_WIDTH, SCREEN_HEIGHT)):
     """Convenience wrapper to project points using the current camera state.
 
     Args:
@@ -950,7 +951,7 @@ def project_to_screen(emu: DeSmuME, points: torch.Tensor, device):
     model_view = read_model_view(emu, device=device)
     fov = read_camera_fov(emu)
     aspect = read_camera_aspect(emu)
-    return _project_to_screen(points, model_view, fov, aspect, device=device)
+    return _project_to_screen(points, model_view, fov, aspect, screen_dim, device=device)
 
 
 # CHECKPOINT INFO #
