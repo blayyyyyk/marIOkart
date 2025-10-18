@@ -19,14 +19,12 @@ from src.core.memory import (
 )
 from src.utils.vector import get_mps_device
 from src.visualization.overlay import (
-    stats_overlay,
     player_overlay,
     raycasting_overlay,
     collision_overlay,
     checkpoint_overlay_1,
     checkpoint_overlay_2,
 )
-from src.core.train import train, fitness
 
 os.environ["PKG_CONFIG_PATH"] = "/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = (
@@ -51,7 +49,6 @@ SAVE_STATE_ID = 4
 # GLOBAL VARIABLES
 # ----------------------------
 input_state = set()
-scene_lock = threading.Lock()
 is_running = False
 scene_next = None
 renderer = None
@@ -152,29 +149,7 @@ def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
     ctx.set_source(pattern)
     ctx.set_operator(cairo.OPERATOR_OVER)
 
-    assert emu_global is not None
-    clock = read_clock(emu_global)
-    checkpoint_distance = read_forward_distance_checkpoint(
-        emu_global, device=device
-    ).item()
-    obstacle_distance = read_forward_distance_obstacle(emu_global, device=device).item()
-    text = """
-Clock:               {}\n
-Checkpoint Distance: {:.2f}\n
-Obstacle Distance:   {:.2f}\n
-    """.format(
-        clock, checkpoint_distance, obstacle_distance
-    )
-    draw_paragraph(
-        ctx,
-        text,
-        pos=(5, 100),
-        color=(40 / 255, 166 / 255, 113 / 255),
-        font_size=7,
-        vertical_spacing=5,
-        alpha=0.9,
-        font_family="JetBrainsMono Nerd Font",
-    )
+    
     ctx.paint()
     return False
 
@@ -227,16 +202,15 @@ def worker():
 # ----------------------------
 # MAIN LOOP
 # ----------------------------
-def run_emulator(generator_fn, overlays):
+def run_emulator(overlays):
     global renderer, callback, emu_global, is_running
     emu = DeSmuME()
     emu.open("mariokart_ds.nds")
+    emu.savestate.load(4)
 
     emu_global = emu
     emu.volume_set(0)
 
-    _generator = generator_fn(emu)
-    next(_generator)
     n = load_current_nkm(emu, device=device)
     k = load_current_kcl(emu, device=device)
 
@@ -262,7 +236,6 @@ def run_emulator(generator_fn, overlays):
         global scene_current, scene_next
         emu.cycle()
 
-        print(read_clock(emu))
         emu.input.keypad_update(0)
         for key in input_state:
             emu.input.keypad_add_key(keymask(KEY_MAP[key]))
@@ -287,30 +260,12 @@ def run_emulator(generator_fn, overlays):
 
 
 # ----------------------------
-# EXAMPLE TRAINING PRESETS
-# ----------------------------
-def generate_trainer(emu: DeSmuME):
-    global device
-    return train(
-        emu,
-        SAVE_STATE_ID,
-        fitness,
-        genome_pop_size=20,
-        max_epoch=50,
-        top_k=10,
-        log_interval=5,
-        device=device,
-    )
-
-
-# ----------------------------
 # ENTRY POINT
 # ----------------------------
 if __name__ == "__main__":
     device = get_mps_device()
     start_keyboard_listener()
     run_emulator(
-        generate_trainer,
         [
             # player_overlay,
             collision_overlay,
