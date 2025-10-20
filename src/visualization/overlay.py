@@ -9,8 +9,7 @@ from src.utils.vector import project_to_screen as _project_to_screen
 import torch
 from typing import TypeAlias, Union
 from functools import wraps
-
-DeviceLikeType: TypeAlias = Union[str, torch.device, int]
+from torch._prims_common import DeviceLikeType
 
 AVAILABLE_OVERLAYS: list[Callable[[DeSmuME, DeviceLikeType | None], None]] = []
 
