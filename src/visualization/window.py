@@ -22,7 +22,7 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
 # ----------------------------
 input_state = set()
 renderer = None
-overlay_surface_cache: cairo.Surface | None = None
+overlay_surface_cache = None
 
 
 # ----------------------------
