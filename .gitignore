@@ -6,3 +6,4 @@ rom
 *.nds
 **/*/venv
 **/*/_build/*
+.envrc
