@@ -42,7 +42,7 @@ from gi.repository import Gtk, Gdk, GLib
 device = None
 SCALE = 3
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
-SAVE_STATE_ID = 4
+SAVE_STATE_ID = 0
 
 
 # ----------------------------

@@ -183,6 +183,8 @@ class SharedEmulatorWindow(Gtk.Window):
             ctx.paint()
             ctx.restore()
             
+    
+            
     def refresh(self):
         self.area.queue_draw()
         return True

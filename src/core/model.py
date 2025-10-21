@@ -21,16 +21,17 @@ class ConnGene:
         self.enabled = enabled
 
 class Genome:
-    def __init__(self, n_inputs, n_outputs):
+    def __init__(self, n_inputs, n_outputs, device: DeviceLikeType | None = None):
         self.nodes = [NodeGene(i, "input") for i in range(n_inputs)] + \
                      [NodeGene(n_inputs+i, "output") for i in range(n_outputs)]
         self.conns = []
         self.next_node_id = n_inputs + n_outputs
+        self.device = device
 
     def mutate_weight(self):
         if self.conns:
             c = random.choice(self.conns)
-            c.w += torch.randn(1).item() * 0.1
+            c.w += torch.randn(1, device=self.device).item() * 0.1
 
     def mutate_add_conn(self):
         a, b = random.sample(self.nodes, 2)
@@ -50,19 +51,21 @@ class Genome:
 
 
 class EvolvedNet(nn.Module):
-    def __init__(self, genome):
+    def __init__(self, genome, device: DeviceLikeType | None = None):
         super().__init__()
         self.g = genome
+        self.device = device
         self.params = nn.ParameterDict()
         for c in genome.conns:
             if c.enabled:
-                self.params[f"w_{c.in_id}_{c.out_id}"] = nn.Parameter(torch.tensor(c.w))
+                self.params[f"w_{c.in_id}_{c.out_id}"] = nn.Parameter(torch.tensor(c.w, device=device))
         self.inputs = [n.id for n in genome.nodes if n.type=="input"]
         self.outputs = [n.id for n in genome.nodes if n.type=="output"]
+        
 
     def forward(self, x):
         # map node IDs to torch tensors
-        vals = {nid: torch.tensor(0.0) for nid in [n.id for n in self.g.nodes]}
+        vals = {nid: torch.tensor(0.0, device=self.device) for nid in [n.id for n in self.g.nodes]}
     
         # assign input activations
         for i, nid in enumerate(self.inputs):
@@ -104,7 +107,7 @@ if __name__ == "__main__":
         tl.show_model_graph(EvolvedNet(scores[0][1]), torch.tensor([0, 0], dtype=torch.float32), vis_opt="rolled")
         print(len(scores[0][1].conns))
         if scores[0][0] > -0.05:
-            print("✅ Solved!")
+            print("Solved!")
             break
         # selection and mutation
         newpop = [copy.deepcopy(scores[0][1])]

@@ -9,3 +9,5 @@ rom
 **/*/venv
 **/*/_build
 **/*/_build/*
+**/*/_build/*
+.envrc

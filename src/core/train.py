@@ -81,6 +81,7 @@ from multiprocessing import Process, Manager, Lock
 from multiprocessing.shared_memory import SharedMemory
 from queue import Queue
 from threading import Thread
+from typing import TypedDict, TypeAlias, cast
 
 # External dependencies
 from desmume.emulator import DeSmuME, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_PIXEL_SIZE
@@ -89,6 +90,8 @@ from desmume.controls import Keys, keymask
 from torch._prims_common import DeviceLikeType
 import numpy as np
 import gi
+
+from src.main import SAVE_STATE_ID
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -101,6 +104,23 @@ from src.core.model import Genome, EvolvedNet
 from src.utils.vector import get_mps_device
 from src.visualization.window import SharedEmulatorWindow, on_draw_memoryview
 from src.visualization.overlay import AVAILABLE_OVERLAYS
+
+class EmulatorProcessConfig(TypedDict):
+    id: int
+    sample: Genome
+    host: bool
+    show: bool
+    
+class EmulatorBatchConfig(TypedDict):
+    size: int
+    display_shm_names: list[str]
+    device: DeviceLikeType | None
+    overlay_ids: list[int]
+    
+class CheckpointRecord:
+    id: int
+    times: list[float]
+    dists: list[float]
 
 MODEL_KEY_MAP = {
     3: Keys.KEY_UP,
@@ -179,7 +199,7 @@ def initialize_emulator() -> DeSmuME:
     """
     emu = DeSmuME()
     emu.open("mariokart_ds.nds")
-    emu.savestate.load(3)
+    emu.savestate.load(SAVE_STATE_ID)
     emu.volume_set(0)
     emu.cycle()
 
@@ -189,7 +209,7 @@ def initialize_emulator() -> DeSmuME:
     return emu
 
 
-def initialize_window(emu, display_count, shm_names) -> SharedEmulatorWindow:
+def initialize_window(emu, config: EmulatorProcessConfig, batch_config: EmulatorBatchConfig) -> SharedEmulatorWindow | None:
     """Create and initialize the tiled GTK window for live visualization.
 
     Computes a near-square grid (``n_rows`` × ``n_cols``) based on the number
@@ -209,6 +229,11 @@ def initialize_window(emu, display_count, shm_names) -> SharedEmulatorWindow:
       - Initializes a GTK/Cairo renderer via :class:`AbstractRenderer`.
 
     """
+    if not config['host']:
+       return None 
+    
+    shm_names = batch_config['display_shm_names']
+    display_count = len(shm_names)
     width = 1000
     height = math.floor(width * (SCREEN_HEIGHT / SCREEN_WIDTH))
     n_cols = math.ceil(math.sqrt(display_count))
@@ -227,7 +252,7 @@ def initialize_window(emu, display_count, shm_names) -> SharedEmulatorWindow:
 
 
 def initialize_overlays(
-    overlay_ids: list[int], device: DeviceLikeType | None
+    config: EmulatorProcessConfig, batch_config: EmulatorBatchConfig
 ) -> Queue | None:
     """Start a background overlay thread and return its work queue.
 
@@ -252,29 +277,32 @@ def initialize_overlays(
       - Overlays are executed off the emulation thread to avoid jitter.
 
     """
+    overlay_ids = batch_config['overlay_ids']
+    if not config['show'] or not len(overlay_ids) > 0:
+        return None
+    
+    device = batch_config['device']
     overlays = []
     for id in overlay_ids:
         overlays.append(AVAILABLE_OVERLAYS[id])
 
-    emu_queue = None
-    if len(overlays) != 0:
-        emu_queue = Queue()
+    emu_queue = Queue()
 
-        def worker():
-            nonlocal overlays, emu_queue, id
-            assert emu_queue is not None
-            while True:
-                emu_instance = emu_queue.get()
-                if emu_instance is None:
-                    break
-                for overlay in overlays:
-                    safe_overlay = safe_thread(overlay, proc_id=id)
-                    safe_overlay(emu_instance, device=device)
+    def worker():
+        nonlocal overlays, emu_queue, id
+        assert emu_queue is not None
+        while True:
+            emu_instance = emu_queue.get()
+            if emu_instance is None:
+                break
+            for overlay in overlays:
+                safe_overlay = safe_thread(overlay, proc_id=id)
+                safe_overlay(emu_instance, device=device)
 
-                emu_queue.task_done()
+            emu_queue.task_done()
 
-        thread = Thread(target=worker, daemon=True)
-        thread.start()
+    thread = Thread(target=worker, daemon=True)
+    thread.start()
 
     return emu_queue
 
@@ -299,128 +327,118 @@ def handle_controls(emu: DeSmuME, logits: torch.Tensor):
     logits_list = logits.tolist()
     emu.input.keypad_update(0)
     for i, v in enumerate(logits_list):
+        
         if v < 0.5:
             continue
 
         emu.input.keypad_add_key(keymask(MODEL_KEY_MAP[i]))
-        emu.input.keypad_add_key(keymask(MODEL_KEY_MAP[5]))
+    
+    emu.input.keypad_add_key(keymask(MODEL_KEY_MAP[5]))
 
 
-def run_window_host_process(
-    id: int,
-    sample: Genome,
-    shm_names: list[str],
-    overlay_ids: list[int],
-    batch_size: int,
-    lock,
-    pop_stats: dict[int, dict[int, list[tuple[float, float]]]],
-):
-    """Display-host evaluation process: emulates, renders, and owns the GTK loop.
+    
 
-    This process:
-      1) Initializes the emulator and the evolved model for `sample`.
-      2) Attaches to its per-process shared-memory frame ``emu_frame_{id}``.
-      3) Creates a tiled :class:`SharedEmulatorWindow` reading all `shm_names`.
-      4) Starts a background overlay thread (if overlays are enabled).
-      5) Schedules two GLib timers:
-         - ``_forward`` (~30 FPS): cycle, composite overlay, write shared frame,
-           run model step, and enqueue overlay work.
-         - ``check_end`` (5 Hz): polls whether all display frames are zeroed and
-           exits the GTK loop when they are (end-of-batch signal).
-      6) On exit, shuts down the overlay thread and writes per-individual stats
-         back to the manager dict.
-
-    Args:
-      id: Process index for this individual (used in shared-memory naming).
-      sample: Genome to evaluate in this process.
-      shm_names: Names of shared-memory frame buffers to tile in the host window.
-      overlay_ids: Enabled overlay identifiers.
-      batch_size: Number of individuals in the current batch.
-      lock: IPC lock used when writing results to `pop_stats`.
-      pop_stats: Manager-backed dict to receive results for this process.
-
-    Side Effects:
-      - Opens GTK window and runs a blocking GTK main loop.
-      - Writes ARGB32 frames into ``emu_frame_{id}`` shared memory.
-      - Updates `pop_stats[id]` with checkpoint timing/distances upon completion.
-
-    """
-    # Set torch device
-    device = get_mps_device()
-
+    
+def initialize_model(emu: DeSmuME, config: EmulatorProcessConfig, batch_config: EmulatorBatchConfig):
+    device = batch_config['device']
+    sample = config['sample']
+    model = EvolvedNet(sample, device=device)
+    forward = get_forward_func(emu, model, device)
+    return forward
+    
+def _run_process(training_stats: dict[int, dict[int, CheckpointRecord]], training_stats_lock, config: EmulatorProcessConfig, batch_config: EmulatorBatchConfig):
+    assert config['show'] if config['host'] else True, "Host processes must have display enabled"
+    
     # Initialize emulator
     emu = initialize_emulator()
-
+    
     # Initialize model
-    model = EvolvedNet(sample).to(device)
-    forward = get_forward_func(emu, model, device)
-
-    # Attach shared window frame
-    shm_frame = SharedMemory(name=f"emu_frame_{id}")
-    frame = np.ndarray(
-        (SCREEN_HEIGHT, SCREEN_WIDTH, 4), dtype=np.uint8, buffer=shm_frame.buf
-    )
-
-    # Initialize window
-    display_count = len(shm_names)
-    window = initialize_window(emu, display_count, shm_names)
-
-    # Initialize overlay thread
-    emu_queue = initialize_overlays(overlay_ids, device)
-
-    # Will incrementally check if the population has died
-    def check_end():
-        """Quit GTK when all visible frames are cleared to zeros."""
-        for name in shm_names:
-            shm = SharedMemory(name=name)
-            arr = np.ndarray(
-                (SCREEN_WIDTH, SCREEN_HEIGHT, 4), dtype=np.uint8, buffer=shm.buf
-            )
-            if arr.sum() != 0:
-                return True
-
-        Gtk.main_quit()
-        return False
-
-    # Cycle like usual
-    stats = {}
-
-    def _forward():
-        """Per-frame emulation, overlay composition, and model step (≈30 FPS)."""
-        nonlocal stats
+    forward = initialize_model(emu, config, batch_config)
+    
+    # Initialize display shared memory buffer as numpy array
+    frame = None
+    if config["show"]:
+        id = config['id']
+        shm_frame = SharedMemory(name=f"emu_frame_{id}")
+        frame = np.ndarray(
+            shape=(SCREEN_HEIGHT, SCREEN_WIDTH, 4),
+            dtype=np.uint8,
+            buffer=shm_frame.buf,
+        )
+        
+    # Initialize window 
+    window = initialize_window(emu, config, batch_config)
+        
+    # Set overlay overlay thread
+    emu_queue = initialize_overlays(config, batch_config)
+        
+    stats: dict[int, CheckpointRecord] | None = None
+    def tick():
+        nonlocal stats, emu_queue, frame, emu, window
         emu.cycle()
-
-        # Copy display data to shared memory buffer
-        buf = emu.display_buffer_as_rgbx()[: SCREEN_PIXEL_SIZE * 4]
-        new_frame = on_draw_memoryview(buf, SCREEN_WIDTH, SCREEN_HEIGHT, 1.0, 1.0)
-        np.copyto(frame, new_frame)
+        
+        if frame is not None:
+            
+            # Copy display data to shared memory buffer
+            buf = emu.display_buffer_as_rgbx()[: SCREEN_PIXEL_SIZE * 4]
+            new_frame = on_draw_memoryview(buf, SCREEN_WIDTH, SCREEN_HEIGHT, 1.0, 1.0)
+            np.copyto(frame, new_frame)
+            
 
         # Inference / Game Update
         logits = forward()
         if isinstance(logits, dict):
-            send_window_end_signal(id)
+            id = config['id']
+            send_window_end_signal(config['id'])
             stats = logits
             return False
 
-        # Queue Overlay Request
+        
+        handle_controls(emu, logits)
         if emu_queue is not None:
+            # Queue Overlay Request
             emu_queue.put(emu)
-
-        tmp_logits = logits
+            
         return True
-
-    GLib.timeout_add(200, check_end)  # non-blocking
-    GLib.timeout_add(33, _forward)  # non-blocking
-    window.show_all()
-    Gtk.main()  # blocking
-
+        
+    while not config['host']:
+        val = tick()
+        if val == False:
+            break
+        
+        
+    if window is not None:
+        # Will incrementally check if the population has died
+        def check_end():
+            """Quit GTK when all visible frames are cleared to zeros."""
+            for name in batch_config['display_shm_names']:
+                shm = SharedMemory(name=name)
+                arr = np.ndarray(
+                    (SCREEN_WIDTH, SCREEN_HEIGHT, 4), dtype=np.uint8, buffer=shm.buf
+                )
+                
+                if arr.sum() != 0:
+                    return True
+    
+            Gtk.main_quit()
+            return False
+        
+        GLib.timeout_add(200, check_end)  # non-blocking
+        GLib.timeout_add(33, tick)  # non-blocking
+        window.show_all()
+        Gtk.main()  # blocking
+        
     # Safe thread shutdown for overlay
     if emu_queue is not None:
         emu_queue.put(None)
-
+        
+        
     # Log results
-    with lock:
-        pop_stats[id] = stats
+    with training_stats_lock:
+        id = config['id']
+        if stats is None:
+            stats = {}
+        training_stats[id] = stats
 
 
 def safe_thread(func, proc_id, thread_id=0):
@@ -449,86 +467,6 @@ def safe_thread(func, proc_id, thread_id=0):
     return wrapper
 
 
-def run_window_process(
-    id: int,
-    sample: Genome,
-    shm_names: list[str],
-    overlay_ids: list[int],
-    batch_size: int,
-    lock,
-    pop_stats: dict[int, dict[int, list[tuple[float, float]]]],
-):
-    """Display worker process: emulates, renders, **no** GTK ownership.
-
-    This process is identical to the host process except it does **not** create
-    nor run a GTK window. It writes its per-frame ARGB32 overlay-composited
-    output to ``emu_frame_{id}`` and exits when the evaluation finishes.
-
-    Args:
-      id: Process index for this individual (used in shared-memory naming).
-      sample: Genome to evaluate in this process.
-      shm_names: Names of all display frame segments (unused directly here).
-      overlay_ids: Enabled overlay identifiers.
-      batch_size: Number of individuals in the current batch.
-      lock: IPC lock used when writing results to `pop_stats`.
-      pop_stats: Manager-backed dict to receive results for this process.
-
-    Side Effects:
-      - Writes ARGB32 frames into ``emu_frame_{id}`` shared memory.
-      - Updates `pop_stats[id]` with checkpoint timing/distances upon completion.
-
-    """
-    # Set torch device
-    device = get_mps_device()
-
-    # Initialize emulator
-    emu = initialize_emulator()
-
-    # Initialize model
-    model = EvolvedNet(sample).to(device)
-    forward = get_forward_func(emu, model, device)
-
-    # Attach shared window frame
-    shm_frame = SharedMemory(name=f"emu_frame_{id}")
-    frame = np.ndarray(
-        (SCREEN_HEIGHT, SCREEN_WIDTH, 4), dtype=np.uint8, buffer=shm_frame.buf
-    )
-
-    # Initialize overlay thread
-    emu_queue = initialize_overlays(overlay_ids, device)
-
-    # Cycle like usual
-    stats = {}
-    while True:
-        emu.cycle()
-
-        # Copy display data to shared memory buffer
-        buf = emu.display_buffer_as_rgbx()[: SCREEN_PIXEL_SIZE * 4]
-        new_frame = on_draw_memoryview(buf, SCREEN_WIDTH, SCREEN_HEIGHT, 1.0, 1.0)
-        np.copyto(frame, new_frame)
-
-        # Inference / Game Update
-        logits = forward()
-        if isinstance(logits, dict):
-            send_window_end_signal(id)
-            stats = logits
-            break
-
-        # Queue Overlay Request
-        if emu_queue is not None:
-            emu_queue.put(emu)
-
-        tmp_logits = logits
-
-    # Safe thread shutdown for overlay
-    if emu_queue is not None:
-        emu_queue.put(None)
-
-    # Log results
-    with lock:
-        pop_stats[id] = stats
-
-
 def send_window_end_signal(id):
     """Zero a per-process frame buffer to signal the host window to exit.
 
@@ -542,64 +480,7 @@ def send_window_end_signal(id):
     """
     shm = SharedMemory(name=f"emu_frame_{id}")
     arr = np.ndarray((SCREEN_HEIGHT, SCREEN_WIDTH, 4), dtype=np.uint8, buffer=shm.buf)
-    arr[:] = 0
-
-
-def run_process(
-    id: int,
-    sample: Genome,
-    shm_names: list[str],
-    overlay_ids: list[int],
-    batch_size: int,
-    lock,
-    pop_stats: dict[int, dict[int, list[tuple[float, float]]]],
-):
-    """Headless evaluation process: emulates and updates controls, no display.
-
-    Runs the emulator to completion for the given `sample` genome. No shared
-    memory frame is produced in this mode; it focuses on throughput.
-
-    Args:
-      id: Process index for this individual.
-      sample: Genome to evaluate.
-      shm_names: Names of all display frame segments (unused in headless mode).
-      overlay_ids: Enabled overlay identifiers (unused in headless mode).
-      batch_size: Number of individuals in the current batch.
-      lock: IPC lock used when writing results to `pop_stats`.
-      pop_stats: Manager-backed dict to receive results for this process.
-
-    Side Effects:
-      - Calls :func:`handle_controls` each step to apply model outputs.
-      - Updates `pop_stats[id]` with final checkpoint stats.
-
-    """
-    # Set torch device
-    device = get_mps_device()
-
-    # Initialize emulator
-    emu = initialize_emulator()
-
-    # Initialize model
-    model = EvolvedNet(sample).to(device)
-    forward = get_forward_func(emu, model, device)
-
-    # Cycle like usual
-    stats = {}
-    while True:
-        emu.cycle()
-
-        # Inference / Game Update
-        logits = forward()
-        if isinstance(logits, dict):
-            stats = logits
-            break
-
-        # Controls
-        handle_controls(emu, logits)
-
-    # Log results
-    with lock:
-        pop_stats[id] = stats
+    arr[:] = 0.0
 
 
 def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
@@ -635,10 +516,10 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
     current_id = read_current_checkpoint(emu)
     prev_id = current_id
     prev_dist = read_checkpoint_distance_altitude(emu, device=device).item()
-    times: dict[int, list[tuple[float, float]]] = {}
+    times: dict[int, CheckpointRecord] = {}
 
-    def forward() -> torch.Tensor | dict[int, list[tuple[float, float]]]:
-        nonlocal current_id, prev_id, current_time, prev_time, prev_dist, model, emu
+    def forward() -> torch.Tensor | dict[int, CheckpointRecord]:
+        nonlocal current_id, prev_id, current_time, prev_time, prev_dist, model, emu, times
 
         clock = read_clock(emu)
         if clock > 10000:
@@ -650,11 +531,20 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
 
         if current_id != prev_id:
             assert isinstance(current_id, int)
-            if current_id not in times:
-                times[current_id] = []
+            
 
             current_time = clock
-            times[current_id].append((current_time - prev_time, prev_dist))
+            if current_id not in times:
+                entry = {
+                    "id": current_id,
+                    "times": [],
+                    "dists": []
+                }
+                
+                times[current_id] = cast(CheckpointRecord, entry)
+                
+            cast(dict, times[current_id])['times'].append(current_time - prev_time)
+            cast(dict, times[current_id])['dists'].append(prev_dist)
             prev_time = current_time
             prev_dist = read_checkpoint_distance_altitude(emu, device=device).item()
 
@@ -684,11 +574,11 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
 
 
 def run_training_batch(
-    batch_pop: list[Genome],
+    batch_population: list[Genome],
     show_samples: list[bool],
-    overlay_ids: list[int],
-    lock,
-    pop_stats: DictProxy[int, dict[int, list[tuple[float, float]]]],
+    training_stats: DictProxy[int, dict[int, CheckpointRecord]],
+    training_stats_lock,
+    batch_config: EmulatorBatchConfig
 ):
     """Evaluate a batch of genomes concurrently, optionally with live display.
 
@@ -713,40 +603,35 @@ def run_training_batch(
       - Spawns processes with appropriate targets and joins them.
 
     """
-    global shm_names
-    batch_size = len(batch_pop)
+    batch_size = batch_config['size']
 
     processes = []
-    shm_names = []
-
-    for id in range(batch_size):
-        if show_samples[id]:
-            shm_names.append(f"emu_frame_{id}")
 
     host_proc_found = False
-    for id, sample, show in zip(range(batch_size), batch_pop, show_samples):
-        target = run_process  # defaults to headless emulator
-
-        if show and not host_proc_found:
-            target = run_window_host_process
+    for id, sample, show in zip(range(batch_size), batch_population, show_samples):
+        config: EmulatorProcessConfig = {
+            "id": id,
+            "sample": sample,
+            "host": False,
+            "show": show
+        }
+        
+        if not host_proc_found:
             host_proc_found = True
-        elif show and host_proc_found:
-            target = run_window_process
-
+            config["host"] = True
+            
         if show:
-            # Attach/create shared memory buffer for emulator frame
-            size = SCREEN_HEIGHT * SCREEN_WIDTH * 4
-            shm_frame = safe_shared_memory(name=f"emu_frame_{id}", size=size)
+            shm_frame = SharedMemory(name=f"emu_frame_{id}")
             frame = np.ndarray(
                 shape=(SCREEN_HEIGHT, SCREEN_WIDTH, 4),
                 dtype=np.uint8,
                 buffer=shm_frame.buf,
             )
-            frame[:] = 1.0  # non-zero sentinel until first frame arrives
+            frame[:] = 1.0
 
         process = Process(
-            target=target,
-            args=(id, sample, shm_names, overlay_ids, batch_size, lock, pop_stats),
+            target=_run_process,
+            args=(training_stats, training_stats_lock, config, batch_config),
             daemon=True,
         )
         processes.append(process)
@@ -765,7 +650,8 @@ def run_training_session(
     num_proc: int | None = None,
     show_samples: list[bool] = [True],
     overlay_ids: list[int] = [],
-) -> dict[int, dict[int, list[tuple[float, float]]]]:
+    device: DeviceLikeType | None = None
+) -> dict[int, list[CheckpointRecord]]:
     """Evaluate the full population in parallel batches and collect statistics.
 
     The population is partitioned into batches of size ``min(num_proc, remaining)``.
@@ -799,34 +685,54 @@ def run_training_session(
         num_proc = os.cpu_count()
         assert num_proc is not None
         num_proc -= 1
+        
+    if len(show_samples) == 1:
+        show_samples *= num_proc
 
-    pop_stats: dict[int, dict[int, list[tuple[float, float]]]] = {}
+    pop_stats: dict[int, list[CheckpointRecord]] = {}
     pop_size = len(pop)
     count = 0
+    
+    shm_names = []
+    for i in range(num_proc):
+        if not show_samples[i]: continue
+        name = f"emu_frame_{i}"
+        size = SCREEN_HEIGHT * SCREEN_WIDTH * 4
+        shm_frame = safe_shared_memory(name=name, size=size)
+        frame = np.ndarray(
+            shape=(SCREEN_HEIGHT, SCREEN_WIDTH, 4),
+            dtype=np.uint8,
+            buffer=shm_frame.buf,
+        )
+        shm_names.append(name)
+    
     while count < pop_size:
         batch_size = min(pop_size - count, num_proc)
+        
+        batch_config: EmulatorBatchConfig = {
+            "overlay_ids": overlay_ids,
+            "display_shm_names": shm_names,
+            "size": batch_size,
+            "device": device
+        }
 
-        # Broadcast display argument to all running processes
-        if len(show_samples) == 1:
-            show_samples *= batch_size
-        elif len(show_samples) > batch_size:
-            show_samples = show_samples[:batch_size]
+        show_samples = show_samples[:batch_size]
 
         with Manager() as manager:
             # Create shared list for stats (locking)
-            shared_pop_stats = manager.dict()
+            shared_pop_stats: DictProxy[int, dict[int, CheckpointRecord]] = manager.dict()
             lock = Lock()
 
             run_training_batch(
                 pop[count : count + batch_size],
                 show_samples=show_samples,
-                overlay_ids=overlay_ids,
-                pop_stats=shared_pop_stats,
-                lock=lock,
+                training_stats=shared_pop_stats,
+                training_stats_lock=lock,
+                batch_config=batch_config
             )
 
             for k, s in shared_pop_stats.items():
-                pop_stats[count + k] = s[k]
+                pop_stats[count + k] = list(s.values())
 
         count += batch_size
 
@@ -834,7 +740,7 @@ def run_training_session(
     return pop_stats
 
 
-def fitness(pop_stats: dict[int, dict[int, list[tuple[float, float]]]]) -> list[float]:
+def fitness(pop_stats: dict[int, list[CheckpointRecord]]) -> list[float]:
     """Compute scalar fitness from per-checkpoint stats.
 
     The current fitness heuristic sums the recorded distances across all
@@ -848,17 +754,12 @@ def fitness(pop_stats: dict[int, dict[int, list[tuple[float, float]]]]) -> list[
       list[float]: Fitness values *ordered by population index*.
 
     """
-    def total_dist(v: dict[int, list[tuple[float, float]]]):
-        result = 0.0
-        for x in v.values():
-            for y in x:
-                result += y[1]
-
-        return result
+    def total_dist(v: list[CheckpointRecord]):
+        return sum([sum(cast(dict, r)['dists']) for r in v])
 
     pop_stats_list = [(k, total_dist(s)) for k, s in pop_stats.items()]
     pop_stats_list.sort(key=lambda x: x[0])
-    return [x[0] for x in pop_stats_list]
+    return [x[1] for x in pop_stats_list]
 
 
 def train(
@@ -866,6 +767,7 @@ def train(
     pop_size: int,
     log_interval: int = 1,
     top_k: int | float = 0.1,
+    device: DeviceLikeType | None = None,
     **simulation_kwargs,
 ):
     """Main evolutionary training loop (selection + mutation).
@@ -889,21 +791,22 @@ def train(
       - Mutates and replaces the population in place each generation.
 
     """
-    pop = [Genome(6, 4) for _ in range(pop_size)]
+    pop = [Genome(6, 2, device=device) for _ in range(pop_size)]
+    for g in pop: g.mutate_add_conn()  # start with random links
 
     if top_k <= 1:
         top_k = int(round(len(pop) * top_k))
     assert isinstance(top_k, int), "top_k must be an integer or a float less than 1"
 
     for n in range(num_iters):
-        stats = run_training_session(pop, **simulation_kwargs)
+        stats = run_training_session(pop, device=device, **simulation_kwargs)
         scores = fitness(stats)
         scores = [(p, s) for p, s in zip(pop, scores)]
         scores.sort(reverse=True, key=lambda x: x[1])
 
         if n % log_interval == 0:
             os.system("clear")
-            print(f"Best Fitness: {scores[0][0]}")
+            print(f"Best Fitness: {scores[0][1]}")
 
         newpop = [copy.deepcopy(scores[0][0])]
         for _ in range(len(pop) - 1):
@@ -914,9 +817,13 @@ def train(
 
 
 if __name__ == "__main__":
+    device = get_mps_device()
     train(
-        num_iters=10,
-        pop_size=32,
-        show_samples=[False],
+        num_iters=1000,
+        pop_size=13,
+        device=device,
+        top_k=5,
+        show_samples=[True],
         overlay_ids=[0, 3, 4],
+        num_proc=13,
     )

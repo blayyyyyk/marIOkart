@@ -433,7 +433,6 @@ def load_current_nkm(emu: DeSmuME, device):
     Returns:
         `NKMTensor` with NKM section tensors (e.g., checkpoints) on the specified device.
     """
-    assert device is not None
     id = get_current_course_id(emu)
     path = get_course_path(id)
     path = f"./courses/{path}/course_map.nkm"
