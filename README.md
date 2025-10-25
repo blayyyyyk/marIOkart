@@ -71,15 +71,13 @@ cd marIOkart
 ```
 
 ### 2. Install System Dependencies
-**Mac + Homebrew (recommended)**
-```bash
-brew install pygobject3 gtk4
+**Linux / MacOS (Apple Silicon)**
 ```
-**Linux (Ubuntu/Debian)**
-```bash
-sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0
+chmod +x ./install.sh
+./install.sh
 ```
-> For other Linux distros consult the site [here](https://pygobject.gnome.org/getting_started.html).
+
+> This installation script is a work in progress. If you are having trouble installing, please [message me on Discord](https://discord.com/users/410111287872323594).
 
 **Windows**
 > Windows is currently untested for this project, but you can try with installation guide [here](https://pygobject.gnome.org/getting_started.html).
@@ -91,8 +89,8 @@ pip install -r requirements.txt
 
 ### 4. If using HOMEBREW, make sure that you have these environment variables set
 ```bash
-export PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:
-export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib:
+export DYLD_LIBRARY_PATH="$(brew --prefix atk)/lib:$(brew --prefix gtk+3)/lib:$(brew --prefix glib)/lib:$(brew --prefix pango)/lib:$(brew --prefix gdk-pixbuf)/lib:$DYLD_LIBRARY_PATH"
+export GI_TYPELIB_PATH="$(brew --prefix atk)/lib/girepository-1.0:$(brew --prefix gtk+3)/lib/girepository-1.0:$(brew --prefix gobject-introspection)/lib/girepository-1.0:$GI_TYPELIB_PATH"
 ```
 
 Platform-specific install commands vary; use your package manager (Homebrew, apt, pacman, etc.).
