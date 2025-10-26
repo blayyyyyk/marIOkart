@@ -230,6 +230,7 @@ from __future__ import annotations
 import sys, os
 from desmume.emulator import SCREEN_WIDTH, DeSmuME
 from mkds.kcl import read_fx32
+from torch._prims_common import DeviceLikeType
 from src.mkds_extensions.kcl_torch import KCLTensor
 from src.mkds_extensions.nkm_torch import NKMTensor
 from mkds.utils import read_vector_3d_fx32
@@ -239,6 +240,7 @@ import math
 from src.utils.vector import (
     pairwise_distances_cross,
     intersect_ray_line_2d,
+    sample_semicircular_sweep,
     triangle_raycast_batch,
     sample_cone,
     triangle_altitude,
@@ -1058,6 +1060,14 @@ def read_next_checkpoint(emu: DeSmuME, checkpoint_count: int):
     else:
         return 0
 
+@frame_cache
+def read_previous_checkpoint(emu: DeSmuME, checkpoint_count: int):
+    current_checkpoint = read_current_checkpoint(emu)
+    prev_checkpoint = current_checkpoint - 1
+    if prev_checkpoint >= 0:
+        return prev_checkpoint
+    else:
+        return checkpoint_count - 1
 
 def _convert_2d_checkpoints(P: torch.Tensor, source: torch.Tensor, dim=0):
     """Lift 2D checkpoint endpoints into 3D by sampling the missing dimension.
@@ -1130,6 +1140,23 @@ def read_next_checkpoint_position(emu: DeSmuME, device):
     checkpoint_count = nkm._CPOI.entry_count
     next_checkpoint = read_next_checkpoint(emu, checkpoint_count)
     return checkpoints[next_checkpoint]
+    
+@frame_cache
+def read_previous_checkpoint_position(emu: DeSmuME, device):
+    """Get the 3D endpoints of the next checkpoint segment.
+
+    Args:
+        emu: Emulator instance.
+        device: Torch device.
+
+    Returns:
+        Tensor shape (2,3) representing the next checkpoint's [p1, p2].
+    """
+    nkm = load_current_nkm(emu, device=device)
+    checkpoints = read_checkpoint_positions(emu, device)
+    checkpoint_count = nkm._CPOI.entry_count
+    previous_checkpoint = read_previous_checkpoint(emu, checkpoint_count)
+    return checkpoints[previous_checkpoint]
 
 
 @frame_cache
@@ -1237,6 +1264,7 @@ def read_facing_point_obstacle(
     position: torch.Tensor | None = None,
     direction: torch.Tensor | None = None,
     device=None,
+    **sample_kwargs
 ):
     """Raycast toward walls/offroad and return the nearest hit point.
 
@@ -1280,7 +1308,9 @@ def read_facing_point_obstacle(
 
     ray_dir = direction / torch.norm(direction, keepdim=True)
     angle = torch.tensor(torch.pi / 24, device=device)
-    ray_samples = sample_cone(ray_dir, angle, 50)
+    up_vector = torch.tensor([0, 1.0, 0], device=device)
+    left_vector = torch.cross(ray_dir, up_vector)
+    ray_samples = sample_semicircular_sweep(ray_dir, left_vector, up_vector, **sample_kwargs)
     ray_dir = ray_dir.reshape(1, 3)
     ray_samples = torch.cat([ray_dir, ray_samples], dim=0)
 
@@ -1292,17 +1322,40 @@ def read_facing_point_obstacle(
     points = triangle_raycast_batch(ray_origin_samples, ray_samples, v1, v2, v3)
     N, M, C = points.shape
     points = points.reshape(N * M, C)
+    
+    return points
+    
+    
+
+@frame_cache
+def read_closest_obstacle_point(
+    emu: DeSmuME, 
+    position: torch.Tensor | None = None,
+    direction: torch.Tensor | None = None,
+    device = None,
+    **sample_kwargs
+) -> torch.Tensor | None:
+    if position is None:
+        position = read_position(emu, device=device)
+
+    if direction is None:
+        direction = read_direction(emu, device=device)
+    
+    points = read_facing_point_obstacle(emu, position, direction, device=device, **sample_kwargs)
+    
+    if points is None:
+        return None
+    
     if points.shape[0] == 0:
         return None
-
-    dist = torch.cdist(points, ray_origin)
+        
+    dist = torch.cdist(points, position.unsqueeze(0))
     min_id = torch.argmin(dist)
     current_point_min = points[min_id]
     return current_point_min
 
-
 @frame_cache
-def read_forward_distance_obstacle(emu: DeSmuME, device) -> torch.Tensor:
+def read_forward_distance_obstacle(emu: DeSmuME, device=None, **sample_kwargs) -> torch.Tensor:
     """Compute forward distance to the nearest wall/offroad obstacle.
 
     Args:
@@ -1313,16 +1366,17 @@ def read_forward_distance_obstacle(emu: DeSmuME, device) -> torch.Tensor:
         Scalar torch.Tensor distance; +inf if no hit.
     """
     position = read_position(emu, device=device)
-    ray_point = read_facing_point_obstacle(emu, device=device)
+    ray_point = read_closest_obstacle_point(emu, device=device, **sample_kwargs)
     if ray_point is None:
         return torch.tensor([float("inf")], device=device)
 
-    dist = torch.sqrt(torch.sum((position - ray_point) ** 2, dim=0))
+    dist = torch.sqrt(torch.sum((position - ray_point) ** 2, dim=0, keepdim=True))
+    
     return dist
 
 
 @frame_cache
-def read_left_distance_obstacle(emu: DeSmuME, device) -> torch.Tensor:
+def read_left_distance_obstacle(emu: DeSmuME, device=None, **sample_kwargs) -> torch.Tensor:
     """Compute leftward distance to the nearest wall/offroad obstacle.
 
     Args:
@@ -1336,16 +1390,16 @@ def read_left_distance_obstacle(emu: DeSmuME, device) -> torch.Tensor:
     direction = read_direction(emu, device=device)
     up_basis = -torch.tensor([0, 1.0, 0], device=device, dtype=torch.float32)
     left_basis = torch.cross(direction, up_basis)
-    ray_point = read_facing_point_obstacle(emu, direction=left_basis, device=device)
+    ray_point = read_closest_obstacle_point(emu, direction=left_basis, device=device, **sample_kwargs)
     if ray_point is None:
         return torch.tensor([float("inf")], device=device)
 
-    dist = torch.sqrt(torch.sum((position - ray_point) ** 2, dim=0))
+    dist = torch.sqrt(torch.sum((position - ray_point) ** 2, dim=0, keepdim=True))
     return dist
 
 
 @frame_cache
-def read_right_distance_obstacle(emu: DeSmuME, device) -> torch.Tensor:
+def read_right_distance_obstacle(emu: DeSmuME, device=None, **sample_kwargs) -> torch.Tensor:
     """Compute rightward distance to the nearest wall/offroad obstacle.
 
     Args:
@@ -1359,11 +1413,11 @@ def read_right_distance_obstacle(emu: DeSmuME, device) -> torch.Tensor:
     direction = read_direction(emu, device=device)
     up_basis = torch.tensor([0, 1.0, 0], device=device, dtype=torch.float32)
     right_basis = torch.cross(direction, up_basis)
-    ray_point = read_facing_point_obstacle(emu, direction=right_basis, device=device)
+    ray_point = read_closest_obstacle_point(emu, direction=right_basis, device=device, **sample_kwargs)
     if ray_point is None:
         return torch.tensor([float("inf")], device=device)
 
-    dist = torch.sqrt(torch.sum((position - ray_point) ** 2, dim=0))
+    dist = torch.sqrt(torch.sum((position - ray_point) ** 2, dim=0, keepdim=True))
     return dist
 
 
@@ -1388,3 +1442,20 @@ def read_checkpoint_distance_altitude(emu: DeSmuME, device) -> torch.Tensor:
     a = torch.norm(p1 - position)
     b = torch.norm(p2 - position)
     return triangle_altitude(a, b)
+
+
+@frame_cache
+def read_touching_prism_type(emu: DeSmuME, attr_mask: Callable[[torch.Tensor], torch.Tensor], device) -> bool:
+    kcl = load_current_kcl(emu, device=device)
+    position = read_position(emu, device=device)
+    indices = kcl.search_triangles(position)
+    if indices is None or len(indices) == 0:
+        return False
+
+    indices = torch.tensor(indices, dtype=torch.int32, device=device)
+    
+    triangle_attr = kcl.prisms.collision_type[indices]
+    
+    mask = attr_mask(triangle_attr)
+    offroad_indices = indices[mask]
+    return offroad_indices.shape[0] > 0

@@ -179,7 +179,9 @@ class SharedEmulatorWindow(Gtk.Window):
             ctx.save()
             ctx.translate(c * tile_w, r * tile_h)
             ctx.scale(tile_w / SCREEN_WIDTH, tile_h / SCREEN_HEIGHT)
+            
             ctx.set_source_surface(surface, 0, 0)
+            ctx.get_source().set_filter(cairo.Filter.NEAREST)  # Disable smoothing
             ctx.paint()
             ctx.restore()
             

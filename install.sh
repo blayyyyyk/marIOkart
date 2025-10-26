@@ -106,4 +106,6 @@ install_pygobject() {
 install_pygobject "$@" &&
 echo "[INFO] Installing Python dependencies"
 pip install -r requirements.txt
+export DYLD_LIBRARY_PATH="$(brew --prefix atk)/lib:$(brew --prefix gtk+3)/lib:$(brew --prefix glib)/lib:$(brew --prefix pango)/lib:$(brew --prefix gdk-pixbuf)/lib:$DYLD_LIBRARY_PATH"
+export GI_TYPELIB_PATH="$(brew --prefix atk)/lib/girepository-1.0:$(brew --prefix gtk+3)/lib/girepository-1.0:$(brew --prefix gobject-introspection)/lib/girepository-1.0:$GI_TYPELIB_PATH"
 
