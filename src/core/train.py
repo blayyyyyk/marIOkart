@@ -75,13 +75,15 @@ Notes
 
 # Builtin dependencies
 from __future__ import annotations
-import random, math, os, sys, copy
+import random, math, os, sys, copy, time
 from multiprocessing.managers import DictProxy
 from multiprocessing import Process, Manager, Lock
 from multiprocessing.shared_memory import SharedMemory
 from queue import Queue
 from threading import Thread
 from typing import TypedDict, TypeAlias, cast
+import argparse
+from pathlib import Path
 
 # External dependencies
 from desmume.emulator import DeSmuME, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_PIXEL_SIZE
@@ -100,23 +102,25 @@ from gi.repository import Gtk, Gdk, GLib
 # Local dependencies
 from src.core.memory import *
 from src.core.memory import read_clock
-from src.core.model import Genome, EvolvedNet
+from src.core.model import Genome, EvolvedNet, load_genome, save_genome
 from src.utils.vector import get_mps_device
 from src.visualization.window import SharedEmulatorWindow, on_draw_memoryview
 from src.visualization.overlay import AVAILABLE_OVERLAYS
+from src.core.metric import DistanceMetric, FitnessScorer, Metric, collect_all, default_fitness_scorer
 
 class EmulatorProcessConfig(TypedDict):
     id: int
     sample: Genome
     host: bool
     show: bool
-    
+
 class EmulatorBatchConfig(TypedDict):
     size: int
     display_shm_names: list[str]
     device: DeviceLikeType | None
     overlay_ids: list[int]
-    
+    metric_factories: list[Callable[[], Metric]]
+
 class CheckpointRecord:
     id: int
     times: list[float]
@@ -140,6 +144,12 @@ MODEL_KEY_MAP = {
     14: Keys.KEY_DOWN,
 }
 
+CHECKPOINT_DIR_PATH = "./model_checkpoints"
+
+NUM_FRAMES_WITH_NOISE = 6500 # This is usually dependent on when (during the race) the savestate loads.
+
+shm_names = []
+best_genome: Genome | None = None
 
 def safe_shared_memory(name: str, size: int):
     """Create or replace a named POSIX shared-memory segment.
@@ -202,6 +212,7 @@ def initialize_emulator() -> DeSmuME:
     emu.savestate.load(SAVE_STATE_ID)
     emu.volume_set(0)
     emu.cycle()
+    os.system('clear')
 
     while not emu.is_running():
         print("Waiting for emulator...")
@@ -230,8 +241,8 @@ def initialize_window(emu, config: EmulatorProcessConfig, batch_config: Emulator
 
     """
     if not config['host']:
-       return None 
-    
+       return None
+
     shm_names = batch_config['display_shm_names']
     display_count = len(shm_names)
     width = 1000
@@ -280,7 +291,7 @@ def initialize_overlays(
     overlay_ids = batch_config['overlay_ids']
     if not config['show'] or not len(overlay_ids) > 0:
         return None
-    
+
     device = batch_config['device']
     overlays = []
     for id in overlay_ids:
@@ -307,7 +318,7 @@ def initialize_overlays(
     return emu_queue
 
 
-def handle_controls(emu: DeSmuME, logits: torch.Tensor):
+def handle_controls(emu: DeSmuME, logits: torch.Tensor, max_frame_with_noise: int = 0):
     """Apply model outputs to emulator controls with a simple threshold policy.
 
     All values ``>= 0.5`` are considered pressed for the corresponding
@@ -327,34 +338,44 @@ def handle_controls(emu: DeSmuME, logits: torch.Tensor):
     logits_list = logits.tolist()
     emu.input.keypad_update(0)
     for i, v in enumerate(logits_list):
-        
+        if read_clock(emu) < max_frame_with_noise:
+            v += random.random()
         if v < 0.5:
             continue
 
         emu.input.keypad_add_key(keymask(MODEL_KEY_MAP[i]))
-    
+
     emu.input.keypad_add_key(keymask(MODEL_KEY_MAP[5]))
 
 
-    
 
-    
+
+
 def initialize_model(emu: DeSmuME, config: EmulatorProcessConfig, batch_config: EmulatorBatchConfig):
     device = batch_config['device']
     sample = config['sample']
     model = EvolvedNet(sample, device=device)
-    forward = get_forward_func(emu, model, device)
+    forward = get_forward_func(emu, model, device=device)
     return forward
-    
-def _run_process(training_stats: dict[int, dict[int, CheckpointRecord]], training_stats_lock, config: EmulatorProcessConfig, batch_config: EmulatorBatchConfig):
+
+def _run_process(
+    training_stats: dict[int, dict[str, float]],
+    training_stats_lock, 
+    config: EmulatorProcessConfig,
+    batch_config: EmulatorBatchConfig
+):
     assert config['show'] if config['host'] else True, "Host processes must have display enabled"
     
+
     # Initialize emulator
     emu = initialize_emulator()
-    
+
     # Initialize model
     forward = initialize_model(emu, config, batch_config)
-    
+    metrics: list[Metric] = [b() for b in batch_config['metric_factories']]
+    for m in metrics: m.reset()
+    device = batch_config['device']
+
     # Initialize display shared memory buffer as numpy array
     frame = None
     if config["show"]:
@@ -365,48 +386,48 @@ def _run_process(training_stats: dict[int, dict[int, CheckpointRecord]], trainin
             dtype=np.uint8,
             buffer=shm_frame.buf,
         )
-        
-    # Initialize window 
+
+    # Initialize window
     window = initialize_window(emu, config, batch_config)
-        
+
     # Set overlay overlay thread
     emu_queue = initialize_overlays(config, batch_config)
-        
-    stats: dict[int, CheckpointRecord] | None = None
+
     def tick():
         nonlocal stats, emu_queue, frame, emu, window
         emu.cycle()
-        
+
         if frame is not None:
-            
             # Copy display data to shared memory buffer
             buf = emu.display_buffer_as_rgbx()[: SCREEN_PIXEL_SIZE * 4]
             new_frame = on_draw_memoryview(buf, SCREEN_WIDTH, SCREEN_HEIGHT, 1.0, 1.0)
             np.copyto(frame, new_frame)
-            
+
 
         # Inference / Game Update
         logits = forward()
-        if isinstance(logits, dict):
+        for metric in metrics:
+            metric.update(emu, device=device)
+            
+        if logits is None:
             id = config['id']
-            send_window_end_signal(config['id'])
-            stats = logits
+            send_window_end_signal(id)
             return False
 
-        
-        handle_controls(emu, logits)
+
+        handle_controls(emu, logits, NUM_FRAMES_WITH_NOISE)
         if emu_queue is not None:
             # Queue Overlay Request
             emu_queue.put(emu)
-            
+
         return True
-        
+
     while not config['host']:
         val = tick()
         if val == False:
             break
-        
-        
+
+
     if window is not None:
         # Will incrementally check if the population has died
         def check_end():
@@ -416,28 +437,29 @@ def _run_process(training_stats: dict[int, dict[int, CheckpointRecord]], trainin
                 arr = np.ndarray(
                     (SCREEN_WIDTH, SCREEN_HEIGHT, 4), dtype=np.uint8, buffer=shm.buf
                 )
-                
+
                 if arr.sum() != 0:
                     return True
-    
+
             Gtk.main_quit()
             return False
-        
+
         GLib.timeout_add(200, check_end)  # non-blocking
-        GLib.timeout_add(33, tick)  # non-blocking
+        GLib.timeout_add(1, tick)  # non-blocking
         window.show_all()
+        window.set_keep_above(True)   # Keeps window above others temporarily
+        window.present_with_time(Gtk.get_current_event_time())  # More reliable focus timing
         Gtk.main()  # blocking
-        
+
     # Safe thread shutdown for overlay
     if emu_queue is not None:
         emu_queue.put(None)
-        
-        
+
+
     # Log results
     with training_stats_lock:
         id = config['id']
-        if stats is None:
-            stats = {}
+        stats = collect_all(metrics)
         training_stats[id] = stats
 
 
@@ -483,13 +505,12 @@ def send_window_end_signal(id):
     arr[:] = 0.0
 
 
-def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
-    """Build a closure that performs one model step and checkpoint bookkeeping.
+def get_forward_func(emu: DeSmuME, model: EvolvedNet, device: DeviceLikeType | None = None):
+    """Build a closure that performs one model step.
 
     The returned callable reads emulator memory for sensor inputs, constructs the
-    model input vector, computes the control logits, and records per-checkpoint
-    split times and distances. When a terminal condition is reached (e.g.
-    clock > 10000), it returns the accumulated stats dict instead of logits.
+    model input vector, computes the control logits. When a terminal condition is reached (e.g.
+    clock > 10000), it returns a NoneType value instead of logits.
 
     Args:
       emu: Active emulator instance to read game state from.
@@ -497,9 +518,9 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
       device: Torch device on which tensors are constructed and the model runs.
 
     Returns:
-      Callable[[], torch.Tensor | dict[int, list[tuple[float, float]]]]:
+      Callable[[], torch.Tensor | None]:
         A no-argument function that returns either a 1D tensor of action logits
-        or a stats dictionary signaling the end of this individual's run.
+        or NoneType signaling the end of this individual's run.
 
     Sensor model:
       - Distances: forward/left/right obstacle distances are read and mapped
@@ -511,52 +532,22 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
       - This function reads directly from emulator memory via utility helpers.
 
     """
-    current_time = read_clock(emu)
-    prev_time = current_time
-    current_id = read_current_checkpoint(emu)
-    prev_id = current_id
-    prev_dist = read_checkpoint_distance_altitude(emu, device=device).item()
-    times: dict[int, CheckpointRecord] = {}
+    
 
-    def forward() -> torch.Tensor | dict[int, CheckpointRecord]:
-        nonlocal current_id, prev_id, current_time, prev_time, prev_dist, model, emu, times
-
+    def forward() -> torch.Tensor | None:
         clock = read_clock(emu)
-        if clock > 10000:
-            return times
+        if clock > 20000:
+            return None
 
-        emu = emu
-        prev_id = read_current_checkpoint(emu)
-        clock = read_clock(emu)
-
-        if current_id != prev_id:
-            assert isinstance(current_id, int)
-            
-
-            current_time = clock
-            if current_id not in times:
-                entry = {
-                    "id": current_id,
-                    "times": [],
-                    "dists": []
-                }
-                
-                times[current_id] = cast(CheckpointRecord, entry)
-                
-            cast(dict, times[current_id])['times'].append(current_time - prev_time)
-            cast(dict, times[current_id])['dists'].append(prev_dist)
-            prev_time = current_time
-            prev_dist = read_checkpoint_distance_altitude(emu, device=device).item()
-
-        s1 = 60.0
+        s1 = 1000.0
 
         # Sensor inputs (obstacle distances)
-        forward_d = read_forward_distance_obstacle(emu, device=device)
-        left_d = read_left_distance_obstacle(emu, device=device)
-        right_d = read_right_distance_obstacle(emu, device=device)
+        forward_d = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1))
+        left_d = read_left_distance_obstacle(emu, device=device, interval=(-0.5, 0.5))
+        right_d = read_right_distance_obstacle(emu, device=device, interval=(-0.5, 0.5))
         inputs_dist1 = torch.tensor([forward_d, left_d, right_d], device=device)
-        inputs_dist1 = torch.tanh(1 - inputs_dist1 / s1)
-
+        inputs_dist1 = inputs_dist1 < 200
+        print(inputs_dist1)
         # Angular relationship to next checkpoint
         angle = read_direction_to_checkpoint(emu, device=device)
         forward_a = torch.cos(angle)
@@ -566,6 +557,7 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
 
         # Model inference
         inputs = torch.cat([inputs_dist1, inputs_dist2])
+        
         logits = model(inputs)
 
         return logits
@@ -576,7 +568,7 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device):
 def run_training_batch(
     batch_population: list[Genome],
     show_samples: list[bool],
-    training_stats: DictProxy[int, dict[int, CheckpointRecord]],
+    training_stats: DictProxy[int, dict[str, float]],
     training_stats_lock,
     batch_config: EmulatorBatchConfig
 ):
@@ -615,11 +607,11 @@ def run_training_batch(
             "host": False,
             "show": show
         }
-        
+
         if not host_proc_found:
             host_proc_found = True
             config["host"] = True
-            
+
         if show:
             shm_frame = SharedMemory(name=f"emu_frame_{id}")
             frame = np.ndarray(
@@ -650,8 +642,9 @@ def run_training_session(
     num_proc: int | None = None,
     show_samples: list[bool] = [True],
     overlay_ids: list[int] = [],
+    metric_factories: list[Callable[[], Metric]] = [],
     device: DeviceLikeType | None = None
-) -> dict[int, list[CheckpointRecord]]:
+) -> dict[int, dict[str, float]]:
     """Evaluate the full population in parallel batches and collect statistics.
 
     The population is partitioned into batches of size ``min(num_proc, remaining)``.
@@ -685,14 +678,14 @@ def run_training_session(
         num_proc = os.cpu_count()
         assert num_proc is not None
         num_proc -= 1
-        
+
     if len(show_samples) == 1:
         show_samples *= num_proc
 
-    pop_stats: dict[int, list[CheckpointRecord]] = {}
+    pop_stats: dict[int, dict[str, float]] = {}
     pop_size = len(pop)
     count = 0
-    
+
     shm_names = []
     for i in range(num_proc):
         if not show_samples[i]: continue
@@ -705,14 +698,15 @@ def run_training_session(
             buffer=shm_frame.buf,
         )
         shm_names.append(name)
-    
+
     while count < pop_size:
         batch_size = min(pop_size - count, num_proc)
-        
+
         batch_config: EmulatorBatchConfig = {
             "overlay_ids": overlay_ids,
             "display_shm_names": shm_names,
             "size": batch_size,
+            "metric_factories": metric_factories,
             "device": device
         }
 
@@ -720,7 +714,7 @@ def run_training_session(
 
         with Manager() as manager:
             # Create shared list for stats (locking)
-            shared_pop_stats: DictProxy[int, dict[int, CheckpointRecord]] = manager.dict()
+            shared_pop_stats: DictProxy[int, dict[str, float]] = manager.dict()
             lock = Lock()
 
             run_training_batch(
@@ -732,7 +726,7 @@ def run_training_session(
             )
 
             for k, s in shared_pop_stats.items():
-                pop_stats[count + k] = list(s.values())
+                pop_stats[count + k] = s
 
         count += batch_size
 
@@ -740,7 +734,7 @@ def run_training_session(
     return pop_stats
 
 
-def fitness(pop_stats: dict[int, list[CheckpointRecord]]) -> list[float]:
+def fitness(pop_stats: dict[int, dict[str, float]], scorer: FitnessScorer) -> list[float]:
     """Compute scalar fitness from per-checkpoint stats.
 
     The current fitness heuristic sums the recorded distances across all
@@ -754,12 +748,14 @@ def fitness(pop_stats: dict[int, list[CheckpointRecord]]) -> list[float]:
       list[float]: Fitness values *ordered by population index*.
 
     """
-    def total_dist(v: list[CheckpointRecord]):
-        return sum([sum(cast(dict, r)['dists']) for r in v])
+    scores = []
+    for k in sorted(pop_stats.keys()):
+        metrics = pop_stats[k]
+        score = scorer(metrics)
+        scores.append(score)
+        
+    return scores
 
-    pop_stats_list = [(k, total_dist(s)) for k, s in pop_stats.items()]
-    pop_stats_list.sort(key=lambda x: x[0])
-    return [x[1] for x in pop_stats_list]
 
 
 def train(
@@ -768,6 +764,9 @@ def train(
     log_interval: int = 1,
     top_k: int | float = 0.1,
     device: DeviceLikeType | None = None,
+    scorer: FitnessScorer = default_fitness_scorer,
+    load_checkpoint_path: str | Path | None = None,
+    
     **simulation_kwargs,
 ):
     """Main evolutionary training loop (selection + mutation).
@@ -791,7 +790,12 @@ def train(
       - Mutates and replaces the population in place each generation.
 
     """
-    pop = [Genome(6, 2, device=device) for _ in range(pop_size)]
+    global best_genome
+    if load_checkpoint_path is None:
+        pop: list[Genome] = [Genome(6, 2, device=device) for _ in range(pop_size)]
+    else:
+        pop: list[Genome] = [load_genome(load_checkpoint_path) for _ in range(pop_size)]
+    
     for g in pop: g.mutate_add_conn()  # start with random links
 
     if top_k <= 1:
@@ -800,30 +804,106 @@ def train(
 
     for n in range(num_iters):
         stats = run_training_session(pop, device=device, **simulation_kwargs)
-        scores = fitness(stats)
-        scores = [(p, s) for p, s in zip(pop, scores)]
-        scores.sort(reverse=True, key=lambda x: x[1])
+        
+        scores = fitness(stats, scorer)
+        scores = sorted(enumerate(scores), reverse=True, key=lambda x: x[1])
+        
+        print(best_genome.conns if best_genome is not None else "")
 
         if n % log_interval == 0:
             os.system("clear")
             print(f"Best Fitness: {scores[0][1]}")
 
-        newpop = [copy.deepcopy(scores[0][0])]
+        first_i = scores[0][0]
+        best_genome = copy.deepcopy(pop[first_i])
+        newpop = [copy.deepcopy(pop[first_i])]
         for _ in range(len(pop) - 1):
-            g = copy.deepcopy(random.choice(scores[:top_k])[0])
+            rand_i = random.choice(scores[:5])[0]
+            g = copy.deepcopy(pop[rand_i])
             random.choice([g.mutate_weight, g.mutate_add_conn, g.mutate_add_node])()
             newpop.append(g)
         pop = newpop
 
+def make_distance_metric():
+    return DistanceMetric()
+
+def main():
+    parser = argparse.ArgumentParser(description="Train a neural network")
+    parser.add_argument("--num_iters", type=int, default=100)
+    parser.add_argument("--log_interval", type=int, default=10)
+    parser.add_argument("--top_k", type=int, default=2)
+    parser.add_argument("--pop_size", type=int, default=-1)
+    parser.add_argument("--num_processes", type=int)
+    parser.add_argument("--num_displays", type=int, default=0)
+    parser.add_argument("--load_checkpoint_path", type=str)
+    parser.add_argument("--load_checkpoint_recent", type=bool, default=False)
+    parser.add_argument("--save_checkpoint", type=bool, default=False)
+    args = parser.parse_args()
+    
+    num_proc = args.num_processes
+    if num_proc is None:
+        num_proc = os.cpu_count()
+        if num_proc is not None:
+            num_proc -= 1
+        else:
+            num_proc = 1
+    
+    num_displays = args.num_displays
+    if num_displays < 0:
+        num_displays = num_proc
+    
+    num_headless = num_proc - num_displays
+    
+    device = get_mps_device()
+    
+    pop_size = args.pop_size
+    if pop_size < 0:
+        pop_size = num_proc
+        
+    load_checkpoint_path: str | Path | None = None
+    if args.load_checkpoint_recent == True:
+        path = Path(CHECKPOINT_DIR_PATH)
+        
+        files = sorted(
+            path.iterdir(),
+            key=lambda f: f.stat().st_mtime,
+            reverse=True
+        )
+        
+        load_checkpoint_path = files[0]
+    elif args.load_checkpoint_path is not None:
+        load_checkpoint_path = args.load_checkpoint_path
+        
+    
+    show_displays = [True] * num_displays + [False] * num_headless
+    
+    try:
+        
+        train(
+            num_iters=args.num_iters,
+            pop_size=pop_size,
+            device=device,
+            top_k=args.top_k,
+            show_samples=show_displays,
+            overlay_ids=[0, 3, 4],
+            num_proc=num_proc,
+            metric_factories=[make_distance_metric],
+            load_checkpoint_path=load_checkpoint_path
+        )
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        global shm_names, best_genome
+        for name in shm_names:
+            shm = SharedMemory(name=name)
+            shm.close()
+            shm.unlink()
+        
+        if args.save_checkpoint == True and best_genome is not None:
+            dest_file_path = Path(CHECKPOINT_DIR_PATH).joinpath(f"chk_{str(hash(best_genome))[:8]}.json")
+            save_genome(best_genome, dest_file_path)
+            print(f"Model Weights Saved at {dest_file_path}")
 
 if __name__ == "__main__":
-    device = get_mps_device()
-    train(
-        num_iters=1000,
-        pop_size=13,
-        device=device,
-        top_k=5,
-        show_samples=[True],
-        overlay_ids=[0, 3, 4],
-        num_proc=13,
-    )
+    main()
+    

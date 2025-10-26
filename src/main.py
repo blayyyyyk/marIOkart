@@ -9,14 +9,7 @@ from pynput import keyboard
 from desmume.emulator import DeSmuME
 from desmume.controls import Keys, keymask
 from src.visualization.draw import consume_draw_stack, draw_text, draw_paragraph
-from src.core.memory import (
-    read_clock,
-    load_current_kcl,
-    load_current_nkm,
-    read_model_view,
-    read_forward_distance_checkpoint,
-    read_forward_distance_obstacle,
-)
+from src.core.memory import *
 from src.utils.vector import get_mps_device
 from src.visualization.overlay import (
     player_overlay,
@@ -206,7 +199,7 @@ def run_emulator(overlays):
     global renderer, callback, emu_global, is_running
     emu = DeSmuME()
     emu.open("mariokart_ds.nds")
-    emu.savestate.load(4)
+    emu.savestate.load(0)
 
     emu_global = emu
     emu.volume_set(0)
@@ -240,12 +233,6 @@ def run_emulator(overlays):
         for key in input_state:
             emu.input.keypad_add_key(keymask(KEY_MAP[key]))
 
-        try:
-            pass
-            # next(_generator)
-        except StopIteration:
-            pass
-
         if not is_running:
             Gtk.main_quit()
 
@@ -271,5 +258,6 @@ if __name__ == "__main__":
             collision_overlay,
             checkpoint_overlay_1,
             checkpoint_overlay_2,
+            raycasting_overlay
         ],
     )

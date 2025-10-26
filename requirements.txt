@@ -1,8 +1,9 @@
-pycairo>=1.28.0
-PyGObject>=3.54.5
+pycairo==1.28.0
+PyGObject==3.54.5
 mkds==0.1.10
 pynput==1.8.1
 py-desmume==0.0.7
 torch>=2.9.0
 numpy>=2.3.4
 pygobject-stubs>=2.13.0
+torchlens>=0.1.36

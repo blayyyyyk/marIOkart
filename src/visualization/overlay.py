@@ -28,6 +28,8 @@ def collision_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
     if indices is None or len(indices) == 0:
         return
 
+    
+
     indices = torch.tensor(indices, dtype=torch.int32, device=device)
     triangles = kcl.triangles
     color_map = [
@@ -71,27 +73,59 @@ current_point = None
 
 @register_overlay
 def raycasting_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
-    global current_point
-    if current_point is None:
-        current_point = torch.tensor(
-            [0.0, 0.0, 0.0], dtype=torch.float32, device=device
-        )
-        
     position = read_position(emu, device=device)
-
-    current_point_min = read_facing_point_obstacle(emu, device=device)
-    if current_point_min is None:
-        return
-
-    current_point = interpolate(current_point, current_point_min, 0.1)
-
-    forward_dist = torch.sqrt(
-        torch.sum((current_point_min - position) ** 2, dim=0)
-    )
-    left_dist = read_left_distance_obstacle(emu, device=device)
-    right_dist = read_right_distance_obstacle(emu, device=device)
-
-    # print(f"Forward Distance: {forward_dist}\nLeft Distance: {left_dist}\nRight Distance: {right_dist}")
+    dir_f = read_direction(emu, device=device)
+    dir_f /= dir_f.norm(dim=-1, keepdim=True)
+    dir_l = torch.cross(dir_f, torch.tensor([0, 1.0, 0], device=device))
+    dir_l /= dir_l.norm(dim=-1, keepdim=True)
+    dir_r = -dir_l
+    
+    def _overlay(dir: torch.Tensor, color: np.ndarray, **sample_kwargs):
+        nonlocal position
+        points_f = read_facing_point_obstacle(
+            emu, 
+            position, 
+            dir, 
+            device=device,
+            **sample_kwargs
+        )
+        f: torch.Tensor = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24)
+        l: torch.Tensor = read_left_distance_obstacle(emu, device=device, interval=(-0.5, 0.5), n_steps=24)
+        r: torch.Tensor = read_right_distance_obstacle(emu, device=device, interval=(-0.5, 0.5), n_steps=24)
+        print(torch.cat([f, l, r], dim=-1))
+        
+        if points_f is None:
+            return
+            
+        if points_f.shape[0] == 0:
+            return
+        
+        raycasted_points_proj = project_to_screen(emu, points_f, device=device)
+        z_clip_mask_2 = z_clip_mask(raycasted_points_proj)
+    
+        # depth filter 2
+        raycasted_points_proj = raycasted_points_proj[z_clip_mask_2]
+        if raycasted_points_proj.shape[0] == 0:
+            return
+    
+        # display depth norm, preserve depth in 3d
+        depth_norm = raycasted_points_proj[:, 3, None]
+        depth = raycasted_points_proj[:, 2, None]
+        raycasted_points_proj = torch.cat([raycasted_points_proj[:, :2], depth_norm, depth], dim=-1)
+        raycasted_points_proj = raycasted_points_proj[:, :3]
+        intersect_proj_np = raycasted_points_proj.detach().cpu().numpy()
+        
+        pos = position[None, :].repeat(raycasted_points_proj.shape[0], 1)
+        pos_proj = project_to_screen(emu, pos, device=device)
+        pos_proj = pos_proj[:, :3]
+        pos_proj[:, 2] = 0.1
+        pos_proj_np = pos_proj.detach().cpu().numpy()
+        
+        draw_lines(pos_proj_np, intersect_proj_np, colors=color)
+        
+    _overlay(dir_f, color=np.array([0.5, 0.7, 0.9]), interval=(-0.1, 0.1), n_steps=24)
+    _overlay(dir_l, color=np.array([0.9, 0.5, 0.7]), interval=(-0.5, 0.5), n_steps=24)
+    _overlay(dir_r, color=np.array([0.3, 0.9, 0.5]), interval=(-0.5, 0.5), n_steps=24)
 
 @register_overlay
 def camera_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
