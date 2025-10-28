@@ -1,0 +1,3 @@
+[submodule "mkds"]
+	path = mkds
+	url = https://github.com/blayyyyyk/mkds-py.git
