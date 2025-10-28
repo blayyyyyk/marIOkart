@@ -256,8 +256,8 @@ if __name__ == "__main__":
         [
             # player_overlay,
             collision_overlay,
-            checkpoint_overlay_1,
-            checkpoint_overlay_2,
+            #checkpoint_overlay_1,
+            #checkpoint_overlay_2,
             raycasting_overlay
         ],
     )
