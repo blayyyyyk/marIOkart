@@ -1,0 +1,162 @@
+from ctypes import *
+from private.mkds_python_bindings.pointer import POINTER32, c_void_p32
+from private.mkds_python_bindings.generated.darray import *
+from private.mkds_python_bindings.generated.gp import *
+from private.mkds_python_bindings.generated.gpi import *
+from private.mkds_python_bindings.generated.gpiBuffer import *
+from private.mkds_python_bindings.generated.gsPlatform import *
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+GPI_PEER_OP_STATE_NONE = 0
+GPI_PEER_OP_STATE_REQUESTED = 1
+GPI_PEER_OP_STATE_FINISHED = 2
+
+
+class GPIMessage(Structure):
+    _fields_ = [
+        ('buffer', GPIBuffer),
+        ('type', c_int),
+        ('start', c_int),
+    ]
+
+class _GPIPeerOp(Structure):
+    _fields_ = [
+        ('state', GPIPeerOpState),
+        ('userData', c_void_p32),
+        ('callback', GPCallback),
+        ('next', POINTER32(_GPIPeerOp)),
+        ('type', c_int),
+        ('timeout', gsi_time),
+    ]
+
+class _GPIPeerOpQueue(Structure):
+    _fields_ = [
+        ('opList', POINTER32(GPIPeerOp)),
+        ('first', POINTER32(GPIPeerOp)),
+        ('last', POINTER32(GPIPeerOp)),
+    ]
+
+class GPIPeer_s(Structure):
+    _fields_ = [
+        ('state', c_int),
+        ('initiated', GPIBool),
+        ('ip', c_int),
+        ('port', c_short),
+        ('profile', GPProfile),
+        ('timeout', time_t),
+        ('nackCount', c_int),
+        ('inputBuffer', GPIBuffer),
+        ('outputBuffer', GPIBuffer),
+        ('messages', DArray),
+        ('peerOpQueue', GPIPeerOpQueue),
+        ('pnext', POINTER32(GPIPeer_s)),
+    ]
+GPITransferID_st = c_void_p32
+GPIPeerOpState = c_int
