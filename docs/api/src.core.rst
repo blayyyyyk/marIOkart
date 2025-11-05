@@ -12,6 +12,14 @@ src.core.memory module
    :show-inheritance:
    :undoc-members:
 
+src.core.metric module
+----------------------
+
+.. automodule:: src.core.metric
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 src.core.model module
 ---------------------
 

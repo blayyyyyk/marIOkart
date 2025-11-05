@@ -19,6 +19,6 @@ Navigation
    :caption: Documentation
    
    api/articles/articles
-   api/src
+   api/modules
    api/mkds
    

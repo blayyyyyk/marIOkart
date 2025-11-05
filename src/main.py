@@ -8,6 +8,10 @@ import gi
 from pynput import keyboard
 from desmume.emulator import DeSmuME
 from desmume.controls import Keys, keymask
+#from private.mkds_python_bindings.testing.driver import driver_t
+#from private.mkds_python_bindings.testing.nnsfnd import NNSFndList
+#from private.mkds_python_bindings.testing.sfx import sfx_emitter_t
+#from private.mkds_python_bindings.testing.list import list_link_t
 from src.visualization.draw import consume_draw_stack, draw_text, draw_paragraph
 from src.core.memory import *
 from src.utils.vector import get_mps_device
@@ -18,6 +22,7 @@ from src.visualization.overlay import (
     checkpoint_overlay_1,
     checkpoint_overlay_2,
 )
+import ctypes
 
 os.environ["PKG_CONFIG_PATH"] = "/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = (
@@ -232,7 +237,7 @@ def run_emulator(overlays):
         emu.input.keypad_update(0)
         for key in input_state:
             emu.input.keypad_add_key(keymask(KEY_MAP[key]))
-
+        
         if not is_running:
             Gtk.main_quit()
 
@@ -256,8 +261,8 @@ if __name__ == "__main__":
         [
             # player_overlay,
             collision_overlay,
-            #checkpoint_overlay_1,
-            #checkpoint_overlay_2,
-            raycasting_overlay
+            checkpoint_overlay_1,
+            checkpoint_overlay_2,
+            #raycasting_overlay
         ],
     )

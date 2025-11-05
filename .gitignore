@@ -11,3 +11,8 @@ rom
 **/*/_build/*
 **/*/_build/*
 .envrc
+.envrc
+nitro-sdk
+mkds_c/external_include
+.clangd
+private

@@ -39,5 +39,12 @@
             "type": "output"
         }
     ],
-    "conns": []
+    "conns": [
+        {
+            "enabled": true,
+            "in_id": 4,
+            "out_id": 7,
+            "w": -0.9950074873543049
+        }
+    ]
 }
