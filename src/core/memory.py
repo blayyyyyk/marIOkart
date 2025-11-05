@@ -229,6 +229,9 @@ Compatibility
 from __future__ import annotations
 import sys, os
 from desmume.emulator import SCREEN_WIDTH, DeSmuME
+import ctypes
+#from src.core.c_structs.cam import *
+#from src.core.c_structs.driver import *
 from mkds.kcl import read_fx32
 from torch._prims_common import DeviceLikeType
 from src.mkds_extensions.kcl_torch import KCLTensor
@@ -245,6 +248,8 @@ from src.utils.vector import (
     sample_cone,
     triangle_altitude,
 )
+#from mkds_c.generated_bindings.camera import camera_t
+#from private.mkds_python_bindings.testing.driver import driver_t
 from typing import Callable, Concatenate, TypeVar, ParamSpec
 from functools import wraps
 
@@ -925,7 +930,6 @@ def _project_to_screen(world_points, model_view, fov, aspect, screen_dim: tuple[
     projection_matrix[2, 2] = (Z_FAR + Z_NEAR) / (Z_NEAR - Z_FAR)
     projection_matrix[2, 3] = -(2 * Z_FAR * Z_NEAR) / (Z_NEAR - Z_FAR)
     projection_matrix[3, 2] = 1
-
     clip_space = (projection_matrix @ cam_space.T).T
 
     ndc = clip_space[:, :3] / clip_space[:, 3, None]
@@ -953,7 +957,6 @@ def project_to_screen(emu: DeSmuME, points: torch.Tensor, device, screen_dim=(SC
     fov = read_camera_fov(emu)
     aspect = read_camera_aspect(emu)
     return _project_to_screen(points, model_view, fov, aspect, screen_dim, device=device)
-
 
 # CHECKPOINT INFO #
 
@@ -1459,3 +1462,24 @@ def read_touching_prism_type(emu: DeSmuME, attr_mask: Callable[[torch.Tensor], t
     mask = attr_mask(triangle_attr)
     offroad_indices = indices[mask]
     return offroad_indices.shape[0] > 0
+    
+def read_mat_c(emu: DeSmuME, device = None):
+    addr = read_camera_ptr(emu)
+    data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(camera_t)])
+    camera = camera_t.from_buffer_copy(data)
+    mat = camera.model_view
+    return torch.tensor(mat.m, device=device).reshape(4, 3) / 0x1000
+    
+def read_pos_c(emu: DeSmuME, device = None):
+    addr = read_camera_ptr(emu)
+    data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(camera_t)])
+    camera = camera_t.from_buffer_copy(data)
+    pos = camera.position
+    return torch.tensor([pos.x, pos.y, pos.z], device=device) / 0x1000
+    
+def read_driver_pos_c(emu: DeSmuME, device = None):
+    addr = read_racer_ptr(emu)
+    data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(driver_t)])
+    driver = driver_t.from_buffer_copy(data)
+    pos = driver.position
+    return torch.tensor([pos.x, pos.y, pos.z], device=device) / 0x1000

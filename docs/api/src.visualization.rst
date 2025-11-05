@@ -20,6 +20,14 @@ src.visualization.overlay module
    :show-inheritance:
    :undoc-members:
 
+src.visualization.window module
+-------------------------------
+
+.. automodule:: src.visualization.window
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 

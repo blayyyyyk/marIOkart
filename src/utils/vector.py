@@ -106,15 +106,15 @@ def intersect_ray_line_2d(O, D, P1, P2, eps=1e-8):
     return intersection, valid
 
 def triangle_raycast_batch(
-    ray_origin: torch.Tensor,  # (N, 3)
-    ray_dir: torch.Tensor,     # (N, 3)
-    v1: torch.Tensor,          # (M, 3)
-    v2: torch.Tensor,          # (M, 3)
-    v3: torch.Tensor,          # (M, 3)
+    ray_origin: torch.Tensor, # (N, 3)
+    ray_dir: torch.Tensor, # (N, 3)
+    v1: torch.Tensor, # (M, 3)
+    v2: torch.Tensor, # (M, 3)
+    v3: torch.Tensor, # (M, 3)
     epsilon=1e-8
 ) -> torch.Tensor:
     """
-    Batched ray-triangle intersection using Möller–Trumbore.
+    Batched ray-triangle intersection using Moller–Trumbore.
 
     Args:
         ray_origin: (N, 3) origins

@@ -7,3 +7,7 @@ rom
 **/*/venv
 **/*/_build/*
 .envrc
+nitro-sdk
+mkds_c/external_include
+.clangd
+private

@@ -90,9 +90,9 @@ def raycasting_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
             **sample_kwargs
         )
         f: torch.Tensor = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24)
-        l: torch.Tensor = read_left_distance_obstacle(emu, device=device, interval=(-0.5, 0.5), n_steps=24)
-        r: torch.Tensor = read_right_distance_obstacle(emu, device=device, interval=(-0.5, 0.5), n_steps=24)
-        print(torch.cat([f, l, r], dim=-1))
+        l: torch.Tensor = read_left_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24)
+        r: torch.Tensor = read_right_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24)
+        #print(torch.cat([l, f, r], dim=-1))
         
         if points_f is None:
             return
@@ -124,8 +124,8 @@ def raycasting_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
         draw_lines(pos_proj_np, intersect_proj_np, colors=color)
         
     _overlay(dir_f, color=np.array([0.5, 0.7, 0.9]), interval=(-0.1, 0.1), n_steps=24)
-    _overlay(dir_l, color=np.array([0.9, 0.5, 0.7]), interval=(-0.5, 0.5), n_steps=24)
-    _overlay(dir_r, color=np.array([0.3, 0.9, 0.5]), interval=(-0.5, 0.5), n_steps=24)
+    _overlay(dir_l, color=np.array([0.9, 0.5, 0.7]), interval=(-0.1, 0.1), n_steps=24)
+    _overlay(dir_r, color=np.array([0.3, 0.9, 0.5]), interval=(-0.1, 0.1), n_steps=24)
 
 @register_overlay
 def camera_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):

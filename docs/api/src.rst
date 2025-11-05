@@ -9,7 +9,6 @@ Subpackages
 
    src.core
    src.mkds_extensions
-   src.tests
    src.utils
    src.visualization
 

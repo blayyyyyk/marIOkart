@@ -1,6 +1,6 @@
 [project]
 name = "src"
-version = "0.1.3"
+version = "0.1.6"
 description = "project files"
 
 [build-system]
@@ -8,7 +8,9 @@ build-backend = "flit_core.buildapi"
 requires = ["flit_core >=3.2,<4"]
 
 [tool.setuptools]
+# Keep the existing src mapping, but also search root
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "."] # search in both src/ and root
+include = ["core*", "misc*", "utils*", "visualization*", "mkds_extensions*", "private/mkds_python_bindings/generated*", "private/mkds_python_bindings/testing*"]
