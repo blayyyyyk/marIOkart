@@ -109,6 +109,8 @@ This guide is a work in-progress, if you are having trouble with setup it to wor
 
 ```
 .
+├── mkds_c/                # Ongoing work to make functional python bindings from mkds header files
+│ 
 ├── mkds/                  # Standalone KCL/NKM parsing library (PyPI: mkds)
 │   └── mkds/                  # Standalone KCL/NKM parsing library (PyPI: mkds)
 │       ├── kcl.py
