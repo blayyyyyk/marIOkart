@@ -218,29 +218,18 @@ print("Prisms:", len(kcl.prisms))
 ---
 
 ## Architecture
-
-```text
-               ┌───────────────────────────┐
-               │      DeSmuME (Core)       │
-               │  emu.cycle(), RAM, I/O    │
-               └─────────────┬─────────────┘
-                             │
-memory.py (read_*  project_to|_screen, z_clip_mask, model-view)
-                             │
-               ┌─────────────┴─────────────┐
-               │                           │
-               │overlay.py(compute,enqueue)│
-               │                           │
-               │  mkds/(KCL/NKM parsers)   │
-               │                           │
-               └─────────────┬─────────────┘
-                             │
-       draw.py (thread-safe queue of Cairo closures)
-                             │
-        GTK draw event (main.py → consume_draw_stack)
-                             │
-            Composited overlay surface → window
-```
+**Overlay Loop (single-process)**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/69ffb0cf-7508-4b9f-bb50-0140f358b0a6">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/5332bbdb-e181-4ee4-90bb-5d786481b4ee">
+  <img alt="Fallback image description" src="https://github.com/user-attachments/assets/5332bbdb-e181-4ee4-90bb-5d786481b4ee">
+</picture>
+**Training Loop (multi-process)**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/69ffb0cf-7508-4b9f-bb50-0140f358b0a6">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/5332bbdb-e181-4ee4-90bb-5d786481b4ee">
+  <img alt="Fallback image description" src="https://github.com/user-attachments/assets/5332bbdb-e181-4ee4-90bb-5d786481b4ee">
+</picture>
 
 - **Threading:** Overlays run in a worker thread and enqueue closures; the GTK thread executes them with a `cairo.Context`.
 - **Projection:** Camera FOV/aspect + pose are read from memory to rebuild the perspective pipeline; screen origin is **top-left** (256×192).
