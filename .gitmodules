@@ -2,9 +2,6 @@
 	path = mkds
 	url = https://github.com/blayyyyyk/mkds-py.git
 	branch = main
-[submodule "libnds"]
-	path = libnds
-	url = https://github.com/devkitPro/libnds.git
 [submodule "mkds_c"]
 	path = mkds_c
 	url = https://github.com/blayyyyyk/MKDS-decomp-headers-python.git
