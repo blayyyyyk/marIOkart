@@ -1,9 +1,0 @@
-{
-  "typeCheckingMode": "basic",
-  "executionEnvironments": [
-    {
-      "root": "./copy",
-      "reportGeneralTypeIssues": "none"
-    }
-  ]
-}

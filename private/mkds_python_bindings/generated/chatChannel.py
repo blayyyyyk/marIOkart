@@ -1,4 +1,0 @@
-from ctypes import *
-from private.mkds_python_bindings.pointer import POINTER32, c_void_p32
-ciUserEnumChannelsCallback = c_void_p32
-ciChannelListUsersCallback = c_void_p32
