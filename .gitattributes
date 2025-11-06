@@ -4,4 +4,5 @@
 
 *.key filter=git-crypt diff=git-crypt
 private/* filter=git-crypt diff=git-crypt
+private/** filter=git-crypt diff=git-crypt
 *.nds filter=git-crypt diff=git-crypt
