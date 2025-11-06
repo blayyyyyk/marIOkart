@@ -208,7 +208,7 @@ def initialize_emulator() -> DeSmuME:
 
     """
     emu = DeSmuME()
-    emu.open("mariokart_ds.nds")
+    emu.open("private/mariokart_ds.nds")
     emu.savestate.load(SAVE_STATE_ID)
     emu.volume_set(0)
     emu.cycle()

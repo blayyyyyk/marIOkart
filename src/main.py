@@ -203,7 +203,7 @@ def worker():
 def run_emulator(overlays):
     global renderer, callback, emu_global, is_running
     emu = DeSmuME()
-    emu.open("mariokart_ds.nds")
+    emu.open("private/mariokart_ds.nds")
     emu.savestate.load(0)
 
     emu_global = emu

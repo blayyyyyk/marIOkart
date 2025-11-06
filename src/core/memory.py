@@ -392,7 +392,7 @@ def get_course_path(id: int, lookup_path: str = "./src/misc/courses.json"):
         id: Course ID.
 
     Returns:
-        String path relative to ./courses/ for the given course.
+        String path relative to ./private/courses/ for the given course.
 
     Raises:
         AssertionError: If the course ID is not present in the lookup table.
@@ -422,7 +422,7 @@ def load_current_kcl(emu: DeSmuME, device):
     assert device is not None
     id = get_current_course_id(emu)
     path = get_course_path(id)
-    path = f"./courses/{path}/course_collision.kcl"
+    path = f"./private/courses/{path}/course_collision.kcl"
     kcl = KCLTensor.from_file(path, device=device)
     return kcl
 
@@ -442,7 +442,7 @@ def load_current_nkm(emu: DeSmuME, device):
     """
     id = get_current_course_id(emu)
     path = get_course_path(id)
-    path = f"./courses/{path}/course_map.nkm"
+    path = f"./private/courses/{path}/course_map.nkm"
     nkm = NKMTensor.from_file(path, device=device)
     return nkm
 
