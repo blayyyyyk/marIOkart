@@ -89,10 +89,10 @@ def raycasting_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
             device=device,
             **sample_kwargs
         )
-        f: torch.Tensor = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24)
-        l: torch.Tensor = read_left_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24)
-        r: torch.Tensor = read_right_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24)
-        #print(torch.cat([l, f, r], dim=-1))
+        f: torch.Tensor = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xy")
+        l: torch.Tensor = read_left_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xy")
+        r: torch.Tensor = read_right_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xy")
+        print(torch.cat([l, f, r], dim=-1))
         
         if points_f is None:
             return
@@ -220,13 +220,13 @@ def player_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
 def distance_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
     # Computation #
     driver = read_driver(emu)
-    pos = read_VecFx32(driver.position, device=device)
-    mtx = read_MtxFx32(driver.mainMtx, device)
+    pos = driver.position.to(device)
+    mtx = driver.mainMtx.to(device)
     right, _, fwd, _ = torch.chunk(mtx, 4, dim=0)   
     
-    fwd_p = read_closest_obstacle_point(emu, fwd.squeeze(), device=device) # raycast forward
-    right_p = read_closest_obstacle_point(emu, right.squeeze(), device=device) # raycast right
-    left_p = read_closest_obstacle_point(emu, -right.squeeze(), device=device) # raycast left
+    fwd_p = read_closest_obstacle_point(emu, fwd.squeeze(), device=device, sweep_plane="yz") # raycast forward
+    right_p = read_closest_obstacle_point(emu, right.squeeze(), device=device, sweep_plane="xy") # raycast right
+    left_p = read_closest_obstacle_point(emu, -right.squeeze(), device=device, sweep_plane="xy") # raycast left
     
     
     # Display Logic #
@@ -266,4 +266,20 @@ def distance_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
     draw_lines(pos_proj, p_proj, colors)
     
     
+@register_overlay
+def driver_overlay(emu: DeSmuME, device):
+    driver = read_driver(emu)
+    col_pos = driver.field374.to(device)
+    
+    proj, mask = project_to_screen(emu, col_pos.unsqueeze(0), device=device)
+    if proj.shape[0] == 0:
+        return
+        
+    proj_xy = proj[:, :2]
+    proj_z = proj[:, 3, None]
+    proj = torch.cat([proj_xy, proj_z], dim=-1)
+    
+    
+    proj_np = proj.detach().cpu().numpy()
+    draw_points(proj_np, colors=np.array([[0.0, 0.0, 1.0]]), radius_scale=5.0)
     

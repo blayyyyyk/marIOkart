@@ -17,6 +17,7 @@ from src.core.memory import *
 from src.utils.vector import get_mps_device
 from src.visualization.overlay import (
     distance_overlay,
+    driver_overlay,
     player_overlay,
     raycasting_overlay,
     collision_overlay,
@@ -24,6 +25,7 @@ from src.visualization.overlay import (
     checkpoint_overlay_2,
 )
 import ctypes
+import numpy as np
 
 os.environ["PKG_CONFIG_PATH"] = "/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = (
@@ -205,7 +207,7 @@ def run_emulator(overlays):
     global renderer, callback, emu_global, is_running
     emu = DeSmuME()
     emu.open("private/mariokart_ds.nds")
-    emu.savestate.load(1)
+    emu.savestate.load(0)
 
     emu_global = emu
     emu.volume_set(0)
@@ -260,9 +262,10 @@ if __name__ == "__main__":
     start_keyboard_listener()
     run_emulator(
         [
-            collision_overlay,
-            checkpoint_overlay_1,
-            checkpoint_overlay_2,
-            distance_overlay
+            #collision_overlay,
+            #checkpoint_overlay_1,
+            #checkpoint_overlay_2,
+            #distance_overlay,
+            raycasting_overlay
         ],
     )

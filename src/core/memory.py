@@ -241,7 +241,7 @@ import math
 from src.utils.vector import (
     pairwise_distances_cross,
     intersect_ray_line_2d,
-    sample_semicircular_sweep,
+    sample_circular_sweep,
     triangle_raycast_batch,
     sample_cone,
     triangle_altitude,
@@ -265,6 +265,7 @@ OBJECTS_PTR_ADDR = 0x0217B588
 CHECKPOINT_PTR_ADDR = 0x021755FC
 CLOCK_DATA_PTR = 0x0217AA34
 CAMERA_PTR_ADDR = 0x0217AA4C
+RACE_STATUS_PTR_ADDR = 0x021755FC
 
 # Object flags
 FLAG_DYNAMIC = 0x1000
@@ -1399,12 +1400,12 @@ def read_facing_point_obstacle(
 
 
     driver = read_driver(emu)
-    position = read_VecFx32(driver.position, device=device)
-    up_vector = read_VecFx32(driver.upDir, device=device)
+    position = driver.position.to(device)
+    up_vector = driver.upDir.to(device)
     left_vector = torch.cross(direction, up_vector)
-    ray_samples = sample_semicircular_sweep(direction, left_vector, up_vector, **sample_kwargs)
+    ray_samples = sample_circular_sweep(direction, left_vector, up_vector, **sample_kwargs)
     ray_dir = direction.reshape(1, 3)
-    ray_samples = ray_dir#torch.cat([ray_dir, ray_samples], dim=0)
+    ray_samples = torch.cat([ray_dir, ray_samples], dim=0)
 
     ray_origin = position
     ray_origin = ray_origin.unsqueeze(0)
@@ -1435,7 +1436,7 @@ def read_closest_obstacle_point(
         return None
     
     driver = read_driver(emu)
-    position = read_VecFx32(driver.position, device=device)
+    position = driver.position.to(device)
     dist = torch.cdist(points, position.unsqueeze(0))
     min_id = torch.argmin(dist)
     current_point_min = points[min_id]
