@@ -1,0 +1,15 @@
+name: mariokart-ml-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pytorch
+  - pygobject
+  - pynput
+  - gtk3
+  - pip
+  - pip:
+      - -e .
+      - -r requirements.txt
+      

@@ -1,6 +1,5 @@
 from __future__ import annotations
 from torch._prims_common import DeviceLikeType
-import torchlens as tl
 import torch, torch.nn as nn, torch.nn.functional as F
 import random, copy
 from src.utils.vector import get_mps_device

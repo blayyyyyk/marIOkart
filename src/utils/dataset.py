@@ -1,26 +1,48 @@
-from desmume.emulator import DeSmuME
+from src.utils.desmume_ext import DeSmuME
 from src.core.memory import *
 from src.utils.vector import get_mps_device
 from private.mkds import race_status_t
 import ctypes, torch, os, warnings, sys
 import numpy as np
-
+from torch.utils.data import DataLoader
 
 warnings.filterwarnings("ignore")
 
+KEYMASK_SIZE = 11 # number of bits from keymask included in labelled data
+
 class RaceDataset(torch.utils.data.Dataset):
-    def __init__(self, folder_path, sample_dim=3, target_dim=1):
+    def __init__(self, folder_path, sample_dim=3, target_dim=KEYMASK_SIZE):
         self.sample_mm = np.memmap(f"{folder_path}/samples.dat", dtype=np.float32, mode="r")
-        self.target_mm = np.memmap(f"{folder_path}/targets.dat", dtype=np.int32, mode="r")
+        self.target_mm = np.memmap(f"{folder_path}/targets.dat", dtype=np.bool, mode="r")
         self.length = len(self.sample_mm) // sample_dim
         self.sample_data = self.sample_mm.reshape(self.length, sample_dim)
         self.target_data = self.target_mm.reshape(self.length, target_dim)
 
     def __len__(self):
-        return self.length
+        return self.length - 1
 
     def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return torch.from_numpy(self.sample_data[idx]), torch.from_numpy(self.target_data[idx.start+1:idx.stop+1])
+        
         return torch.from_numpy(self.sample_data[idx]), torch.from_numpy(self.target_data[idx+1])
+
+
+def int_to_binary_array(num, width=KEYMASK_SIZE):
+  """
+  Converts a single integer to a binary numpy array.
+  If width is provided, it pads with leading zeros.
+  """
+  if width:
+    # Use numpy.binary_repr for fixed width (handles negative nums with two's complement)
+    binary_str = np.binary_repr(num, width)
+  else:
+    # Use standard bin() and slice off the '0b' prefix
+    binary_str = bin(num)[2:]
+
+  # Convert each character in the string to an integer and create a numpy array
+  binary_array = np.array([bit == "1" for bit in binary_str], dtype=np.bool)
+  return binary_array
 
 
 def create_dataset(dsm_path: str, output_dir_path: str):
@@ -63,14 +85,22 @@ def create_dataset(dsm_path: str, output_dir_path: str):
             sf.write(arr.astype("float32").tobytes())
 
             # Inputs #
-            arr = np.array(emu.input.keypad_get(), dtype=np.int32)
-            tf.write(arr.astype("int32").tobytes())
+            arr = int_to_binary_array(emu.input.keypad_get())
+            tf.write(arr.astype("bool").tobytes())
 
     print(f"Dataset Saved Successfully at {dataset_path}!")
+    
+def record_main():
+    create_dataset(
+        dsm_path="./private/input_data/f8c_pikalex.dsm",
+        output_dir_path="./private/training_data"
+    )
 
 
 if __name__ == "__main__":
-    create_dataset(
-        dsm_path=sys.argv[1] if sys.argv[1] else "./private/input_data/figure_eight_circuit_pikalex.dsm",
-        output_dir_path=sys.argv[2] if sys.argv[2] else "./private/training_data"
-    )
+    #record_main()
+    device = get_mps_device()
+    ds = RaceDataset("private/training_data/f8c_pikalex")
+    print(ds[5:8])
+    
+    

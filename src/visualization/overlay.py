@@ -1,5 +1,5 @@
 from __future__ import annotations
-from desmume.emulator import DeSmuME
+from src.utils.desmume_ext import DeSmuME
 from src.visualization.draw import draw_paragraph, draw_points, draw_text, draw_triangles, draw_lines
 from src.utils.vector import interpolate
 import torch
@@ -92,7 +92,7 @@ def raycasting_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
         f: torch.Tensor = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xy")
         l: torch.Tensor = read_left_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xy")
         r: torch.Tensor = read_right_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xy")
-        print(torch.cat([l, f, r], dim=-1))
+        #print(torch.cat([l, f, r], dim=-1))
         
         if points_f is None:
             return
@@ -221,7 +221,7 @@ def distance_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
     # Computation #
     driver = read_driver(emu)
     pos = driver.position.to(device)
-    mtx = driver.mainMtx.to(device)
+    mtx = torch.tensor(driver.mainMtx.m, dtype=torch.float32, device=device).reshape(3, 4).T / 0x1000
     right, _, fwd, _ = torch.chunk(mtx, 4, dim=0)   
     
     fwd_p = read_closest_obstacle_point(emu, fwd.squeeze(), device=device, sweep_plane="yz") # raycast forward
