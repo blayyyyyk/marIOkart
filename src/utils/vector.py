@@ -284,6 +284,61 @@ def sample_cone(x, theta, k):
     world = local @ basis.T
     return world
 
+
+def sample_circular_sweep(
+    forward: torch.Tensor,
+    left: torch.Tensor,
+    up: torch.Tensor,
+    sweep_plane: str = "xz",
+    interval: tuple[float, float] = (-0.5, 0.5),
+    n_steps: int = 32,
+):
+    """
+    Generate a semicircular sweep of direction vectors across a 2d-subspace (i.e. plane).
+
+    Args:
+        forward (torch.Tensor): (3,) normalized forward vector.
+        left (torch.Tensor): (3,) normalized left vector.
+        up (torch.Tensor): (3,) normalized up vector (unused except for completeness).
+        sweep_plane (str): the sweeping plane ()
+        interval (float): angle difference between each sample in radians.
+        n_steps (int): Number of vectors in the sweep.
+
+    Returns:
+        torch.Tensor: (n_steps, 3) array of direction vectors.
+    """
+    # Ensure all inputs are normalized and shaped properly
+    forward = forward / forward.norm()
+    left = left / left.norm()
+    up = up / up.norm()  # included for consistency even if unused
+    
+    if sweep_plane == 'xy':
+        a_sin = up
+        a_cos = left
+    elif sweep_plane == 'yz':
+        a_sin = forward
+        a_cos = up
+    elif sweep_plane == 'xz':
+        a_sin = left
+        a_cos = forward
+        
+    else:
+        raise ValueError(f"Invalid sweep plane: {sweep_plane}")
+
+
+    # Sweep angles from -90° to +90° (front half)
+    theta = torch.linspace(interval[0] * torch.pi, interval[1] * torch.pi, n_steps, device=forward.device)
+
+    # Compute direction vectors (in the forward-left plane)
+    dirs = (torch.cos(theta).unsqueeze(1) * a_cos +
+            torch.sin(theta).unsqueeze(1) * a_sin)
+
+    # Normalize all output vectors
+    dirs = dirs / dirs.norm(dim=1, keepdim=True)
+
+    return dirs
+
+
 def sample_semicircular_sweep(
     forward: torch.Tensor,
     left: torch.Tensor,

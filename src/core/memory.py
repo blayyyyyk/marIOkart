@@ -228,10 +228,9 @@ Compatibility
 """
 from __future__ import annotations
 import sys, os
-from desmume.emulator import SCREEN_WIDTH, DeSmuME
+from desmume.emulator import SCREEN_WIDTH
+from src.utils.desmume_ext import DeSmuME, MMUPrefix
 import ctypes
-#from src.core.c_structs.cam import *
-#from src.core.c_structs.driver import *
 from mkds.kcl import read_fx32
 from torch._prims_common import DeviceLikeType
 from src.mkds_extensions.kcl_torch import KCLTensor
@@ -243,13 +242,12 @@ import math
 from src.utils.vector import (
     pairwise_distances_cross,
     intersect_ray_line_2d,
-    sample_semicircular_sweep,
+    sample_circular_sweep,
     triangle_raycast_batch,
     sample_cone,
     triangle_altitude,
 )
-#from mkds_c.generated_bindings.camera import camera_t
-#from private.mkds_python_bindings.testing.driver import driver_t
+from private.mkds import camera_t, driver_t, VecFx32
 from typing import Callable, Concatenate, TypeVar, ParamSpec
 from functools import wraps
 
@@ -267,6 +265,7 @@ OBJECTS_PTR_ADDR = 0x0217B588
 CHECKPOINT_PTR_ADDR = 0x021755FC
 CLOCK_DATA_PTR = 0x0217AA34
 CAMERA_PTR_ADDR = 0x0217AA4C
+RACE_STATUS_PTR_ADDR = 0x021755FC
 
 # Object flags
 FLAG_DYNAMIC = 0x1000
@@ -427,6 +426,16 @@ def load_current_kcl(emu: DeSmuME, device):
     return kcl
 
 
+def read_VecFx32(vec, device):
+    return torch.tensor([
+        vec.x,
+        vec.y,
+        vec.z
+    ], device=device, dtype=torch.float32) / 0x1000
+    
+def read_MtxFx32(mtx, device):
+    return torch.tensor(mtx.m, device=device, dtype=torch.float32) / 0x1000
+
 @game_cache
 def load_current_nkm(emu: DeSmuME, device):
     """Load and parse the NKM map file for the current course.
@@ -461,6 +470,13 @@ def read_racer_ptr(emu: DeSmuME, addr: int = RACER_PTR_ADDR):
 
 
 @frame_cache
+def read_driver(emu: DeSmuME):
+    addr = read_racer_ptr(emu)
+    driver = emu.memory.read_struct(driver_t, addr)
+    return driver
+
+
+@frame_cache
 def read_position(emu: DeSmuME, device):
     """Read the player's world-space position.
 
@@ -471,14 +487,12 @@ def read_position(emu: DeSmuME, device):
     Returns:
         torch.Tensor of shape (3,) representing (x, y, z) in world units.
     """
-    data = emu.memory.unsigned
-    addr = read_racer_ptr(emu)
-    pos = read_vector_3d_fx32(data, addr + 0x80)
-    return torch.tensor(pos, dtype=torch.float32, device=device)
+    driver = read_driver(emu)
+    return driver.position.to(device)
 
 
 @frame_cache
-def read_direction(emu: DeSmuME, device):
+def read_direction(emu: DeSmuME, device = None):
     """Read the player's forward direction vector (world-space).
 
     Args:
@@ -488,10 +502,8 @@ def read_direction(emu: DeSmuME, device):
     Returns:
         torch.Tensor of shape (3,) representing the forward direction.
     """
-    data = emu.memory.unsigned
-    addr = read_racer_ptr(emu)
-    pos = read_vector_3d_fx32(data, addr + 0x68)
-    return torch.tensor(pos, dtype=torch.float32, device=device)
+    driver = read_driver(emu)
+    return driver.direction.to(device)
 
 
 def read_objects_array_max_count(emu: DeSmuME, addr: int = OBJECTS_PTR_ADDR):
@@ -635,8 +647,8 @@ def read_object_position(emu: DeSmuME, id: int, device):
         torch.Tensor of shape (3,) in world coordinates, or None if deleted.
     """
     pos_ptr = read_object_position_ptr(emu, id)
-    pos = read_vector_3d_fx32(emu.memory.unsigned, pos_ptr)
-    return torch.tensor(pos, device=device)
+    pos = emu.memory.read_struct(VecFx32, pos_ptr)
+    return pos.to(device)
 
 
 @frame_cache
@@ -746,137 +758,14 @@ def read_camera_ptr(emu: DeSmuME, addr: int = CAMERA_PTR_ADDR):
         Integer address of the camera struct.
     """
     return emu.memory.unsigned.read_long(addr)
-
-
-@frame_cache
-def read_camera_fov(emu: DeSmuME):
-    """Read the current camera field-of-view (radians).
-
-    The FOV value is stored as a 16-bit fixed-point angle; it is converted to radians.
-
-    Args:
-        emu: Emulator instance.
-
-    Returns:
-        Floating-point FOV in radians.
-    """
-    addr = read_camera_ptr(emu)
-    return emu.memory.unsigned.read_short(addr + 0x60) * (2 * math.pi / 0x10000)
-
+    
 
 @frame_cache
-def read_camera_aspect(emu: DeSmuME):
-    """Read the camera aspect ratio from memory.
-
-    Args:
-        emu: Emulator instance.
-
-    Returns:
-        Float aspect ratio (width/height).
-    """
+def read_camera(emu: DeSmuME) -> camera_t:
     addr = read_camera_ptr(emu)
-    return read_fx32(emu.memory.unsigned, addr + 0x6C)
-
-
-@frame_cache
-def read_camera_position(emu: DeSmuME, device):
-    """Read the camera world position, including elevation offset.
-
-    Args:
-        emu: Emulator instance.
-        device: Torch device for the returned tensor.
-
-    Returns:
-        torch.Tensor shape (3,) representing camera (x, y, z).
-    """
-    addr = read_camera_ptr(emu)
-    pos = read_vector_3d_fx32(emu.memory.unsigned, addr + 0x24)
-    elevation = read_fx32(emu.memory.unsigned, addr + 0x178)
-    pos = (pos[0], pos[1] + elevation, pos[2])
-    return torch.tensor(pos, device=device)
-
-
-def read_camera_target_position(emu: DeSmuME, device):
-    """Read the camera's target/look-at position in world space.
-
-    Args:
-        emu: Emulator instance.
-        device: Torch device for the returned tensor.
-
-    Returns:
-        torch.Tensor shape (3,) target (x, y, z).
-    """
-    addr = read_camera_ptr(emu)
-    pos = read_vector_3d_fx32(emu.memory.unsigned, addr + 0x18)
-    return torch.tensor(pos, device=device)
-
-
-def _compute_orthonormal_basis(
-    forward_vector_3d: torch.Tensor,
-    reference_vector_3d: torch.Tensor | None = None,
-    device=None,
-):
-    """Compute a right-handed orthonormal basis given a forward vector.
-
-    Args:
-        forward_vector_3d: Tensor shape (3,) forward direction.
-        reference_vector_3d: Optional up-like reference; defaults to (0,1,0).
-        device: Unused (kept for signature parity).
-
-    Returns:
-        torch.Tensor shape (3,3) with rows [right, up, forward].
-    """
-    if reference_vector_3d is None:
-        reference_vector_3d = torch.tensor(
-            [0.0, 1.0, 0.0],
-            dtype=forward_vector_3d.dtype,
-            device=forward_vector_3d.device,
-        )
-
-    right_vector_3d = torch.cross(forward_vector_3d, reference_vector_3d, dim=0)
-    right_vector_3d /= right_vector_3d.norm()
-
-    up_vector_3d = torch.cross(right_vector_3d, forward_vector_3d, dim=0)
-    up_vector_3d /= up_vector_3d.norm()
-
-    basis = torch.stack(
-        [
-            right_vector_3d,
-            up_vector_3d,
-            forward_vector_3d,
-        ],
-        dim=0,
-    )
-
-    return basis
-
-
-def _compute_model_view(
-    camera_pos: torch.Tensor, camera_target_pos: torch.Tensor, device
-):
-    """Build a 4x4 model-view matrix from camera position and target.
-
-    Args:
-        camera_pos: Tensor shape (3,) camera world position.
-        camera_target_pos: Tensor shape (3,) target look-at position.
-        device: Torch device for the returned matrix.
-
-    Returns:
-        torch.Tensor shape (4,4) model-view matrix.
-    """
-    forward = camera_target_pos - camera_pos
-    forward /= torch.norm(forward, dim=-1)
-
-    rot = _compute_orthonormal_basis(forward, device=device)
-
-    pos_proj = rot @ camera_pos.unsqueeze(-2).transpose(-1, -2)
-
-    model_view = torch.eye(4, dtype=rot.dtype, device=device)
-    model_view[:3, :3] = rot
-    model_view[:3, 3] = -pos_proj.squeeze(-1)
-
-    return model_view
-
+    camera = emu.memory.read_struct(camera_t, addr)
+    return camera
+    
 
 @frame_cache
 def read_model_view(emu: DeSmuME, device):
@@ -889,9 +778,73 @@ def read_model_view(emu: DeSmuME, device):
     Returns:
         torch.Tensor shape (4,4) model-view matrix.
     """
-    camera_pos = read_camera_position(emu, device=device)
-    camera_target_pos = read_camera_target_position(emu, device=device)
-    return _compute_model_view(camera_pos, camera_target_pos, device=device)
+    addr = read_camera_ptr(emu)
+    
+    # Load the camera struct
+    data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(camera_t)])
+    camera = camera_t.from_buffer_copy(data)
+    mat = torch.tensor(camera.mtx.m, device=device)
+    mat = torch.cat([mat.T, torch.tensor([0, 0, 0, 1], device=device, dtype=torch.float)[None, :]], dim=0)
+    
+    # Move the decimal point over for fixed point data (fx32)
+    mat[:3, :3] /= 0x1000
+    mat[:3, 3] /= 0x100 # position is scaled by 16
+    
+    return mat
+
+@game_cache
+def read_projection(emu: DeSmuME, device):
+    camera = read_camera(emu)
+
+    fov_sin = camera.fovSin / 0x1000
+    fov_cos = camera.fovCos / 0x1000
+    aspect = camera.aspectRatio / 0x1000
+    far = camera.frustumFar / 0x1000
+    near = camera.frustumNear / 0x1000
+
+    pm = torch.zeros((4, 4), device=device)
+    pm[0, 0] = fov_cos / (fov_sin * aspect)
+    pm[1, 1] = fov_cos / fov_sin
+    pm[2, 2] = -(far + near) / (far - near)
+    pm[2, 3] = -(2 * far * near) / (far - near)
+    pm[3, 2] = -1
+    
+    return pm
+  
+    
+def to_screen(emu: DeSmuME, points: torch.Tensor, screen_w, screen_h, device=None):
+    mvm = read_model_view(emu, device)
+    pm = read_projection(emu, device)
+    camera = read_camera(emu)
+    far = camera.frustumFar / 0x1000
+    near = camera.frustumNear / 0x1000
+    
+    # convert to camera space
+    padded = torch.nn.functional.pad(points, (0, 1), "constant", 1)
+    cam_space = (mvm @ padded.T).T
+    
+    # convert to clip space
+    clip_space = (pm @ cam_space.T).T
+    
+    # depth
+    ndc = clip_space[:, :3] / clip_space[:, 3, None] # normalize w/ respect to w (new shape: (B, 3))
+    
+    # screen space
+    screen_x = (ndc[:, 0] + 1) / 2 * screen_w
+    screen_y = (1 - ndc[:, 1]) / 2 * screen_h
+    screen_depth = clip_space[:, 2]
+    screen_depth_norm = -far / (-far + 16 * clip_space[:, 2])
+    screen_space = torch.stack([
+        screen_x, 
+        screen_y, 
+        screen_depth, 
+        screen_depth_norm
+    ], dim=-1)
+    
+    z_clip = (screen_space[:, 2] > near) & (screen_space[:, 2] < far)
+    
+    out = screen_space[z_clip]
+    return out, z_clip
 
 
 def _project_to_screen(world_points, model_view, fov, aspect, screen_dim: tuple[int, int], device=None):
@@ -953,10 +906,7 @@ def project_to_screen(emu: DeSmuME, points: torch.Tensor, device, screen_dim=(SC
     Returns:
         Tensor shape (N,4) in screen space (see `_project_to_screen`).
     """
-    model_view = read_model_view(emu, device=device)
-    fov = read_camera_fov(emu)
-    aspect = read_camera_aspect(emu)
-    return _project_to_screen(points, model_view, fov, aspect, screen_dim, device=device)
+    return to_screen(emu, points, *screen_dim, device=device)
 
 # CHECKPOINT INFO #
 
@@ -1264,8 +1214,7 @@ def read_direction_to_checkpoint(emu: DeSmuME, device):
 @frame_cache
 def read_facing_point_obstacle(
     emu: DeSmuME,
-    position: torch.Tensor | None = None,
-    direction: torch.Tensor | None = None,
+    direction: torch.Tensor,
     device=None,
     **sample_kwargs
 ):
@@ -1286,11 +1235,18 @@ def read_facing_point_obstacle(
     assert device is not None
     kcl = load_current_kcl(emu, device=device)
     triangles = kcl.triangles
-    wall_mask = kcl.prisms.is_wall == 1
+    wall_mask = (kcl.prisms.is_wall == 1
+        | (kcl.prisms.collision_type == 8)
+        | (kcl.prisms.collision_type == 9)
+        | (kcl.prisms.collision_type == 16)
+        | (kcl.prisms.collision_type == 21)
+        | (kcl.prisms.collision_type == 14)
+    )
     offroad_mask = (
         (kcl.prisms.collision_type == 5)
         | (kcl.prisms.collision_type == 3)
         | (kcl.prisms.collision_type == 2)
+        
     )
     triangles = triangles[wall_mask | offroad_mask]
     B = triangles.shape[0]
@@ -1303,18 +1259,13 @@ def read_facing_point_obstacle(
     v2 = v2.squeeze(1)
     v3 = v3.squeeze(1)
 
-    if position is None:
-        position = read_position(emu, device=device)
 
-    if direction is None:
-        direction = read_direction(emu, device=device)
-
-    ray_dir = direction / torch.norm(direction, keepdim=True)
-    angle = torch.tensor(torch.pi / 24, device=device)
-    up_vector = torch.tensor([0, 1.0, 0], device=device)
-    left_vector = torch.cross(ray_dir, up_vector)
-    ray_samples = sample_semicircular_sweep(ray_dir, left_vector, up_vector, **sample_kwargs)
-    ray_dir = ray_dir.reshape(1, 3)
+    driver = read_driver(emu)
+    position = driver.position.to(device)
+    up_vector = driver.upDir.to(device)
+    left_vector = torch.cross(direction, up_vector)
+    ray_samples = sample_circular_sweep(direction, left_vector, up_vector, **sample_kwargs)
+    ray_dir = direction.reshape(1, 3)
     ray_samples = torch.cat([ray_dir, ray_samples], dim=0)
 
     ray_origin = position
@@ -1332,26 +1283,21 @@ def read_facing_point_obstacle(
 
 @frame_cache
 def read_closest_obstacle_point(
-    emu: DeSmuME, 
-    position: torch.Tensor | None = None,
-    direction: torch.Tensor | None = None,
+    emu: DeSmuME,
+    direction: torch.Tensor,
     device = None,
     **sample_kwargs
 ) -> torch.Tensor | None:
-    if position is None:
-        position = read_position(emu, device=device)
-
-    if direction is None:
-        direction = read_direction(emu, device=device)
-    
-    points = read_facing_point_obstacle(emu, position, direction, device=device, **sample_kwargs)
+    points = read_facing_point_obstacle(emu, direction, device=device, **sample_kwargs)
     
     if points is None:
         return None
     
     if points.shape[0] == 0:
         return None
-        
+    
+    driver = read_driver(emu)
+    position = driver.position.to(device)
     dist = torch.cdist(points, position.unsqueeze(0))
     min_id = torch.argmin(dist)
     current_point_min = points[min_id]
@@ -1369,7 +1315,8 @@ def read_forward_distance_obstacle(emu: DeSmuME, device=None, **sample_kwargs) -
         Scalar torch.Tensor distance; +inf if no hit.
     """
     position = read_position(emu, device=device)
-    ray_point = read_closest_obstacle_point(emu, device=device, **sample_kwargs)
+    direction = read_direction(emu, device)
+    ray_point = read_closest_obstacle_point(emu, direction, device=device, **sample_kwargs)
     if ray_point is None:
         return torch.tensor([float("inf")], device=device)
 
@@ -1462,24 +1409,3 @@ def read_touching_prism_type(emu: DeSmuME, attr_mask: Callable[[torch.Tensor], t
     mask = attr_mask(triangle_attr)
     offroad_indices = indices[mask]
     return offroad_indices.shape[0] > 0
-    
-def read_mat_c(emu: DeSmuME, device = None):
-    addr = read_camera_ptr(emu)
-    data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(camera_t)])
-    camera = camera_t.from_buffer_copy(data)
-    mat = camera.model_view
-    return torch.tensor(mat.m, device=device).reshape(4, 3) / 0x1000
-    
-def read_pos_c(emu: DeSmuME, device = None):
-    addr = read_camera_ptr(emu)
-    data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(camera_t)])
-    camera = camera_t.from_buffer_copy(data)
-    pos = camera.position
-    return torch.tensor([pos.x, pos.y, pos.z], device=device) / 0x1000
-    
-def read_driver_pos_c(emu: DeSmuME, device = None):
-    addr = read_racer_ptr(emu)
-    data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(driver_t)])
-    driver = driver_t.from_buffer_copy(data)
-    pos = driver.position
-    return torch.tensor([pos.x, pos.y, pos.z], device=device) / 0x1000

@@ -2,20 +2,18 @@ from __future__ import annotations
 import cairo
 import threading
 import queue
-import torch
 import os
+import torch
 import gi
-from pynput import keyboard
-from desmume.emulator import DeSmuME
+import pynput
+from src.utils.desmume_ext import DeSmuME
 from desmume.controls import Keys, keymask
-#from private.mkds_python_bindings.testing.driver import driver_t
-#from private.mkds_python_bindings.testing.nnsfnd import NNSFndList
-#from private.mkds_python_bindings.testing.sfx import sfx_emitter_t
-#from private.mkds_python_bindings.testing.list import list_link_t
 from src.visualization.draw import consume_draw_stack, draw_text, draw_paragraph
 from src.core.memory import *
 from src.utils.vector import get_mps_device
 from src.visualization.overlay import (
+    distance_overlay,
+    driver_overlay,
     player_overlay,
     raycasting_overlay,
     collision_overlay,
@@ -23,11 +21,7 @@ from src.visualization.overlay import (
     checkpoint_overlay_2,
 )
 import ctypes
-
-os.environ["PKG_CONFIG_PATH"] = "/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
-os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = (
-    "/opt/homebrew/lib:$DYLD_FALLBACK_LIBRARY_PATH"
-)
+import numpy as np
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -98,9 +92,10 @@ def start_keyboard_listener():
         except Exception:
             pass
 
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+    listener = pynput.keyboard.Listener(on_press=on_press, on_release=on_release)
     listener.daemon = True
     listener.start()
+    
     return listener
 
 
@@ -170,10 +165,31 @@ class EmulatorWindow(Gtk.Window):
         drawing_area.set_size_request(SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE)
         drawing_area.connect("draw", on_draw_main)
         drawing_area.connect("configure-event", on_configure_main)
+        # GTK keyboard events cause the keys to sometimes stick, which is why we use pynput to listen asynchronously
+        # self.connect("key-press-event", self.on_key_press)
+        # self.connect("key-release-event", self.on_key_release)
         self.add(drawing_area)
         self.drawing_area = drawing_area
         self.connect("destroy", Gtk.main_quit)
         self.set_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK)
+        
+    def on_key_press(self, widget, event):
+        # Get the keyval (integer representation of the key)
+        keyval = event.keyval
+        
+        # Convert the keyval to its string name for easier debugging/identification
+        keyname = Gdk.keyval_name(keyval)
+        if keyname in KEY_MAP:
+            input_state.add(keyname)
+            
+    def on_key_release(self, widget, event):
+        # Get the keyval (integer representation of the key)
+        keyval = event.keyval
+        
+        # Convert the keyval to its string name for easier debugging/identification
+        keyname = Gdk.keyval_name(keyval)
+        if keyname in KEY_MAP:
+            input_state.discard(keyname)
 
 
 # ----------------------------
@@ -237,6 +253,10 @@ def run_emulator(overlays):
         emu.input.keypad_update(0)
         for key in input_state:
             emu.input.keypad_add_key(keymask(KEY_MAP[key]))
+            
+        print(emu.input.keypad_get())
+        
+        #emu.memory.write_byte(0x2041234, 0)
         
         if not is_running:
             Gtk.main_quit()
@@ -255,14 +275,14 @@ def run_emulator(overlays):
 # ENTRY POINT
 # ----------------------------
 if __name__ == "__main__":
-    device = get_mps_device()
+    device = "cpu"
     start_keyboard_listener()
     run_emulator(
         [
-            # player_overlay,
             collision_overlay,
             checkpoint_overlay_1,
             checkpoint_overlay_2,
-            #raycasting_overlay
+            #distance_overlay,
+            raycasting_overlay
         ],
     )

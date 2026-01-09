@@ -86,9 +86,11 @@ import argparse
 from pathlib import Path
 
 # External dependencies
-from desmume.emulator import DeSmuME, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_PIXEL_SIZE
+from desmume.emulator import SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_PIXEL_SIZE
 from desmume.frontend.gtk_drawing_area_desmume import AbstractRenderer
 from desmume.controls import Keys, keymask
+from src.core.train_rnn import MarioKartRNN
+from src.utils.desmume_ext import DeSmuME
 from torch._prims_common import DeviceLikeType
 import numpy as np
 import gi
@@ -110,7 +112,7 @@ from src.core.metric import DistanceMetric, FitnessScorer, Metric, collect_all, 
 
 class EmulatorProcessConfig(TypedDict):
     id: int
-    sample: Genome
+    sample: EvolvedNet | MarioKartRNN
     host: bool
     show: bool
 
@@ -318,7 +320,7 @@ def initialize_overlays(
     return emu_queue
 
 
-def handle_controls(emu: DeSmuME, logits: torch.Tensor, max_frame_with_noise: int = 0):
+def handle_controls(emu: DeSmuME, logits: torch.Tensor, max_frame_with_noise: int = 0, mode: str="test", threshold: float = 0.5):
     """Apply model outputs to emulator controls with a simple threshold policy.
 
     All values ``>= 0.5`` are considered pressed for the corresponding
@@ -335,6 +337,18 @@ def handle_controls(emu: DeSmuME, logits: torch.Tensor, max_frame_with_noise: in
         ``emu.input.keypad_add_key(...)`` multiple times.
 
     """
+    if mode == "test":
+        probs = torch.sigmoid(logits).flatten()
+        pressed_buttons = (probs >= threshold).int().cpu().numpy().tolist()
+        mask = int("".join(map(str, pressed_buttons)), 2)
+        
+        if mask == 0:
+            emu.input.keypad_add_key(Keys.KEY_A)
+            return
+        
+        emu.input.keypad_update(mask)
+        return
+    
     logits_list = logits.tolist()
     emu.input.keypad_update(0)
     for i, v in enumerate(logits_list):
@@ -346,8 +360,6 @@ def handle_controls(emu: DeSmuME, logits: torch.Tensor, max_frame_with_noise: in
         emu.input.keypad_add_key(keymask(MODEL_KEY_MAP[i]))
 
     emu.input.keypad_add_key(keymask(MODEL_KEY_MAP[5]))
-
-
 
 
 
@@ -371,7 +383,7 @@ def _run_process(
     emu = initialize_emulator()
 
     # Initialize model
-    forward = initialize_model(emu, config, batch_config)
+    forward = get_forward_func(emu, config["sample"], batch_config['device'])
     metrics: list[Metric] = [b() for b in batch_config['metric_factories']]
     for m in metrics: m.reset()
     device = batch_config['device']
@@ -505,7 +517,7 @@ def send_window_end_signal(id):
     arr[:] = 0.0
 
 
-def get_forward_func(emu: DeSmuME, model: EvolvedNet, device: DeviceLikeType | None = None):
+def get_forward_func(emu: DeSmuME, model: EvolvedNet | MarioKartRNN, device: DeviceLikeType | None = None, seq_len=8):
     """Build a closure that performs one model step.
 
     The returned callable reads emulator memory for sensor inputs, constructs the
@@ -533,8 +545,11 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device: DeviceLikeType | N
 
     """
     
+    if isinstance(model, MarioKartRNN):
+        seq = torch.zeros((1, 1, model.kwargs['input_size']))
 
     def forward() -> torch.Tensor | None:
+        nonlocal seq
         clock = read_clock(emu)
         if clock > 20000:
             return None
@@ -542,12 +557,11 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device: DeviceLikeType | N
         s1 = 1000.0
 
         # Sensor inputs (obstacle distances)
-        forward_d = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1))
-        left_d = read_left_distance_obstacle(emu, device=device, interval=(-0.5, 0.5))
-        right_d = read_right_distance_obstacle(emu, device=device, interval=(-0.5, 0.5))
+        forward_d = read_forward_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xz")
+        left_d = read_left_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xz")
+        right_d = read_right_distance_obstacle(emu, device=device, interval=(-0.1, 0.1), n_steps=24, sweep_plane="xz")
         inputs_dist1 = torch.tensor([forward_d, left_d, right_d], device=device)
-        inputs_dist1 = inputs_dist1 < 200
-        print(inputs_dist1)
+        
         # Angular relationship to next checkpoint
         angle = read_direction_to_checkpoint(emu, device=device)
         forward_a = torch.cos(angle)
@@ -556,9 +570,23 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device: DeviceLikeType | N
         inputs_dist2 = torch.tensor([forward_a, left_a, right_a], device=device)
 
         # Model inference
-        inputs = torch.cat([inputs_dist1, inputs_dist2])
+        #inputs = torch.cat([inputs_dist1, inputs_dist2])
+        inputs = inputs_dist1
         
-        logits = model(inputs)
+        if isinstance(model, EvolvedNet):
+            logits = model(inputs_dist1)
+        elif isinstance(model, MarioKartRNN):
+            if  seq.shape[1] == 1:
+                seq = inputs[None, None, :]
+            elif seq.shape[1] < seq_len:
+                seq = torch.cat([seq, inputs[None, None, :]], dim=1)
+            else:
+                seq[:, :-1, :] = seq[:, 1:, :].clone() # shift the history
+                
+            with torch.no_grad():
+                logits, _ = model(seq)
+                
+            logits = logits
 
         return logits
 
@@ -566,7 +594,7 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet, device: DeviceLikeType | N
 
 
 def run_training_batch(
-    batch_population: list[Genome],
+    batch_population: list[EvolvedNet] | list[MarioKartRNN],
     show_samples: list[bool],
     training_stats: DictProxy[int, dict[str, float]],
     training_stats_lock,
@@ -638,7 +666,7 @@ def run_training_batch(
 
 
 def run_training_session(
-    pop: list[Genome],
+    pop: list[EvolvedNet] | list[MarioKartRNN],
     num_proc: int | None = None,
     show_samples: list[bool] = [True],
     overlay_ids: list[int] = [],
@@ -755,8 +783,8 @@ def fitness(pop_stats: dict[int, dict[str, float]], scorer: FitnessScorer) -> li
         scores.append(score)
         
     return scores
-
-
+    
+    
 
 def train(
     num_iters: int,
@@ -766,7 +794,6 @@ def train(
     device: DeviceLikeType | None = None,
     scorer: FitnessScorer = default_fitness_scorer,
     load_checkpoint_path: str | Path | None = None,
-    
     **simulation_kwargs,
 ):
     """Main evolutionary training loop (selection + mutation).
@@ -791,8 +818,9 @@ def train(
 
     """
     global best_genome
+    
     if load_checkpoint_path is None:
-        pop: list[Genome] = [Genome(6, 2, device=device) for _ in range(pop_size)]
+        pop: list[Genome] = [Genome(3, 2, device=device) for _ in range(pop_size)]
     else:
         pop: list[Genome] = [load_genome(load_checkpoint_path) for _ in range(pop_size)]
     
@@ -803,7 +831,8 @@ def train(
     assert isinstance(top_k, int), "top_k must be an integer or a float less than 1"
 
     for n in range(num_iters):
-        stats = run_training_session(pop, device=device, **simulation_kwargs)
+        m_pop = [EvolvedNet(g, device) for g in pop]
+        stats = run_training_session(m_pop, device=device, **simulation_kwargs)
         
         scores = fitness(stats, scorer)
         scores = sorted(enumerate(scores), reverse=True, key=lambda x: x[1])
@@ -824,6 +853,28 @@ def train(
             newpop.append(g)
         pop = newpop
 
+def test_pretrained(paths: list[str] | str, device=None):
+    if not isinstance(paths, list):
+        paths = [paths]
+        
+    pop = []
+    for path in paths:
+        kwargs, state = torch.load(path)
+        model = MarioKartRNN(**kwargs)
+        model.load_state_dict(state)
+        model.eval()
+        pop.append(model)
+        
+    stats = run_training_session(
+        pop, 
+        device=device, 
+        num_proc=len(pop),
+        overlay_ids=[0, 3, 4],
+    )
+    
+    print("done")
+    
+
 def make_distance_metric():
     return DistanceMetric()
 
@@ -834,7 +885,7 @@ def main():
     parser.add_argument("--top_k", type=int, default=2)
     parser.add_argument("--pop_size", type=int, default=-1)
     parser.add_argument("--num_processes", type=int)
-    parser.add_argument("--num_displays", type=int, default=0)
+    parser.add_argument("--num_displays", type=int, default=-1)
     parser.add_argument("--load_checkpoint_path", type=str)
     parser.add_argument("--load_checkpoint_recent", type=bool, default=False)
     parser.add_argument("--save_checkpoint", type=bool, default=False)
@@ -854,7 +905,7 @@ def main():
     
     num_headless = num_proc - num_displays
     
-    device = get_mps_device()
+    device = "cpu"
     
     pop_size = args.pop_size
     if pop_size < 0:
@@ -904,6 +955,10 @@ def main():
             save_genome(best_genome, dest_file_path)
             print(f"Model Weights Saved at {dest_file_path}")
 
+def main_test():
+    device = "cpu"
+    test_pretrained("private/checkpoints/checkpoint_e01052026.pth", device)
+
 if __name__ == "__main__":
-    main()
+    main_test()
     
