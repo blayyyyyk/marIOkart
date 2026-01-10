@@ -216,11 +216,11 @@ def worker():
 # ----------------------------
 # MAIN LOOP
 # ----------------------------
-def run_emulator(overlays):
+def run_emulator(overlays, state: str | None):
     global renderer, callback, emu_global, is_running
     emu = DeSmuME()
     emu.open("private/mariokart_ds.nds")
-    emu.savestate.load(0)
+    emu.savestate.load_file(f"states/{state or 'state'}.dst")
 
     emu_global = emu
     emu.volume_set(0)
@@ -285,4 +285,5 @@ if __name__ == "__main__":
             #distance_overlay,
             raycasting_overlay
         ],
+        sys.argv[1] if len(sys.argv) > 1 else None
     )
