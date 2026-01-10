@@ -5,7 +5,6 @@ import queue
 import os
 import torch
 import gi
-import pynput
 from src.utils.desmume_ext import DeSmuME
 from desmume.controls import Keys, keymask
 from src.visualization.draw import consume_draw_stack, draw_text, draw_paragraph
@@ -26,6 +25,15 @@ import numpy as np
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
+
+# GTK keyboard events may cause the keys to sometimes stick. If that happens, use pynput.
+# Note that pynput may require running as root.
+USE_PYNPUT = False
+if not USE_PYNPUT:
+    global pynput
+    pynput = None
+else:
+    import pynput
 
 # ----------------------------
 # CONSTANTS
@@ -69,12 +77,12 @@ KEY_MAP = {
     "down": Keys.KEY_DOWN,
 }
 
-
 # ----------------------------
-# ASYNC KEYBOARD HANDLER
+# PYNPUT
 # ----------------------------
 def start_keyboard_listener():
     """Starts a non-blocking keyboard listener in a separate thread."""
+    assert pynput != None
 
     def on_press(key):
         try:
@@ -165,32 +173,29 @@ class EmulatorWindow(Gtk.Window):
         drawing_area.set_size_request(SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE)
         drawing_area.connect("draw", on_draw_main)
         drawing_area.connect("configure-event", on_configure_main)
-        # GTK keyboard events cause the keys to sometimes stick, which is why we use pynput to listen asynchronously
-        # self.connect("key-press-event", self.on_key_press)
-        # self.connect("key-release-event", self.on_key_release)
+        if not USE_PYNPUT:
+            self.connect("key-press-event", self.on_key_press)
+            self.connect("key-release-event", self.on_key_release)
+            self.connect("focus-out-event", self.on_leave_window)
         self.add(drawing_area)
         self.drawing_area = drawing_area
         self.connect("destroy", Gtk.main_quit)
-        self.set_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK)
+        self.set_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK | Gdk.EventMask.FOCUS_CHANGE_MASK)
         
     def on_key_press(self, widget, event):
-        # Get the keyval (integer representation of the key)
-        keyval = event.keyval
-        
-        # Convert the keyval to its string name for easier debugging/identification
-        keyname = Gdk.keyval_name(keyval)
+        # Must be lowercase, because Shift+A gives 'A' but should be treated same as 'a'.
+        keyname = Gdk.keyval_name(event.keyval).lower()
         if keyname in KEY_MAP:
             input_state.add(keyname)
             
     def on_key_release(self, widget, event):
-        # Get the keyval (integer representation of the key)
-        keyval = event.keyval
-        
-        # Convert the keyval to its string name for easier debugging/identification
-        keyname = Gdk.keyval_name(keyval)
+        # Must be lowercase, because Shift+A gives 'A' but should be treated same as 'a'.
+        keyname = Gdk.keyval_name(event.keyval).lower()
         if keyname in KEY_MAP:
             input_state.discard(keyname)
 
+    def on_leave_window(self, widget, event):
+        input_state.clear()
 
 # ----------------------------
 # EMULATION WORKER
@@ -254,7 +259,7 @@ def run_emulator(overlays):
         for key in input_state:
             emu.input.keypad_add_key(keymask(KEY_MAP[key]))
             
-        print(emu.input.keypad_get())
+        #print(emu.input.keypad_get())
         
         #emu.memory.write_byte(0x2041234, 0)
         
@@ -276,7 +281,8 @@ def run_emulator(overlays):
 # ----------------------------
 if __name__ == "__main__":
     device = "cpu"
-    start_keyboard_listener()
+    if USE_PYNPUT:
+        start_keyboard_listener()
     run_emulator(
         [
             collision_overlay,
