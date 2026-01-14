@@ -169,7 +169,7 @@ if __name__ == '__main__':
 	if course == 'all':
 		for i in range(32):
 			ghost_data = get_normal_ghost_data(contents, i)
-			data_to_json(ghost_data, f'{out_path}{COURSE_ABBREVIATIONS}.json')
+			data_to_json(ghost_data, f'{out_path}{COURSE_ABBREVIATIONS[i]}.json')
 	else:
 		course = int(course)
 		ghost_data = get_normal_ghost_data(contents, course)
