@@ -4,6 +4,7 @@ from desmume.controls import Keys, keymask
 from src.core.memory import *
 from src.utils.desmume_ext import DeSmuME
 
+import json
 import os
 import sys
 
@@ -60,7 +61,6 @@ def do_menu(emu: DeSmuME, character: int, kart: int, course: int):
 			emu.cycle(False)
 
 	print("Menuing...")
-	state = 0
 	# Title screen and main menu
 	wait(360)
 	press(Keys.KEY_A)
@@ -197,7 +197,7 @@ def run(input_file:str, output_file: str | None = None):
 	assert input_total_count <= 1764
 	input_count = 0
 	index = input_count*2 + 4
-	while input_count <= input_total_count:
+	while input_count < input_total_count:
 		buttons = inputs[index]
 		frame_count = inputs[index + 1]
 		frame_inputs = '|0|'
@@ -220,7 +220,7 @@ def run(input_file:str, output_file: str | None = None):
 		index += 1
 		if index > 20:
 			raise Exception('Movie has no comment?')
-	movie_contents[index] = f'comment {data['characterId']} {data['kartId']} {data['courseId']} {start_frame}\n'
+	movie_contents[index] = f"comment {data['characterId']} {data['kartId']} {data['courseId']} {start_frame}\n"
 
 	with open(output_file, 'w') as fs:
 		fs.writelines(movie_contents)

@@ -175,6 +175,8 @@ if is_desmume then
 	memory.read_s32_le = memory.readdwordsigned
 	memory.read_bytes_as_array = memory.readbyterange
 	
+	memory.write_u16_le = memory.writeword
+	
 	event.onexit = emu.registerexit
 end
 -----------------------------------
@@ -214,7 +216,6 @@ local function FramesSinceRaceStart()
 end
 
 local function collectData(fileName)
-	memory.usememorydomain("ARM9 System Bus")
 	local data = {
 		characterId = memory.read_u8(playerConfig + 0x00),
 		kartId = memory.read_u8(playerConfig + 0x04),
@@ -240,6 +241,10 @@ print("Recording data for marIOkart.")
 event.onexit(function() print("marIOkart: Stopped.") end)
 
 local function main()
+	if not is_desmume then
+		memory.usememorydomain("ARM9 System Bus")
+	end
+
 	local frames = FramesSinceRaceStart()
 	if frames >= 0 then
 		local raceStatus = memory.read_u32_le(raceStatusPtr)
