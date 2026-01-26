@@ -229,7 +229,7 @@ Compatibility
 from __future__ import annotations
 import sys, os
 from desmume.emulator import SCREEN_WIDTH
-from src.utils.desmume_ext import DeSmuME, MMUPrefix
+from core.emulator import DeSmuME, MMUPrefix
 import ctypes
 from mkds.kcl import read_fx32
 from torch._prims_common import DeviceLikeType
@@ -247,7 +247,7 @@ from src.utils.vector import (
     sample_cone,
     triangle_altitude,
 )
-from private.mkds import camera_t, driver_t, VecFx32
+from private.stubgen_out import camera_t, driver_t, race_status_t, VecFx32
 from typing import Callable, Concatenate, TypeVar, ParamSpec
 from functools import wraps
 
@@ -340,7 +340,6 @@ def z_clip_mask(x: torch.Tensor) -> torch.Tensor:
     """
     return (x[:, 2] < -Z_NEAR) & (x[:, 2] > -Z_FAR)
 
-
 @game_cache
 def read_clock_ptr(emu: DeSmuME):
     """Read the base pointer to the game's clock data structure.
@@ -370,6 +369,12 @@ def read_clock(emu: DeSmuME):
     addr = read_clock_ptr(emu)
     return emu.memory.signed.read_long(addr + 0x08) * 10
 
+
+@frame_cache
+def read_race_clock(emu: DeSmuME):
+    addr = emu.memory.unsigned.read_long(RACE_STATUS_PTR_ADDR)
+    data = bytes(emu.memory.unsigned[addr:addr+ctypes.sizeof(race_status_t)])
+    race_status = race_status_t.from_buffer_copy(data)
 
 def get_current_course_id(emu: DeSmuME):
     """Read the current course ID from memory.
@@ -783,14 +788,12 @@ def read_model_view(emu: DeSmuME, device):
     # Load the camera struct
     data = bytes(emu.memory.unsigned[addr: addr+ctypes.sizeof(camera_t)])
     camera = camera_t.from_buffer_copy(data)
-    mat = torch.tensor(camera.mtx.m, device=device)
-    mat = torch.cat([mat.T, torch.tensor([0, 0, 0, 1], device=device, dtype=torch.float)[None, :]], dim=0)
+    out = torch.eye(4).to(device)
+    mtx = camera.mtx.to(device).T
+    mtx[:3, 3] *= 16 # position is scaled by 16
+    out[:3, :] = mtx
     
-    # Move the decimal point over for fixed point data (fx32)
-    mat[:3, :3] /= 0x1000
-    mat[:3, 3] /= 0x100 # position is scaled by 16
-    
-    return mat
+    return out
 
 @game_cache
 def read_projection(emu: DeSmuME, device):
