@@ -188,9 +188,10 @@ FPS:                         {fps:.1f}
 
         if not emu.memory.race_ready:
             return True
-        
-        print(emu.memory.race_status.time.frameCounter - emu.memory.race_state.frameCounter)
+            
+        # memory debugging code comes below here
 
+        # to here
         return True
 
     refresh_rate = int(1000.0 // fps) # Hz
