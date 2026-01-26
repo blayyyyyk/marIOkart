@@ -2,6 +2,8 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 import math
+import numpy as np
+from typing import Union
 #from utils.emulator import SCREEN_WIDTH, SCREEN_HEIGHT
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
@@ -112,7 +114,7 @@ def triangle_raycast_batch(
     v2: torch.Tensor, # (M, 3)
     v3: torch.Tensor, # (M, 3)
     epsilon=1e-8
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Batched ray-triangle intersection using Moller–Trumbore.
 
@@ -157,11 +159,76 @@ def triangle_raycast_batch(
     # Intersection points
     pts = ro + rd * t[..., None]  # (N,M,3)
 
-    # Mask invalid with NaN
-    pts = pts[None, valid]
+    return pts, valid
 
-    return pts
+def generate_driver_rays(
+    n_rays: int, 
+    sweep_angle: float, 
+    driver_pos: torch.Tensor, 
+    driver_fwd: torch.Tensor, 
+    driver_up: torch.Tensor
+):
+    """
+    Generates n rays centered on the driver's forward vector, spread across the XZ plane (driver space).
+    
+    Args:
+        n_rays:      Number of rays to generate.
+        sweep_angle: Total field of view in degrees (e.g., 120 means +/- 60 degrees).
+        driver_pos:  (3,) Global position of the driver.
+        driver_fwd:  (3,) Global forward vector (normalized).
+        driver_up:   (3,) Global up vector (normalized).
+        
+    Returns:
+        ray_origins:    (n_rays, 3) Global starting points.
+        ray_directions: (n_rays, 3) Global normalized direction vectors.
+    """
+    device = driver_pos.device
+    
+    # --- STEP 1: DEFINE RAYS IN LOCAL SPACE ---
+    # We define the pattern relative to a car at (0,0,0) facing (0,0,1).
+    # X = Right, Y = Up, Z = Forward
+    
+    # Generate angles centered at 0 (Forward)
+    # If sweep is 90, we go from -45 to +45.
+    half_sweep = sweep_angle / 2.0
+    angles_deg = torch.linspace(-half_sweep, half_sweep, n_rays, device=device)
+    angles_rad = torch.deg2rad(angles_deg)
+    
+    # Convert Polar -> Cartesian (Local XZ Plane)
+    # x = sin(theta) (Positive is Right)
+    # y = 0          (Flat on the driver's horizon)
+    # z = cos(theta) (Positive is Forward)
+    local_x = torch.sin(angles_rad)
+    local_y = torch.zeros_like(angles_rad)
+    local_z = torch.cos(angles_rad)
+    
+    # Shape: (n_rays, 3)
+    local_dirs = torch.stack([local_x, local_y, local_z], dim=1)
 
+    # --- STEP 2: BUILD ROTATION MATRIX (Local -> World) ---
+    # We need the 3rd basis vector: Right.
+    # Right = Cross(Forward, Up).
+    # Note: We assume standard Right-Hand Rule.
+    driver_right = torch.cross(driver_fwd, driver_up)
+    
+    # Normalize just in case inputs weren't perfect
+    driver_right = driver_right / (torch.linalg.norm(driver_right) + 1e-6)
+    
+    # Construct the Rotation Matrix
+    # Columns are [Right, Up, Forward]
+    # Shape: (3, 3)
+    rotation_matrix = torch.stack([driver_right, driver_up, driver_fwd], dim=1)
+    
+    # --- STEP 3: TRANSFORM TO GLOBAL SPACE ---
+    # Rotate: (N, 3) @ (3, 3)^T
+    # We transpose because standard matrix math is R @ v, but our vectors are rows.
+    global_dirs = local_dirs @ rotation_matrix.T
+    
+    # Translate: Add driver position
+    # Expand driver_pos to match (n_rays, 3)
+    global_origins = driver_pos.expand(n_rays, 3)
+    
+    return global_origins, global_dirs
 
 def pairwise_distances(pts):
     norms = (pts**2).sum(dim=-1)
@@ -434,3 +501,142 @@ def triangle_altitude(a, b):
         return a * b / torch.sqrt(a**2 + b**2)
 
     return a * b / math.sqrt(a**2 + b**2)
+
+import torch
+
+def generate_plane_vectors(
+    n_rays: int,
+    sweep_angle_deg: float,
+    rotation_matrix: torch.Tensor,
+    origin: torch.Tensor,
+    plane_indices: tuple[int, int] = (2, 0) # Default: Forward (Z) to Right (X)
+):
+    """
+    Generates a fan of rays using a rotation matrix to define the orientation.
+    
+    Args:
+        n_rays: Number of rays to generate.
+        sweep_angle_deg: Total field of view (e.g., 120 means +/- 60 deg).
+        rotation_matrix: (3, 3) or (B, 3, 3) Matrix where columns are basis vectors.
+                         - Col 0: Right (X)
+                         - Col 1: Up (Y)
+                         - Col 2: Forward (Z)
+        origin: (3,) or (B, 3) Ray starting positions.
+        plane_indices: Tuple (center_idx, side_idx) defining the sweep plane.
+                       - (2, 0) = Horizontal Sweep (Forward -> Right)
+                       - (2, 1) = Vertical Sweep (Forward -> Up)
+        
+    Returns:
+        origins: (N, 3) or (B, N, 3)
+        directions: (N, 3) or (B, N, 3) Normalized
+    """
+    # 1. Handle Batching
+    # If input is unbatched (3,3), unsqueeze to (1,3,3) for uniform logic
+    is_batched = rotation_matrix.dim() == 3
+    if not is_batched:
+        rotation_matrix = rotation_matrix.unsqueeze(0)
+        origin = origin.unsqueeze(0)
+        
+    B = rotation_matrix.shape[0]
+    device = rotation_matrix.device
+    
+    # 2. Extract Basis Vectors from Matrix Columns
+    # R[:, :, i] grabs the i-th column (the i-th basis vector)
+    center_idx, side_idx = plane_indices
+    
+    # Shape: (B, 3)
+    vec_center = rotation_matrix[:, :, center_idx] 
+    vec_side   = rotation_matrix[:, :, side_idx]
+    
+    # 3. Generate Angles
+    half_sweep = sweep_angle_deg / 2.0
+    angles = torch.linspace(-half_sweep, half_sweep, n_rays, device=device)
+    rads = torch.deg2rad(angles)
+    
+    # 4. Reshape for Broadcasting
+    # We want: (B, 1, 3) * (1, N, 1) -> (B, N, 3)
+    
+    # Basis vectors: (B, 1, 3)
+    vec_center = vec_center.unsqueeze(1)
+    vec_side   = vec_side.unsqueeze(1)
+    
+    # Trig values: (1, N, 1)
+    cos_t = torch.cos(rads).view(1, n_rays, 1)
+    sin_t = torch.sin(rads).view(1, n_rays, 1)
+    
+    # 5. Linear Combination (The Sweep)
+    # v = Center * cos(t) + Side * sin(t)
+    directions = (vec_center * cos_t) + (vec_side * sin_t)
+    
+    # Normalize (just in case floating point drift occurred)
+    directions = directions / (torch.norm(directions, dim=-1, keepdim=True) + 1e-8)
+    
+    # 6. Expand Origins
+    # Origin (B, 3) -> (B, N, 3)
+    origins = origin.unsqueeze(1).expand(-1, n_rays, -1)
+    
+    # 7. Remove batch dim if input was single
+    if not is_batched:
+        return origins.squeeze(0), directions.squeeze(0)
+        
+    return origins, directions
+    
+def ray_triangle_intersection(
+    vertices: torch.Tensor, 
+    ray_origin: torch.Tensor, 
+    ray_direction: torch.Tensor, 
+    culling: bool = False, 
+    epsilon: float = 1e-6
+) -> torch.Tensor:
+    """
+    PyTorch vmap-compatible Möller-Trumbore intersection.
+    
+    Args:
+        vertices: (3, 3) Tensor
+        ray_origin: (3,) Tensor
+        ray_direction: (3,) Tensor
+        culling: bool (Static python argument, not a Tensor)
+        epsilon: float
+        
+    Returns:
+        Tensor of shape (3,) containing [t, u, v]. 
+        Contains [NaN, NaN, NaN] if no intersection occurs.
+    """
+    v0, v1, v2 = vertices[0], vertices[1], vertices[2]
+
+    edge1 = v1 - v0
+    edge2 = v2 - v0
+
+    pvec = torch.linalg.cross(ray_direction, edge2)
+
+    det = torch.dot(edge1, pvec)
+
+    if culling:
+        # Culling: determinant must be positive and > epsilon
+        valid_det = det > epsilon
+    else:
+        # No Culling: determinant must be non-zero (abs > epsilon)
+        valid_det = torch.abs(det) > epsilon
+
+    safe_det = torch.where(valid_det, det, torch.ones_like(det)) 
+    inv_det = 1.0 / safe_det
+
+    tvec = ray_origin - v0
+    u = torch.dot(tvec, pvec) * inv_det
+    valid_u = (u >= 0.0) & (u <= 1.0)
+
+    qvec = torch.linalg.cross(tvec, edge1)
+    v = torch.dot(ray_direction, qvec) * inv_det
+    valid_v = (v >= 0.0) & (u + v <= 1.0)
+
+    t = torch.dot(edge2, qvec) * inv_det
+    valid_t = t > epsilon # Intersection must be strictly in front of camera
+
+    is_hit = valid_det & valid_u & valid_v & valid_t
+
+    result = torch.stack([t, u, v])
+    
+    nan_tensor = torch.full_like(result, float('nan'))
+
+    return torch.where(is_hit, result, nan_tensor)
+    

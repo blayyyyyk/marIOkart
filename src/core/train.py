@@ -89,8 +89,8 @@ from pathlib import Path
 from desmume.emulator import SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_PIXEL_SIZE
 from desmume.frontend.gtk_drawing_area_desmume import AbstractRenderer
 from desmume.controls import Keys, keymask
-from src.core.train_rnn import MarioKartRNN
-from src.utils.desmume_ext import DeSmuME
+from models.rnn import MarioKartRNN
+from core.emulator import DeSmuME
 from torch._prims_common import DeviceLikeType
 import numpy as np
 import gi
@@ -104,15 +104,18 @@ from gi.repository import Gtk, Gdk, GLib
 # Local dependencies
 from src.core.memory import *
 from src.core.memory import read_clock
-from src.core.model import Genome, EvolvedNet, load_genome, save_genome
+from models.neat import Genome, EvolvedNet, load_genome, save_genome
 from src.utils.vector import get_mps_device
-from src.visualization.window import SharedEmulatorWindow, on_draw_memoryview
+from core.window import SharedEmulatorWindow, on_draw_memoryview
 from src.visualization.overlay import AVAILABLE_OVERLAYS
 from src.core.metric import DistanceMetric, FitnessScorer, Metric, collect_all, default_fitness_scorer
+from models.lstm import MarioKartLSTM, get_action_keymask, CONFIG as LSTM_CONFIG
+
+MarioKartModel: TypeAlias = EvolvedNet | MarioKartRNN | MarioKartLSTM
 
 class EmulatorProcessConfig(TypedDict):
     id: int
-    sample: EvolvedNet | MarioKartRNN
+    sample: MarioKartModel
     host: bool
     show: bool
 
@@ -146,12 +149,14 @@ MODEL_KEY_MAP = {
     14: Keys.KEY_DOWN,
 }
 
+
 CHECKPOINT_DIR_PATH = "./model_checkpoints"
 
 NUM_FRAMES_WITH_NOISE = 6500 # This is usually dependent on when (during the race) the savestate loads.
 
 shm_names = []
 best_genome: Genome | None = None
+keys = [0, 33, 289, 1, 257, 321, 801, 273, 17]
 
 def safe_shared_memory(name: str, size: int):
     """Create or replace a named POSIX shared-memory segment.
@@ -245,8 +250,8 @@ def initialize_window(emu, config: EmulatorProcessConfig, batch_config: Emulator
     if not config['host']:
        return None
 
-    shm_names = batch_config['display_shm_names']
-    display_count = len(shm_names)
+    display_shm_names = batch_config['display_shm_names']
+    display_count = len(display_shm_names)
     width = 1000
     height = math.floor(width * (SCREEN_HEIGHT / SCREEN_WIDTH))
     n_cols = math.ceil(math.sqrt(display_count))
@@ -259,7 +264,7 @@ def initialize_window(emu, config: EmulatorProcessConfig, batch_config: Emulator
         n_cols=n_cols,
         n_rows=n_rows,
         renderer=renderer,
-        shm_names=shm_names,
+        shm_names=display_shm_names,
     )
     return window
 
@@ -338,15 +343,13 @@ def handle_controls(emu: DeSmuME, logits: torch.Tensor, max_frame_with_noise: in
 
     """
     if mode == "test":
-        probs = torch.sigmoid(logits).flatten()
-        pressed_buttons = (probs >= threshold).int().cpu().numpy().tolist()
-        mask = int("".join(map(str, pressed_buttons)), 2)
+        probs = torch.sigmoid(logits).flatten().softmax(-1)
+        print(probs)
+        key_idx = int(probs.argmax().item())
         
-        if mask == 0:
-            emu.input.keypad_add_key(Keys.KEY_A)
-            return
         
-        emu.input.keypad_update(mask)
+        
+        emu.input.keypad_update(keys[key_idx])
         return
     
     logits_list = logits.tolist()
@@ -383,7 +386,7 @@ def _run_process(
     emu = initialize_emulator()
 
     # Initialize model
-    forward = get_forward_func(emu, config["sample"], batch_config['device'])
+    forward = get_forward_func(emu, config["sample"], batch_config['device'], seq_len=128)
     metrics: list[Metric] = [b() for b in batch_config['metric_factories']]
     for m in metrics: m.reset()
     device = batch_config['device']
@@ -417,17 +420,18 @@ def _run_process(
 
 
         # Inference / Game Update
-        logits = forward()
+        y = forward()
         for metric in metrics:
             metric.update(emu, device=device)
             
-        if logits is None:
+        if y is None:
             id = config['id']
             send_window_end_signal(id)
             return False
 
-
-        handle_controls(emu, logits, NUM_FRAMES_WITH_NOISE)
+        mask, logits = y
+        emu.input.keypad_update(mask)
+        
         if emu_queue is not None:
             # Queue Overlay Request
             emu_queue.put(emu)
@@ -517,7 +521,7 @@ def send_window_end_signal(id):
     arr[:] = 0.0
 
 
-def get_forward_func(emu: DeSmuME, model: EvolvedNet | MarioKartRNN, device: DeviceLikeType | None = None, seq_len=8):
+def get_forward_func(emu: DeSmuME, model: MarioKartModel, device: DeviceLikeType | None = None, seq_len=8):
     """Build a closure that performs one model step.
 
     The returned callable reads emulator memory for sensor inputs, constructs the
@@ -546,10 +550,14 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet | MarioKartRNN, device: Dev
     """
     
     if isinstance(model, MarioKartRNN):
-        seq = torch.zeros((1, 1, model.kwargs['input_size']))
+        obs = torch.zeros((1, 1, model.kwargs['input_size']))
+        prev_actions = torch.zeros((1, 1, 1))
+    elif isinstance(model, MarioKartLSTM):
+        obs: torch.Tensor | None = None
+        prev_actions: torch.Tensor | None = None
 
-    def forward() -> torch.Tensor | None:
-        nonlocal seq
+    def forward() -> tuple[int, float] | None:
+        nonlocal obs, prev_actions
         clock = read_clock(emu)
         if clock > 20000:
             return None
@@ -576,17 +584,37 @@ def get_forward_func(emu: DeSmuME, model: EvolvedNet | MarioKartRNN, device: Dev
         if isinstance(model, EvolvedNet):
             logits = model(inputs_dist1)
         elif isinstance(model, MarioKartRNN):
-            if  seq.shape[1] == 1:
-                seq = inputs[None, None, :]
-            elif seq.shape[1] < seq_len:
-                seq = torch.cat([seq, inputs[None, None, :]], dim=1)
+            assert obs is not None
+            if  obs.shape[1] == 1:
+                obs = inputs[None, None, :]
+            elif obs.shape[1] < seq_len:
+                obs = torch.cat([obs, inputs[None, None, :]], dim=1)
             else:
-                seq[:, :-1, :] = seq[:, 1:, :].clone() # shift the history
+                obs[:, :-1, :] = obs[:, 1:, :].clone() # shift the history
                 
             with torch.no_grad():
-                logits, _ = model(seq)
+                logits, _ = model(obs)
                 
             logits = logits
+        elif isinstance(model, MarioKartLSTM):
+            inputs = inputs.view(1, 1, -1)
+            if prev_actions is None and obs is None:
+                mask, logits = get_action_keymask(model, inputs, torch.ones(1, 1), keys)
+                obs = inputs
+                prev_actions = torch.tensor(mask).reshape(1, 1)
+                return mask, logits
+            
+            assert obs is not None and prev_actions is not None
+            obs = torch.cat([obs, inputs], dim=1)
+            obs = obs[:, 1:, :].clone() if obs.shape[1] > seq_len else obs
+
+            prev_actions = prev_actions[:, 1:, :].clone() if prev_actions.shape[1] > seq_len + 1 else prev_actions
+            clip = prev_actions[:-1] if prev_actions.shape[1] > 1 else prev_actions
+            mask, logits = get_action_keymask(model, obs, clip, keys)
+
+            prev_actions = torch.cat([prev_actions, torch.tensor([[mask]])], dim=1)
+            return mask, logits
+                
 
         return logits
 
@@ -859,8 +887,13 @@ def test_pretrained(paths: list[str] | str, device=None):
         
     pop = []
     for path in paths:
-        kwargs, state = torch.load(path)
-        model = MarioKartRNN(**kwargs)
+        state = torch.load(path)
+        model = MarioKartLSTM(
+            LSTM_CONFIG['obs_dim'], 
+            LSTM_CONFIG['num_classes'], 
+            LSTM_CONFIG['hidden_dim'], 
+            LSTM_CONFIG['embed_dim'],
+        )
         model.load_state_dict(state)
         model.eval()
         pop.append(model)
@@ -957,7 +990,7 @@ def main():
 
 def main_test():
     device = "cpu"
-    test_pretrained("private/checkpoints/checkpoint_e01052026.pth", device)
+    test_pretrained("private/checkpoints/checkpoint_e01122026.pth", device)
 
 if __name__ == "__main__":
     main_test()

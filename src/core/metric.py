@@ -38,7 +38,7 @@ Typical usage:
 from __future__ import annotations
 from typing import Any, Protocol, Self
 from abc import abstractmethod
-from desmume.emulator import DeSmuME
+from core.emulator import DeSmuME
 from torch._prims_common import DeviceLikeType
 from src.core.memory import *
 
@@ -119,11 +119,15 @@ class DistanceMetric(Metric):
         self.curr_id: int | None = None
         self.next_id: int | None = None
         self.dist: float = 0
+        self.dist_diff: float = 0
 
     def reset(self) -> None:
         """Clear progress counters and current checkpoint ID."""
+        self.prev_id = None
         self.curr_id = None
+        self.next_id = None
         self.dist = 0
+        self.dist_diff = 0
 
     def update(self, emu: DeSmuME, device: DeviceLikeType | None = None) -> None:
         """Accumulate signed progress on checkpoint transitions.
@@ -170,7 +174,8 @@ class DistanceMetric(Metric):
             scale = -1
 
         assert midpoint_1 is not None and midpoint_2 is not None, "Midpoints should be calculated"
-        self.dist += scale * torch.norm(midpoint_1 - midpoint_2).item()
+        self.dist_diff = scale * torch.norm(midpoint_1 - midpoint_2).item()
+        self.dist += self.dist_diff
 
         self.curr_id = current_checkpoint_id
         self.prev_id = read_previous_checkpoint(emu, checkpoint_count)
@@ -186,7 +191,8 @@ class DistanceMetric(Metric):
                   moving backward.
         """
         return {
-            'distance': self.dist
+            'distance': self.dist,
+            'distance_difference': self.dist_diff
         }
 
 

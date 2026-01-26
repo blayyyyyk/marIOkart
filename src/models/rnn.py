@@ -7,16 +7,19 @@ from src.utils.dataset import RaceDataset
 from desmume.controls import keymask, Keys
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
+import json
+import numpy as np
 
 
 class MarioKartRNN(nn.Module):
-    def __init__(self, input_size=3, hidden_size=32, output_size=11, num_layers=5):
+    def __init__(self, input_size=3, hidden_size=32, output_size=11, num_layers=5, norm_scale=3000):
         super(MarioKartRNN, self).__init__()
         self.kwargs = {
             "input_size": input_size,
             "hidden_size": hidden_size,
             "output_size": output_size,
-            "num_layers": num_layers
+            "num_layers": num_layers,
+            "norm_scale": norm_scale
         }
         
         # Built-in torch.nn.RNN module
@@ -24,18 +27,15 @@ class MarioKartRNN(nn.Module):
         # Final fully connected layer for discrete action space
         self.fc = nn.Linear(hidden_size, output_size)
 
-    def forward(self, x):
+    def forward(self, x, h0=None):
         # x shape: (batch_size, sequence_length, input_size)
-        h0 = torch.zeros(self.kwargs['num_layers'], x.size(0), self.kwargs['hidden_size']).to(x.device)
-        x_norm = x.norm(dim=-1, keepdim=True) + 1e-8
-        x /= x_norm
         out, h = self.rnn(x, h0)
         # Use the output from the final time step for classification
         out = self.fc(out[:, -1, :])
         return out, h
 
 # --- Training Logic ---
-def train_vanilla_rnn(dataset_path, batch_size=64, seq_len=8, epochs=250):
+def train_vanilla_rnn(dataset_path, batch_size=64, seq_len=32, epochs=250):
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     
     # Initialize your custom RaceDataset
@@ -70,22 +70,26 @@ def train_vanilla_rnn(dataset_path, batch_size=64, seq_len=8, epochs=250):
             epoch_loss += loss.item()
             
         print(f"Epoch {epoch+1}/{epochs} | Loss: {epoch_loss/len(loader):.5f}")
+    
+    
 
     
-    
-def train_with_benchmark(dataset_path, batch_size=16, seq_len=8, epochs=50, color: str = "ff0000"):
+def train_with_benchmark(dataset_path, batch_size=32, seq_len=32, epochs=25, color: str = "ff0000"):
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     
-    full_dataset = RaceDataset(dataset_path, sample_dim=3, target_dim=11)
+    full_dataset = RaceDataset(dataset_path, sample_dim=3, target_dim=9)
     train_size = int(0.8 * len(full_dataset))
     test_size = len(full_dataset) - train_size
     train_ds, test_ds = random_split(full_dataset, [train_size, test_size])
+    max_dist = None
+    with open(f"{dataset_path}/metadata.json") as f:
+        max_dist = json.load(f)["upper_bound"]
     
     train_loader = DataLoader(train_ds, batch_size=batch_size * seq_len, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_ds, batch_size=batch_size * seq_len, shuffle=True, drop_last=True)
 
-    model = MarioKartRNN(input_size=3, hidden_size=128, output_size=11).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    model = MarioKartRNN(input_size=3, hidden_size=128, output_size=9, norm_scale=max_dist).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = nn.BCEWithLogitsLoss()
     train_losses, test_losses = [], []
 
@@ -96,12 +100,11 @@ def train_with_benchmark(dataset_path, batch_size=16, seq_len=8, epochs=50, colo
         for samples, targets in train_loader:
             samples = samples.to(device).view(-1, seq_len, 3)
             targets = targets.to(device).float()[seq_len-1::seq_len]
-            
+            norm_samples = samples / samples.norm(-1)
             optimizer.zero_grad()
-            output, _ = model(samples)
+            output, _ = model(norm_samples)
             loss = criterion(output, targets)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0) # Prevent NaNs
             
             optimizer.step()
             total_train_loss += loss.item()
@@ -113,8 +116,9 @@ def train_with_benchmark(dataset_path, batch_size=16, seq_len=8, epochs=50, colo
             for samples, targets in test_loader:
                 samples = samples.to(device).view(-1, seq_len, 3)
                 targets = targets.to(device).float()[seq_len-1::seq_len]
-                output, _ = model(samples)
-                loss = criterion(output, targets)
+                norm_samples = samples / samples.norm(-1)
+                output, _ = model(norm_samples)
+                loss = criterion(output.softmax(-1), targets)
                 total_test_loss += loss.item()
 
         avg_train = total_train_loss / len(train_loader)
@@ -153,5 +157,9 @@ colors = {
 }
 
 if __name__ == "__main__":
-    train_with_benchmark("./private/training_data/f8c_pikalex")
+    train_with_benchmark("./private/training_data/f8c_pikalex",
+        batch_size=4, 
+        seq_len=128, 
+        epochs=100
+    )
     

@@ -28,6 +28,9 @@ def draw_stack_op(func: Callable[Concatenate[Context, P], None]) -> Callable[P, 
 
 @draw_stack_op
 def draw_points(ctx: Context, pts: np.ndarray, colors: np.ndarray, radius_scale: float | np.ndarray):
+    _draw_points(ctx, pts, colors, radius_scale)
+
+def _draw_points(ctx: Context, pts: np.ndarray, colors: np.ndarray, radius_scale: float | np.ndarray):
     if isinstance(radius_scale, float):
         radius_scale = radius_scale * np.array(1)
 
@@ -50,6 +53,9 @@ def draw_points(ctx: Context, pts: np.ndarray, colors: np.ndarray, radius_scale:
 
 @draw_stack_op
 def draw_lines(ctx: Context, pts1: np.ndarray, pts2: np.ndarray, colors: np.ndarray, stroke_width_scale=1.0):
+    _draw_lines(ctx, pts1, pts2, colors, stroke_width_scale)
+
+def _draw_lines(ctx: Context, pts1: np.ndarray, pts2: np.ndarray, colors: np.ndarray, stroke_width_scale=1.0):
     if pts1.ndim == 1:
         pts1 = pts1[None, :]
 
@@ -80,6 +86,15 @@ def draw_triangles(
     pts3: np.ndarray,
     colors: np.ndarray
 ):
+    _draw_triangles(ctx, pts1, pts2, pts3, colors)
+
+def _draw_triangles(
+    ctx: Context,
+    pts1: np.ndarray,
+    pts2: np.ndarray,
+    pts3: np.ndarray,
+    colors: np.ndarray
+):
     n = pts1.shape[0]
     assert pts2.shape[0] == n and pts3.shape[0] == n, "All point arrays must have the same batch size"
 
@@ -96,7 +111,7 @@ def draw_triangles(
     l2 = np.concatenate([pts3, pts1, pts2], axis=0)
     c3 = np.tile(colors, (3, 1))
 
-    draw_lines(l1, l2, c3)  # assumes draw_lines accepts NumPy arrays
+    _draw_lines(ctx, l1, l2, c3)  # assumes draw_lines accepts NumPy arrays
 
 
 def draw_text(ctx: Context, text: str, pos: tuple[float, float] = (0.0, 0.0), color: tuple[float, float, float] = (1.0, 0.5, 0.34), alpha: float = 1.0, font_size: float = 12, font_family: str = "Sans"):
