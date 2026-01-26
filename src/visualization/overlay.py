@@ -1,5 +1,5 @@
 from __future__ import annotations
-from src.utils.desmume_ext import DeSmuME
+from core.emulator import DeSmuME
 from src.visualization.draw import draw_paragraph, draw_points, draw_text, draw_triangles, draw_lines
 from src.utils.vector import interpolate
 import torch
@@ -140,23 +140,28 @@ def camera_overlay(emu: DeSmuME, device: DeviceLikeType | None = None):
 @register_overlay
 def checkpoint_overlay_1(emu: DeSmuME, device: DeviceLikeType | None = None):
     global current_point
-    position = read_position(emu, device=device)
+    position = emu.memory.driver.position
+    position = position.to(device)
     
-    checkpoint = read_next_checkpoint_position(emu, device=device)
-    checkpoint[:, 1] = position[1]
-    
-    checkpoint_proj, _ = project_to_screen(emu, checkpoint, device=device)
-    if checkpoint_proj.shape[0] < 2:
+    checkpoint = emu.memory.checkpoint_info()['next_checkpoint_pos']
+    checkpoint = checkpoint.to(device)
+    checkpoint[:, 1] -= emu.memory.camera.targetElevation / (1 << 12)
+
+    proj = emu.memory.project_to_screen(checkpoint, normalize_depth=True)
+    screen_space = proj['screen']
+    depth_mask = proj['mask']
+    screen_space = screen_space[depth_mask]
+
+    if screen_space.shape[0] < 2:
         return
 
-    # display depth norm, preserve depth in 3d
-    depth_norm = checkpoint_proj[:, 3, None] / 3
-    depth = checkpoint_proj[:, 2, None]
-    checkpoint_proj = torch.cat([checkpoint_proj[:, :2], depth_norm, depth], dim=-1)
-    p1_np, p2 = checkpoint_proj[:, :3].chunk(2, dim=0)
-    p1_np = p1_np.detach().cpu().numpy()
-    p2_np = p2.detach().cpu().numpy()
-    draw_lines(p1_np, p2_np, colors=np.array([0.0, 1.0, 0.0]), stroke_width_scale=1.0)
+    p1, p2 = screen_space.chunk(2, dim=0)
+    draw_lines(
+        p1.detach().cpu().numpy(), 
+        p2.detach().cpu().numpy(), 
+        colors=np.array([0.0, 1.0, 0.0]), 
+        stroke_width_scale=1.0
+    )
 
 
 """ Displays an overlay of a ray connecting the kart and the next checkpoint boundary. """
