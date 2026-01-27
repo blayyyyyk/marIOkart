@@ -219,27 +219,21 @@ FPS:                         {fps:.1f}
 
         emu.close() # safely stop emulator
 
-def add_recording_offset(dsm_path, frame_offset, out_path=None):
-    if out_path is None:
-        base, ext = dsm_path.split('.')[0], dsm_path.split('.')[1]
-        out_path = f"{base}_offset_{frame_offset}.{ext}"
-
-    
 
 def main(overlays=[]):
     parser = ArgumentParser(
         prog="main.py",
-        description="Runs a user friendly visualization of mariokart ds",
+        description="Main entry point for the Mario Kart DS ML visualization application.",
     )
-    parser.add_argument('-p', '--rom-path', default="private/mariokart_ds.nds")
-    parser.add_argument('-r', '--record')
-    parser.add_argument('-d', '--record-data')
-    parser.add_argument('-m', '--movie')
-    parser.add_argument('-s', '--savestate')
-    parser.add_argument('--correct-movie', action='store_true')
-    parser.add_argument('--sram')
-    parser.add_argument('--fps')
-    parser.add_argument('--force-overlay', action='store_true')
+    parser.add_argument('-p', '--rom-path', default="private/mariokart_ds.nds", help="Path to the Mario Kart DS ROM file.")
+    parser.add_argument('-r', '--record', help="Path to record gameplay to.")
+    parser.add_argument('-d', '--record-data', help="Path to record gameplay data to.")
+    parser.add_argument('-m', '--movie', help="Path to a movie file to playback.")
+    parser.add_argument('-s', '--savestate', help="Path to a savestate file to load.")
+    parser.add_argument('--correct-movie', action='store_true', help="Flag to correct movie playback.")
+    parser.add_argument('--sram', help="Path to SRAM file.")
+    parser.add_argument('--fps', help="Target frames per second.")
+    parser.add_argument('--force-overlay', action='store_true', help="Flag to force overlay display.")
     args = parser.parse_args()
     
     run_emulator(overlays, args)
