@@ -20,7 +20,7 @@ from typing import (
 )
 from typing import Annotated, Literal
 from typing_extensions import override
-from private.mkdslib import (
+from mkdslib.mkdslib import (
     VecFx32,
     VecFx16,
     camera_t,

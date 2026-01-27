@@ -1,7 +1,7 @@
 from core.emulator import MarioKart
 from src.core.memory import *
 from src.utils.vector import get_mps_device
-from private.stubgen_out import race_status_t
+from mkdslib.stubgen_out import race_status_t
 import ctypes, torch, os, warnings, sys
 import numpy as np
 from torch.utils.data import DataLoader

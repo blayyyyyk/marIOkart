@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 import ctypes
 
-from private.mkdslib import *
+from mkdslib.mkdslib import *
 
 DEFAULT_USER_FPS = 60.0
 DEFAULT_HEADLESS_FPS = 240.0

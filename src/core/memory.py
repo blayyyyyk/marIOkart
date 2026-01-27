@@ -247,7 +247,7 @@ from src.utils.vector import (
     sample_cone,
     triangle_altitude,
 )
-from private.stubgen_out import camera_t, driver_t, race_status_t, VecFx32
+from mkdslib.stubgen_out import camera_t, driver_t, race_status_t, VecFx32
 from typing import Callable, Concatenate, TypeVar, ParamSpec
 from functools import wraps
 

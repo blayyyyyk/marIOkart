@@ -13,7 +13,7 @@ from src.core.window import (
     DriftOverlay
 )
 from argparse import ArgumentParser
-from private.mkdslib import *
+from mkdslib.mkdslib import *
 from src.main import DEFAULT_USER_FPS, DEFAULT_HEADLESS_FPS
 
 BOOST_WINDOW_START = 193
