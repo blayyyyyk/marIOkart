@@ -2,7 +2,7 @@ from desmume.emulator import StartFrom
 from desmume.controls import Keys, keymask
 
 from src.core.memory import *
-from src.utils.desmume_ext import DeSmuME
+from src.core.emulator import MarioKart
 
 import json
 import os
