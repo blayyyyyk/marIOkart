@@ -130,7 +130,7 @@ def get_normal_ghost_data(data: bytearray, ordered_course_id: int) -> bytearray:
 
     return ghost_data
 
-def data_to_json(data: bytearray, file: str):
+def data_to_dict(data: bytearray):
     character_id = data[0x04] & 0xf
     kart_id = (struct.unpack_from('<H', data, 4)[0] >> 4) & 0x3f
     course_id = (struct.unpack_from('<H', data, 4)[0] >> 10) & 0x3f
@@ -143,6 +143,10 @@ def data_to_json(data: bytearray, file: str):
         'ghostInputs': [x for x in inputs],
     }
     content = json.dumps(json_data)
+    return content
+
+def data_to_json(data: bytearray, file: str):
+    content = data_to_dict(data)
     with open(file, 'w') as fs:
         fs.write(content)
 
