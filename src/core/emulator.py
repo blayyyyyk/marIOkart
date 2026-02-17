@@ -20,7 +20,7 @@ from typing import (
 )
 from typing import Annotated, Literal
 from typing_extensions import override
-from mkdslib.mkdslib import (
+from src.mkdslib.mkdslib import (
     VecFx32,
     VecFx16,
     camera_t,
@@ -60,6 +60,57 @@ class MMUPrefix(ctypes.Structure):
         ("ARM9_DTCM", ctypes.c_uint8 * 0x4000),
         ("MAIN_MEM", ctypes.c_uint8 * (16 * 1024 * 1024)),
         # ...
+    ]
+    
+class NDSDisplayInfo(ctypes.Structure):
+    _fields_ = [
+        # --- User-requested settings ---
+        ("colorFormat", ctypes.c_int),                  # NDSColorFormat (enum)
+        ("pixelBytes", ctypes.c_uint32),                # u32
+        
+        ("isCustomSizeRequested", ctypes.c_bool),       # bool
+        # Note: Compiler likely adds padding here for alignment
+        
+        ("customWidth", ctypes.c_uint32),               # u32
+        ("customHeight", ctypes.c_uint32),              # u32
+        ("framebufferPageSize", ctypes.c_uint32),       # u32
+        
+        ("framebufferPageCount", ctypes.c_uint32),      # u32
+        ("masterFramebufferHead", ctypes.c_void_p),     # void *
+        
+        ("isDisplayEnabled", ctypes.c_bool * 2),        # bool[2]
+        
+        # --- Frame render state information ---
+        ("bufferIndex", ctypes.c_uint8),                # u8
+        # Note: Compiler likely adds 7 bytes of padding here to align the next u64
+        
+        ("sequenceNumber", ctypes.c_uint64),            # u64
+        
+        ("masterNativeBuffer16", ctypes.POINTER(ctypes.c_uint16)), # u16 *
+        ("masterCustomBuffer", ctypes.c_void_p),        # void *
+        
+        ("nativeBuffer16", ctypes.POINTER(ctypes.c_uint16) * 2),   # u16 *[2]
+        ("customBuffer", ctypes.c_void_p * 2),          # void *[2]
+        
+        ("renderedWidth", ctypes.c_uint32 * 2),         # u32[2]
+        ("renderedHeight", ctypes.c_uint32 * 2),        # u32[2]
+        ("renderedBuffer", ctypes.c_void_p * 2),        # void *[2]
+        
+        ("engineID", ctypes.c_int * 2),                 # GPUEngineID (enum)[2]
+        
+        ("didPerformCustomRender", ctypes.c_bool * 2),  # bool[2]
+        
+        ("masterBrightnessDiffersPerLine", ctypes.c_bool * 2), # bool[2]
+        
+        # 2D arrays: [2][192]
+        ("masterBrightnessMode", (ctypes.c_uint8 * SCREEN_HEIGHT) * 2), 
+        ("masterBrightnessIntensity", (ctypes.c_uint8 * SCREEN_HEIGHT) * 2), 
+        
+        ("backlightIntensity", ctypes.c_float * 2),     # float[2]
+        
+        # --- Postprocessing information ---
+        ("needConvertColorFormat", ctypes.c_bool * 2),  # bool[2]
+        ("needApplyMasterBrightness", ctypes.c_bool * 2) # bool[2]
     ]
 
 
@@ -433,12 +484,13 @@ class MarioKart_Memory(DeSmuME_Memory):
         -------
         `bool`: True if the race is ready, False otherwise.
         """
+        try:
+            _f = self.race_state.frameCounter - self.race_state.frameCounter2
+        except:
+            return False
+            
         if not self._ready:
-            try:
-                _f = self.race_state.frameCounter - self.race_state.frameCounter2
-                self._ready = _f == 1
-            except:
-                pass
+            self._ready = _f == 1
 
         return self._ready
 
@@ -873,6 +925,17 @@ class MarioKart_Memory(DeSmuME_Memory):
             self.obstacle_info(n_rays, max_dist=max_dist, device=device)['distance'],
             self.checkpoint_info(device)['midpoint_angle'].reshape(1)
         ], dim=-1)
+        
+    def reset(self):
+        self._driver: Optional[driver_t] = None
+        self._camera: Optional[camera_t] = None
+        self._race_status: Optional[race_status_t] = None
+        self._map_data: Optional[mdat_mapdata_t] = None
+        self._cpoi_data: Optional[ctypes.Array[struct_nkm_cpoi_entry_t]] = None
+        self._kcl_header: Optional[kcol_header_t] = None
+        self._kcl_data: Optional[CollisionData] = None
+        self._race_state: Optional[race_state_t] = None
+        self._ready = False
 
 
 MT = TypeVar('MT', bound=Union[np.ndarray, list])
@@ -905,7 +968,7 @@ def _to_list(mdata: Metadata[np.ndarray]) -> Metadata[list]:
         "size": mdata['size']
     }
 
-def combine(*mdata: Metadata):
+def combine(mdata: list[Metadata]):
     assert len(mdata) != 0
 
 
@@ -990,16 +1053,16 @@ class FileIO:
             "std": std_dev,
             "size": self.size
         }
+        
+    
 
     def close(self, old_metadata: Optional[Metadata]):
-        new_metadata = combine(self.metadata, old_metadata) if old_metadata is not None else self.metadata
+        new_metadata = combine([self.metadata, old_metadata]) if old_metadata is not None else self.metadata
         if isinstance(new_metadata['mean'], np.ndarray):
             new_metadata = _to_list(cast(Metadata[np.ndarray], new_metadata))
 
         new_metadata = cast(Metadata[list], new_metadata)
         json.dump(new_metadata, self.mf)
-        self.sf.close()
-        self.tf.close()
         self.mf.close()
 
 
@@ -1084,7 +1147,7 @@ class MarioKart(DeSmuME):
             self._cycle_with_grad(with_joystick)
         else:
             super().cycle(with_joystick)
-
+            
         self.count += 1
 
         if isinstance(self._io, FileIO) and self.memory.race_ready:
@@ -1135,12 +1198,16 @@ class MarioKart(DeSmuME):
     @override
     def reset(self):
         super().reset()
-        self.memory._ready = False
+        
+        self.memory.reset()
+        self._io = None
+        
 
 
     @override
     def close(self):
+        super().close()
+        
         if isinstance(self._io, FileIO):
             self._io.close(self._old_metadata)
 
-        super().close()

@@ -13,7 +13,6 @@ from torch._prims_common import DeviceLikeType
 
 AVAILABLE_OVERLAYS: list[Callable[[DeSmuME, DeviceLikeType | None], None]] = []
 
-
 def register_overlay(func: Callable[[DeSmuME, DeviceLikeType | None], None]):
     AVAILABLE_OVERLAYS.append(func)
     return func

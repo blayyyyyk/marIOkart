@@ -111,6 +111,14 @@ class Structure(ctypes.Structure, AsDictMixin):
                     cls.__name__, bound_fields.keys()
             ))
         return cls(**fields)
+        
+    def __repr__(self) -> str:
+        values = ",\n".join(f"{name}={value}" for name, value in self._asdict().items())
+        return f"<{self.__class__.__name__}: {values}>"
+
+    def _asdict(self) -> dict:
+        return {field[0]: getattr(self, field[0])
+                for field in self._fields_}
 
 
 class Union(ctypes.Union, AsDictMixin):

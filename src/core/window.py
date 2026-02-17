@@ -1,16 +1,16 @@
-from core.emulator import MarioKart, MarioKart_Memory
+import multiprocessing
+from src.core.emulator import MarioKart, MarioKart_Memory
 from desmume.controls import Keys, keymask
+from desmume.emulator import SCREEN_PIXEL_SIZE
+from multiprocessing import Process
 from desmume.frontend.gtk_drawing_area_desmume import AbstractRenderer
 from src.visualization.draw import consume_draw_stack, _draw_lines, _draw_triangles
 import cairo, numpy as np, math, time, os
 from pynput import keyboard
 from multiprocessing.shared_memory import SharedMemory
-from typing import Callable, Any, TypeVar, Generic, TypedDict
+from typing import Callable, Any, Literal, TypeVar, Generic, TypedDict, Optional, Unpack, overload
 from queue import Queue
 import threading
-import queue
-from abc import ABC, abstractmethod
-import gi
 import torch
 from src.utils.vector import (
     pairwise_distances_cross,
@@ -22,6 +22,7 @@ from src.utils.vector import (
     generate_plane_vectors,
     generate_driver_rays
 )
+import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
@@ -118,159 +119,6 @@ COLOR_MAP = [
     [0,   255, 0]     # 22: Force Recalc (Lime Green - Debug visual)
 ]
 
-
-# ----------------------------
-# ASYNC KEYBOARD HANDLER
-# ----------------------------
-def start_keyboard_listener():
-    """Starts a non-blocking keyboard listener in a separate thread."""
-    def on_press(key):
-        try:
-            name = key.char.lower() if hasattr(key, "char") else key.name
-            if name in KEY_MAP:
-                input_state.add(name)
-        except Exception:
-            pass
-
-    def on_release(key):
-        try:
-            name = key.char.lower() if hasattr(key, "char") else key.name
-            if name in KEY_MAP:
-                input_state.discard(name)
-        except Exception:
-            pass
-
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.daemon = True
-    listener.start()
-    return listener
-
-
-# ============================================================
-#  Overlay-Composited Offscreen Draw
-# ============================================================
-def on_draw_memoryview(
-    buf: memoryview, width: int, height: int, scale_x: float, scale_y: float
-) -> np.ndarray:
-    """Scale emulator RGBX frame and apply overlay → NumPy RGBA array."""
-    stride = width * 4
-    src_surface = cairo.ImageSurface.create_for_data(
-        buf, cairo.FORMAT_RGB24, width, height, stride
-    )
-    new_w, new_h = int(width * scale_x), int(height * scale_y)
-    dest_surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, new_w, new_h)
-    ctx = cairo.Context(dest_surface)
-    ctx.scale(scale_x, scale_y)
-
-    # Compose overlays
-    composited = apply_overlay_to_surface(src_surface)
-    ctx.set_source_surface(composited, 0, 0)
-    ctx.paint()
-
-    buf_out = dest_surface.get_data()
-    arr = np.ndarray((new_h, new_w, 4), np.uint8, buffer=buf_out)
-    return arr
-
-
-def apply_overlay_to_surface(src_surface: cairo.ImageSurface) -> cairo.Surface:
-    """Return new Cairo surface with overlay applied."""
-    global overlay_surface_cache
-    width, height = src_surface.get_width(), src_surface.get_height()
-
-    overlay_surface = src_surface.create_similar(
-        cairo.CONTENT_COLOR_ALPHA, width, height
-    )
-    overlay_surface.set_device_scale(*src_surface.get_device_scale())
-
-    overlay_ctx = cairo.Context(overlay_surface)
-    overlay_ctx.set_operator(cairo.OPERATOR_CLEAR)
-    overlay_ctx.paint()
-    overlay_ctx.set_operator(cairo.OPERATOR_OVER)
-    overlay_ctx.set_antialias(cairo.ANTIALIAS_NONE)
-
-    num_calls = consume_draw_stack(overlay_ctx)
-
-    if num_calls == 0 and overlay_surface_cache is not None:
-        overlay = overlay_surface_cache
-    else:
-        overlay_surface_cache = overlay_surface
-        overlay = overlay_surface
-
-    result_surface = src_surface.create_similar(
-        cairo.CONTENT_COLOR_ALPHA, width, height
-    )
-    ctx = cairo.Context(result_surface)
-    ctx.set_source_surface(src_surface, 0, 0)
-    ctx.paint()
-    ctx.set_source_surface(overlay, 0, 0)
-    ctx.paint()
-    return result_surface
-
-
-# ============================================================
-#  Multi-Process Display Window (shared memory compositor)
-# ============================================================
-
-class SharedEmulatorWindow(Gtk.Window):
-    def __init__(self, width: int, height: int, n_cols: int, n_rows: int, renderer: AbstractRenderer, shm_names: list[str]):
-        super().__init__(title="MarI/O Kart — Multi Display")
-        self.connect("destroy", self._on_destroy)
-        self.set_default_size(width, height)
-
-        self.width = width
-        self.height = height
-        self.n_cols = n_cols
-        self.n_rows = n_rows
-        self.renderer = renderer
-        # Hold references so their buffers remain valid:
-        self._shms = [SharedMemory(name=name) for name in shm_names]
-        self.frames = [
-            np.ndarray((SCREEN_HEIGHT, SCREEN_WIDTH, 4), dtype=np.uint8, buffer=shm.buf)
-            for shm in self._shms
-        ]
-        
-        self.area = Gtk.DrawingArea()
-        self.area.connect("draw", self.on_draw)
-        self.add(self.area)
-        
-        GLib.timeout_add(33, self.refresh)
-
-    def on_draw(self, widget: Gtk.DrawingArea, ctx: cairo.Context):
-        import math
-        scale = 1.0
-        tile_w = self.width / self.n_cols
-        tile_h = tile_w * (SCREEN_HEIGHT / SCREEN_WIDTH)
-
-        for i, frame in enumerate(self.frames):
-            r, c = divmod(i, self.n_cols)
-            
-            surface = cairo.ImageSurface.create_for_data(
-                frame, cairo.FORMAT_RGB24, SCREEN_WIDTH, SCREEN_HEIGHT
-            )
-            
-            ctx.save()
-            ctx.translate(c * tile_w, r * tile_h)
-            ctx.scale(tile_w / SCREEN_WIDTH, tile_h / SCREEN_HEIGHT)
-            
-            ctx.set_source_surface(surface, 0, 0)
-            ctx.get_source().set_filter(cairo.Filter.NEAREST)  # Disable smoothing
-            ctx.paint()
-            ctx.restore()
-            
-    
-            
-    def refresh(self):
-        self.area.queue_draw()
-        return True
-        
-    def _on_destroy(self, *_):
-        # Close (do not unlink) — unlink after procs finish in the trainer
-        for shm in self._shms:
-            try:
-                shm.close()
-            except Exception:
-                pass
-
 # ============================================================
 #  Standard Single Emulator GTK Window (for interactive mode)
 # ============================================================
@@ -341,7 +189,7 @@ class AsyncOverlay(Gtk.DrawingArea, Generic[T]):
         ctx.clip()
 
         self.draw_overlay(ctx, state)
-
+        
         ctx.restore()
         return False
     
@@ -531,42 +379,86 @@ class DriftOverlay(AsyncOverlay[tuple[np.ndarray, np.ndarray]]):
         _draw_lines(ctx, D, P, colors)
         
 
-class EmulatorWindow(Gtk.Window):
-    def __init__(self, emu: MarioKart, overlays: list[type[AsyncOverlay]], device=None):
-        super().__init__()
+
+class EmulatorContainerImpl:
+    width: int
+    height: int
+    scale: int
+    
+    def setup_container(
+        self,
+        width: int,
+        height: int,
+        orientation: Literal['horizontal', 'vertical'],
+        scale: int,
+        id: Optional[int]
+    ):
+        self.width = width
+        self.height = height
+        self.total_width = self.width
+        self.total_height = self.height
+        self.scale = scale
+        if orientation == 'horizontal':
+            self.total_width *= 2
+        elif orientation == 'vertical':
+            self.total_height *= 2
         
-        # 1. State Flag
+        self.size = self.total_height * self.total_width * 8
+        if id is None: return
+        self.shm = SharedMemory(
+            name=f"display_{id}",
+            size=self.size
+        )
+        print(self.shm)
+        
+        
+        assert self.shm.buf
+        self.shm_buf = self.shm.buf
+        self.shm_surface = cairo.ImageSurface.create_for_data(
+            self.shm_buf, cairo.FORMAT_RGB24, self.total_width, self.total_height
+        )
+    
+def unpack_shm(name: str):
+    shm = SharedMemory(name=name, size=SCREEN_WIDTH*SCREEN_HEIGHT*8)
+    arr = np.ndarray(shape=(SCREEN_WIDTH, SCREEN_HEIGHT, 3), dtype=np.uint8, buffer=shm.buf)
+    return arr
+    
+
+class EmulatorWindowImpl(EmulatorContainerImpl):
+    def setup_emulator(
+        self, 
+        emu: MarioKart, 
+        overlays: list[type[AsyncOverlay]], 
+        width: int,
+        height: int,
+        orientation: Literal['horizontal', 'vertical'],
+        scale: int,
+        id: Optional[int],
+        device=None):
+        self.setup_container(width, height, orientation, scale, id)
         self.show_sub_screen = True
         
-        # Dimensions
-        self.DS_WIDTH = 256
-        self.DS_HEIGHT = 192
-        self.TOTAL_WIDTH = self.DS_WIDTH * 2
-        
+        # Gtk Window Setup #
         self.set_title("MarI/O Emulator Window")
-
-        # Set initial size
-        self.set_default_size(self.TOTAL_WIDTH * SCALE, self.DS_HEIGHT * SCALE)
+        self.set_default_size(self.total_width * self.scale, self.total_height * self.scale)
         self.connect("destroy", self._on_window_destroy)
-
         self.renderer = AbstractRenderer.impl(emu)
         self.renderer.init()
         
+        # Gtk Overlay Widgets Setup #
         self.overlay_container = Gtk.Overlay()
         self.add(self.overlay_container)
-
         self.game_area = Gtk.DrawingArea()
-        self.game_area.set_size_request(self.TOTAL_WIDTH * SCALE, self.DS_HEIGHT * SCALE)
+        self.game_area.set_size_request(self.total_width * self.scale, self.total_height * self.scale)
         self.game_area.connect("draw", self.on_draw_main)
-        self.game_area.connect("configure-event", self.on_configure_main)
         self.overlay_container.add(self.game_area)
-
-        # Overlays
         self.overlays: dict[str, AsyncOverlay] = {}
         for overlay_cls in overlays:
             self.add_async_overlay(overlay_cls, emu, device=device, refresh_rate=60)
-
-        self.show_all()
+        
+    def detach_container(self):
+        self.remove(self.overlay_container)
+        return self.overlay_container
 
     # --- NEW METHOD ---
     def toggle_display_mode(self):
@@ -575,26 +467,17 @@ class EmulatorWindow(Gtk.Window):
         Resizes the window and prevents the backend from rendering the second screen.
         """
         self.show_sub_screen = not self.show_sub_screen
-        
-        # 1. Calculate Target Dimensions
         if self.show_sub_screen:
             # Showing both: Width is 2x
-            target_width = self.TOTAL_WIDTH * SCALE
+            target_width, target_height = self.total_width, self.total_height
         else:
             # Showing top only: Width is 1x
-            target_width = self.DS_WIDTH * SCALE
-            
-        target_height = self.DS_HEIGHT * SCALE
-
-        # 2. Update DrawingArea constraints
-        # We must reduce the 'request' size or GTK won't let the window shrink.
+            target_width, target_height = self.width, self.height
+        
+        target_width *= self.scale
+        target_height *= self.scale
         self.game_area.set_size_request(target_width, target_height)
-        
-        # 3. Resize the Window
         self.resize(target_width, target_height)
-        
-        # 4. Queue Resize
-        # This triggers 'configure-event', which updates our renderer buffers
         self.game_area.queue_resize()
 
     def add_async_overlay(self, overlay_cls: type[AsyncOverlay], emu, device, refresh_rate):
@@ -603,11 +486,11 @@ class EmulatorWindow(Gtk.Window):
         overlay.set_can_focus(False)
         self.overlay_container.add_overlay(overlay)
         self.overlay_container.set_overlay_pass_through(overlay, True)
-        overlay.show()
         self.overlays[name] = overlay
 
-    def show_overlays(self):
+    def start_overlay_threads(self):
         for overlay in self.overlays.values():
+            overlay.show()
             overlay.start()
 
     @property
@@ -618,81 +501,251 @@ class EmulatorWindow(Gtk.Window):
         self.on_window_destroy()
 
     def on_window_destroy(self):
-        print("Shutting down...")
         for overlay in self.overlays.values():
             overlay.end()
+            
         Gtk.main_quit()
 
-    def on_draw_main(self, widget: Gtk.DrawingArea, ctx: cairo.Context, *args):
-        ctx.scale(SCALE, SCALE)
+    def on_draw_main(self, widget: Gtk.DrawingArea, ctx: cairo.Context, *args) -> bool:
+        ctx.scale(self.scale, self.scale)
         
         # 1. Always Draw Top Screen (Index 0)
-        self.renderer.screen(self.DS_WIDTH * SCALE, self.DS_HEIGHT * SCALE, ctx, 0)
+        target_width, target_height = self.width, self.height
+        target_width *= self.scale
+        target_height *= self.scale
+        self.renderer.screen(target_width, target_height, ctx, 0)
         
         # 2. Conditionally Draw Bottom Screen (Index 1)
         if self.show_sub_screen:
             ctx.save()
-            ctx.translate(self.DS_WIDTH, 0) 
-            self.renderer.screen(self.DS_WIDTH * SCALE, self.DS_HEIGHT * SCALE, ctx, 1)
+            ctx.translate(self.total_width - self.width, self.total_height - self.height) 
+            self.renderer.screen(target_width, target_height, ctx, 1)
             ctx.restore()
         
-        return True
-
-    def on_configure_main(self, widget: Gtk.DrawingArea, *args):
-        # 1. Always allocate Top Screen
-        self.renderer.reshape(widget, 0)
         
-        # 2. Conditionally allocate Bottom Screen
-        # If hidden, we stop calling reshape. This prevents the backend from 
-        # resizing/reallocating the buffer for screen 1 during this event.
-        if self.show_sub_screen:
-            self.renderer.reshape(widget, 1)
-            
         return True
         
+class RealWindow(Gtk.Window, EmulatorWindowImpl):
+    def __init__(self, *args, **kwargs):
+        Gtk.Window.__init__(self)
+        self.setup_emulator(*args, **kwargs)
+    
+        
+        
+class VirtualWindow(Gtk.OffscreenWindow, EmulatorWindowImpl):
+    def __init__(self, *args, **kwargs):
+        assert 'id' in kwargs, 'Virtual window must have an id'
+        Gtk.OffscreenWindow.__init__(self)
+        self.setup_emulator(*args, **kwargs)
+        self.id = kwargs['id']
+        
+    def on_draw_main(self, widget: Gtk.DrawingArea, ctx: cairo.Context, *args):
+        stop = SharedMemory(name="stop", size=1)
+        assert stop.buf is not None
+        if stop.buf[0] == 1:
+            Gtk.main_quit()
+            return False
+        
+        original_scale = self.scale
+        surface_ctx = cairo.Context(self.shm_surface)
+        try:
+            self.scale = 1
+            result =  super().on_draw_main(widget, surface_ctx, *args)
+        finally:
+            self.scale = original_scale
+        
+        ctx.set_source_surface(self.shm_surface, 0, 0)
+        ctx.paint()
+        return True
+        
+class VirtualView(Gtk.Overlay, EmulatorContainerImpl):
+    def __init__(self, 
+        width: int,
+        height: int,
+        orientation: Literal['horizontal', 'vertical'],
+        scale: int,
+        id: int | None
+    ):
+        Gtk.Overlay.__init__(self)
+        self.setup_container(width, height, orientation, scale, id)
+        self.id = id
+        self.game_area = Gtk.DrawingArea()
+        self.game_area.set_size_request(self.total_width * self.scale, self.total_height * self.scale)
+        self.game_area.connect("draw", self.on_draw_main)
+        
+        self.add(self.game_area)
+        self.show_all()
+        
+    def on_draw_main(self, widget: Gtk.DrawingArea, ctx: cairo.Context, *args):
+        
+        
+        #ctx.scale(self.scale, self.scale)
+        ctx.set_source_surface(self.shm_surface, 0, 0)
+        ctx.paint()
+        self.game_area.queue_draw()
+        return True
+        
+        
+        
+    
 
+@overload
+def EmulatorWindow(
+    emu: MarioKart, overlays: list[type[AsyncOverlay]], width: int, height: int, orientation: Literal['horizontal', 'vertical'], scale: int, 
+    virtual_screen: Literal[True],
+    id: int = 0, device=None
+) -> VirtualWindow: ...
 
-# ============================================================
-#  GTK Draw Helpers (used by EmulatorWindow)
-# ============================================================
-
-def on_draw_main(widget: Gtk.DrawingArea, ctx: cairo.Context):
-    global renderer, overlay_surface_cache
-    if renderer is None:
-        return False
-
-    ctx.scale(SCALE, SCALE)
-    renderer.screen(SCREEN_WIDTH, SCREEN_HEIGHT, ctx, 0)
-    src_surface = ctx.get_target()
-
-    overlay_surface = src_surface.create_similar(
-        cairo.CONTENT_COLOR_ALPHA, SCREEN_WIDTH, SCREEN_HEIGHT
-    )
-    overlay_surface.set_device_scale(*src_surface.get_device_scale())
-
-    overlay_ctx = cairo.Context(overlay_surface)
-    overlay_ctx.set_operator(cairo.OPERATOR_CLEAR)
-    overlay_ctx.paint()
-    overlay_ctx.set_operator(cairo.OPERATOR_OVER)
-    overlay_ctx.set_antialias(cairo.ANTIALIAS_NONE)
-
-    num_calls = consume_draw_stack(overlay_ctx)
-    if num_calls == 0 and overlay_surface_cache is not None:
-        to_paint = overlay_surface_cache
+@overload
+def EmulatorWindow(
+    emu: MarioKart, overlays: list[type[AsyncOverlay]], width: int, height: int, orientation: Literal['horizontal', 'vertical'], scale: int, 
+    virtual_screen: Literal[False] = False,
+    id: int = 0, device=None
+) -> RealWindow: ...
+        
+def EmulatorWindow(
+    emu: MarioKart, 
+    overlays: list[type[AsyncOverlay]], 
+    width: int,
+    height: int,
+    orientation: Literal['horizontal', 'vertical'],
+    scale: int,
+    virtual_screen: bool = False,
+    id: int=0,
+    device=None
+):
+    if virtual_screen:
+        return VirtualWindow(emu, overlays, width, height, orientation, scale, device=device, id=id)
     else:
-        overlay_surface_cache = overlay_surface
-        to_paint = overlay_surface
+        return RealWindow(emu, overlays, width, height, orientation, scale, device=device, id=None)
+        
+class MultiEmulatorWindow(Gtk.Window):
+    def __init__(self, 
+        width: int,
+        height: int,
+        orientation: Literal['horizontal', 'vertical'],
+        scale: int,
+        n_windows: int
+    ):
+        super().__init__()
+        self.set_title(f"Multi-View ({n_windows})")
+        
+        self.grid = Gtk.Grid()
+        #self.grid.set_column_homogeneous(True)
+        #self.grid.set_row_homogeneous(True)
+        self.set_default_size(SCREEN_WIDTH * 3, SCREEN_HEIGHT * 3)
+        self.add(self.grid)
 
-    pattern = cairo.SurfacePattern(to_paint)
-    pattern.set_filter(cairo.FILTER_NEAREST)
-    ctx.set_source(pattern)
-    ctx.set_operator(cairo.OPERATOR_OVER)
-    ctx.paint()
-    return False
+        # --- CALCULATION LOGIC ---
+        # 1. Calculate columns based on square root
+        #    ceil(sqrt(5)) = 3 columns
+        #    ceil(sqrt(16)) = 4 columns
+        n_cols = math.ceil(math.sqrt(n_windows))
+        
+        # 2. Calculate rows based on columns
+        #    If we have 5 windows and 3 cols, we need ceil(5/3) = 2 rows.
+        if n_cols > 0:
+            n_rows = math.ceil(n_windows / n_cols)
+        else:
+            n_rows = 0 # Handle 0 windows edge case
 
+        # --- PLACEMENT LOGIC ---
+        for i in range(n_windows):
+            # Calculate x (col) and y (row) index
+            col = i % n_cols
+            row = i // n_cols
+            
+            sub_window = VirtualView(width, height, orientation, scale, id=i)
+            
+            # Attach to grid: child, left, top, width, height
+            self.grid.attach(sub_window, col, row, 1, 1)
+            print("test")
 
-def on_configure_main(widget: Gtk.DrawingArea, *args):
-    global renderer
-    if renderer:
-        renderer.reshape(widget, 0)
-    return True
+        self.connect("destroy", self.on_destroy)
+        self.show_all()
+        
+    def on_destroy(self, widget: Gtk.Widget):
+        for child in self.grid.get_children():
+            child.destroy()
+            
+        Gtk.main_quit()
+
+    
+                
+def main_mp():
+    from src.main import main, MainKwargs
+    from pathlib import Path
+    kwargs: MainKwargs = {
+        "rom_path": Path("private/mariokart_ds.nds"),
+        "movie": None,
+        "record": None,
+        "record_data": None,
+        "fps": None,
+        "sram": None,
+        "force_overlay": False,
+        "savestate": None,
+        "id": 0
+    }
+    
+    
+    stop = SharedMemory(name="stop", create=True, size=1)
+    assert stop.buf is not None
+    stop.buf[0] = 0
+    
+    processes = []
+    shm_names = []
+    for i in range(4):
+        shm_name = f"display_{i}"
+        try:
+            SharedMemory(
+                name=shm_name,
+                create=True,
+                size=SCREEN_WIDTH * SCREEN_HEIGHT * 8
+            )
+        except:
+            SharedMemory(
+                name=shm_name,
+                create=False,
+                size=SCREEN_WIDTH * SCREEN_HEIGHT * 8
+            )
+        p_kwargs = kwargs.copy()
+        p_kwargs['id'] = i
+        process = Process(
+            target=main,
+            kwargs=p_kwargs,
+            daemon=True
+        )
+        processes.append(process)
+        shm_names.append(shm_name)
+        
+    
+    # Start processes
+    for p in processes:
+        p.start()
+        
+    win = MultiEmulatorWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "horizontal",1, 1) # Should result in a 3x2 grid (3 cols, 2 rows)
+    win.show_all()
+    Gtk.main()
+    
+    stop.buf[0] = 1
+    
+    for p in processes:
+        p.join()
+        
+    print("All child processes cleaned up.")
+
+    # Join processes
+    for p in processes:
+        p.join()
+        
+    for n in shm_names:
+        shm = SharedMemory(name=n)
+        shm.close()
+        shm.unlink()
+        
+    stop.close()
+    stop.unlink()
+    
+if __name__ == "__main__":
+    main_mp()
+    

@@ -4,16 +4,18 @@ import torch.optim as optim
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 import numpy as np
 import matplotlib.pyplot as plt
-import json
+import json, os
 from typing import Optional
+from src.core.emulator import Metadata, combine
+from src.utils.vector import get_mps_device
 
 # default model hyperparams
 CONFIG = {
-    'seq_len': 32,          # Look back 32 frames (approx 0.5s at 60fps)           # Left, Forward, Right sensors
+    'seq_len': 128,          # Look back 32 frames (approx 0.5s at 60fps)           # Left, Forward, Right sensors
     'num_classes': 9,       # The 9 distinct controller states
     'hidden_dim': 128,      # Size of LSTM memory
     'embed_dim': 64,        # Dimension to represent "Previous Action"
-    'batch_size': 12,
+    'batch_size': 64,
     'lr': 0.001,
     'epochs': 15,
     'stride': 1,             # Overlap: stride 1 means 31 shared frames
@@ -40,9 +42,9 @@ def get_target_indices(raw_targets_batch, device=None):
 class RaceDataset(Dataset):
     def __init__(self, folder_path, seq_len=32, stride=1, dilation=1):
         with open(f"{folder_path}/metadata.json", 'r') as f:
-            self.metadata = json.load(f)
+            self.metadata: Metadata = json.load(f)
         
-        self.obs_data = np.memmap(f"{folder_path}/samples.dat", dtype=np.float32, mode="r").reshape(-1, self.metadata['obs_dim'])
+        self.obs_data = np.memmap(f"{folder_path}/samples.dat", dtype=np.float32, mode="r").reshape(-1, len(self.metadata['mean']))
         self.act_data = np.memmap(f"{folder_path}/targets.dat", dtype=np.int32, mode="r")
 
         self.seq_len = seq_len
@@ -78,7 +80,7 @@ def combine_dataset_stats(datasets: list[RaceDataset]):
     total_sq_sum = None
 
     for ds in datasets:
-        n = ds.metadata['count']
+        n = ds.metadata['size']
         mu = np.array(ds.metadata['mean'], dtype=np.float32)
         sigma = np.array(ds.metadata['std'], dtype=np.float32)
         
@@ -108,12 +110,7 @@ def combine_dataset_stats(datasets: list[RaceDataset]):
 class ConcatRaceDataset(ConcatDataset):
     def __init__(self, datasets: list[RaceDataset]):
         super().__init__(datasets)
-        mean, std, count = combine_dataset_stats(datasets)
-        self.metadata = {
-            "count": count,
-            "mean": mean,
-            "std": std
-        }
+        self.metadata = combine([x.metadata for x in datasets])
 
 # lstm model for mariokart ds
 class MarioKartLSTM(nn.Module):
@@ -133,20 +130,20 @@ class MarioKartLSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, num_classes)
 
         # untrainable params for feature scaling
-        self.register_buffer("mu", torch.ones((obs_dim,))) # mean
-        self.register_buffer("sigma", torch.ones((obs_dim,))) # std
+        self.register_buffer("mu", torch.ones((obs_dim,), dtype=torch.float32),) # mean
+        self.register_buffer("sigma", torch.ones((obs_dim,), dtype=torch.float32)) # std
 
     def forward(self, obs, prev_actions):
         # obs shape: (batch, seq_len, obs_dim)
         # prev_actions shape: (batch, seq_len)
-        
-        prev_ids = action_id(prev_actions)
+        device = obs.device
+        prev_ids = action_id(prev_actions, device=device)
         
         act_embeddings = self.action_embed(prev_ids) # (batch, seq_len, embed_dim)
         
         # feature scaling (only the distance components)
         assert isinstance(self.mu, torch.Tensor) and isinstance(self.sigma, torch.Tensor)
-        normalized_obs = (obs - self.mu) / (self.sigma + 1e-8)
+        normalized_obs = (obs - self.mu.to(device)) / (self.sigma.to(device) + 1e-8)
 
         obs_embeddings = self.obs_embed(normalized_obs)
 
@@ -164,7 +161,7 @@ class MarioKartLSTM(nn.Module):
 
 
 def train_model(dataset_paths: list[str]):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_mps_device()
     print(f"Training on {device}...")
 
     # Data Loading
@@ -183,19 +180,19 @@ def train_model(dataset_paths: list[str]):
     train_size = int(0.8 * len(concat_ds))
     test_size = len(concat_ds) - train_size
     train_ds, test_ds = random_split(concat_ds, [train_size, test_size])
-    train_loader = DataLoader(train_ds, batch_size=CONFIG['batch_size'], shuffle=False, drop_last=True)
+    train_loader = DataLoader(train_ds, batch_size=CONFIG['batch_size'], shuffle=True, drop_last=True)
     test_loader = DataLoader(test_ds, batch_size=CONFIG['batch_size'], shuffle=False)
 
     # Model Init
     model = MarioKartLSTM(
-        datasets[0].metadata['obs_dim'], 
+        len(datasets[0].metadata['mean']), 
         CONFIG['num_classes'], 
         CONFIG['hidden_dim'], 
         CONFIG['embed_dim'],
         
     ).to(device)
-    model.mu = concat_ds.metadata['mean']
-    model.sigma = concat_ds.metadata['std']
+    model.mu = torch.tensor(concat_ds.metadata['mean'], dtype=torch.float32)
+    model.sigma = torch.tensor(concat_ds.metadata['std'], dtype=torch.float32)
     
     optimizer = optim.Adam(model.parameters(), lr=CONFIG['lr'])
     criterion = nn.CrossEntropyLoss()
@@ -284,5 +281,7 @@ def get_action_keymask(model, obs_window, prev_action_window, class_to_keymask_m
         return keymask, probs.max().item()
 
 if __name__ == "__main__":
-    trained_model = train_model(["private/training_data/f8c_pikalex"])
-    torch.save(trained_model.state_dict(), "./private/checkpoints/checkpoint_e01122026.pth")
+    TRAINING_ROOT_DIR = "private/training_data"
+    data_dirs = [x[0] for x in os.walk(TRAINING_ROOT_DIR)][1:]
+    trained_model = train_model(data_dirs)
+    torch.save(trained_model.state_dict(), "./private/checkpoints/checkpoint_e01282026.pth")
