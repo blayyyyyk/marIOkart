@@ -178,7 +178,7 @@ def main(save_path, course, out_path):
             if has_ghost(contents, i): continue # here
             print(f"Found course {i}")
             ghost_data = get_normal_ghost_data(contents, i)
-            data_to_json(ghost_data, f'{out_path}{COURSE_ABBREVIATIONS[i]}.json')
+            data_to_json(ghost_data, f'{out_path}/{COURSE_ABBREVIATIONS[i]}.json')
     else:
         course = int(course)
         if has_ghost(contents, course):

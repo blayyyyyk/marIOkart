@@ -4,14 +4,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
 from src.core.emulator import MarioKart
-from src.core.window import (
-    EmulatorWindow, 
-    SensorOverlay, 
-    CollisionOverlay, 
-    CheckpointOverlay, 
-    OrientationOverlay, 
-    DriftOverlay
-)
+from src.display.window import EmulatorWindow
 from argparse import ArgumentParser
 from mkdslib.mkdslib import *
 from src.main import DEFAULT_USER_FPS, DEFAULT_HEADLESS_FPS

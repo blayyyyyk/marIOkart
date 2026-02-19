@@ -1,4 +1,5 @@
 from __future__ import annotations
+from multiprocessing import Process, freeze_support
 from desmume.frontend.gtk_drawing_impl.software import SCREEN_HEIGHT, SCREEN_WIDTH
 import os, torch, gi, pynput
 
@@ -8,16 +9,19 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
 from src.core.emulator import MarioKart, FX32_SCALE_FACTOR
-from src.core.window import (
+from src.display.window import (
     EmulatorWindow,
     RealWindow,
     VirtualWindow,
+)
+from src.display.overlay import (
     SensorOverlay,
     CollisionOverlay,
     CheckpointOverlay,
     OrientationOverlay,
     DriftOverlay,
 )
+from src.display.multiwindow import MultiEmulatorWindow
 from desmume.controls import Keys, keymask
 from contextlib import nullcontext
 from argparse import ArgumentParser
@@ -26,7 +30,7 @@ import ctypes
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
-from typing import Literal, TypedDict, Unpack, Optional
+from typing import Literal, TypedDict, Unpack, Optional, cast
 from src.utils.recording.extract_ghost import (
     get_normal_ghost_data,
     has_ghost,
@@ -35,10 +39,11 @@ from src.utils.recording.extract_ghost import (
 )
 from src.utils.recording.convert_to_dsm import convert_to_dsm
 from src.mkdslib.mkdslib import *
+from multiprocessing.shared_memory import SharedMemory
 
 DEFAULT_USER_FPS = 60.0
 DEFAULT_HEADLESS_FPS = 240.0
-SCREEN_SCALE = 1
+SCREEN_SCALE = 3
 SCREEN_ORIENTATION = "horizontal"
 
 OVERLAYS = [
@@ -106,16 +111,19 @@ class MainKwargs(TypedDict):
     savestate: Optional[Path]
     force_overlay: bool
     id: Optional[int]
+    verbose: Optional[bool]
+    model: Optional[Path]
 
 
 def main(
     emu: Optional[MarioKart] = None,
     window: Optional[VirtualWindow | RealWindow] = None,
+    virtual: Optional[bool] = None,
     **kwargs: Unpack[MainKwargs],
 ):
     overlays = OVERLAYS
-    print(overlays)
     listener, input_state = start_keyboard_listener()
+
     # Initialize the emulator
     has_grad = kwargs["record"] is not None or kwargs["record_data"] is not None
     DEVICE = torch.device("cpu")
@@ -127,17 +135,33 @@ def main(
         emu.reset()
 
     if window is None:
-        window = EmulatorWindow(
-            emu,
-            overlays,
-            width=SCREEN_WIDTH,
-            height=SCREEN_HEIGHT,
-            orientation=SCREEN_ORIENTATION,
-            scale=SCREEN_SCALE,
-            device=DEVICE,
-            virtual_screen=True,
-            id=kwargs["id"] if kwargs["id"] is not None else 0,
-        )
+        if "id" not in kwargs:
+            kwargs["id"] = 0
+
+        if virtual:
+            window = EmulatorWindow(
+                emu,
+                overlays,
+                width=SCREEN_WIDTH,
+                height=SCREEN_HEIGHT,
+                orientation=SCREEN_ORIENTATION,
+                scale=1,
+                device=DEVICE,
+                virtual_screen=True,
+                id=kwargs["id"] if kwargs["id"] is not None else 0,
+            )
+        else:
+            window = EmulatorWindow(
+                emu,
+                overlays,
+                width=SCREEN_WIDTH,
+                height=SCREEN_HEIGHT,
+                orientation=SCREEN_ORIENTATION,
+                scale=SCREEN_SCALE,
+                device=DEVICE,
+                virtual_screen=False,
+                id=kwargs["id"] if kwargs["id"] is not None else 0,
+            )
         window.show_all()
 
     # Emulator speed
@@ -199,13 +223,16 @@ def main(
     targets_path = f"{dataset_path}/targets.dat"
     metadata_path = f"{dataset_path}/metadata.json"
 
-    print(f"""
-DeSmuME Savestate:           {kwargs['savestate'] if kwargs['savestate'] else "None"}
-DeSmuME Movie (loading):     {kwargs['movie'] if kwargs['movie'] else "None"}
-DeSmuME Movie (saving):      {kwargs['record'] if kwargs['record'] else "None"}
-Training Data Directory:     {dataset_path if kwargs['record_data'] else "None"}
-FPS:                         {fps:.1f}
-    """)
+    if kwargs["verbose"]:
+        print(
+            f"""
+    DeSmuME Savestate:           {kwargs['savestate'] if kwargs['savestate'] else "None"}
+    DeSmuME Movie (loading):     {kwargs['movie'] if kwargs['movie'] else "None"}
+    DeSmuME Movie (saving):      {kwargs['record'] if kwargs['record'] else "None"}
+    Training Data Directory:     {dataset_path if kwargs['record_data'] else "None"}
+    FPS:                         {fps:.1f}
+        """
+        )
 
     # Expect the race to end when recording training data
     kill_on_race_complete = kwargs["record_data"] or kwargs["record"] or kwargs["movie"]
@@ -238,6 +265,7 @@ FPS:                         {fps:.1f}
 
         emu.input.keypad_update(0)
 
+        
         try:
             for key in input_state:
                 if key in USER_KEYMAP:
@@ -256,9 +284,6 @@ FPS:                         {fps:.1f}
             return True
 
         # memory debugging code comes below here
-        # os.system('clear')
-        # d = emu.memory.driver
-        # print(d.netColPos)
 
         # to here
         return True
@@ -305,11 +330,64 @@ FPS:                         {fps:.1f}
         return emu
 
 
+def batch(configs: list[MainKwargs], func=main):
+    freeze_support()
+    stop = SharedMemory(name="stop", create=True, size=1)
+    assert stop.buf is not None
+    stop.buf[0] = 0
+
+    processes = []
+    shm_names = []
+    for id, config in enumerate(configs):
+        shm_name = f"display_{id}"
+        try:
+            SharedMemory(
+                name=shm_name, create=True, size=SCREEN_WIDTH * SCREEN_HEIGHT * 8
+            )
+        except:
+            SharedMemory(
+                name=shm_name, create=False, size=SCREEN_WIDTH * SCREEN_HEIGHT * 8
+            )
+
+        config["id"] = id
+        proc = Process(target=func, kwargs={"virtual": True, **config}, daemon=True)
+        processes.append(proc)
+        shm_names.append(shm_name)
+
+    for p in processes:
+        p.start()
+
+    win = MultiEmulatorWindow(
+        SCREEN_WIDTH, SCREEN_HEIGHT, "horizontal", 1, len(configs)
+    )  # Should result in a 3x2 grid (3 cols, 2 rows)
+    win.show_all()
+    Gtk.main()
+
+    stop.buf[0] = 1
+
+    for p in processes:
+        p.join()
+
+    print("All child processes cleaned up.")
+
+    # Join processes
+    for p in processes:
+        p.join()
+
+    for n in shm_names:
+        shm = SharedMemory(name=n)
+        shm.close()
+        shm.unlink()
+
+    stop.close()
+    stop.unlink()
+
 if __name__ == "__main__":
     parser = ArgumentParser(
         prog="main.py",
         description="Main entry point for the Mario Kart DS ML visualization application.",
     )
+    subparsers = parser.add_subparsers(dest="command")
 
     # Main parser #
     parser.add_argument(
@@ -334,6 +412,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--force-overlay", action="store_true", help="Flag to force overlay display."
     )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Flag to enable verbose output."
+    )
+    parser.add_argument("--model", help="Path to a model file to load.", type=Path)
 
     parser.set_defaults(func=main)
     args = parser.parse_args()
@@ -342,14 +424,29 @@ if __name__ == "__main__":
         args.func(**args.__dict__)
         exit()
 
-    if os.path.isdir(args.movie):
-        dirname = args.movie
-        emu = None
-        onlyfiles = [f for f in listdir(str(dirname)) if isfile(join(str(dirname), f))]
-        print(f"Movie directory detected, running on {len(onlyfiles)} files")
-        for f in onlyfiles:
-            args.movie = f"{dirname}/{f}"
-            emu = args.func(emu=emu, **args.__dict__)
+    elif os.path.isdir(args.movie):
+        movie_dir = args.movie
+        movie_files = [
+            f for f in listdir(str(movie_dir)) if isfile(join(str(movie_dir), f))
+        ]
+        configs = []
+        for movie_f in movie_files:
+            config = {**args.__dict__, "movie": Path(f"{movie_dir}/{movie_f}"), 'verbose': False}
+            configs.append(config)
+
+        batch(configs, args.func)
+    elif os.path.isdir(args.model):
+        model_dir = args.model
+        model_files = [
+            f for f in listdir(str(model_dir)) if isfile(join(str(model_dir), f))
+        ]
+        configs = []
+        for model_f in model_files:
+            config = {**args.__dict__, "model": Path(f"{model_dir}/{model_f}")}
+            configs.append(args.__dict__)
+
+        batch(configs, args.func)
+
     elif args.movie.suffix == ".sav":
         print("Save file detected, extracting ghost inputs and converting to dsm.")
         contents: bytearray

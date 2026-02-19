@@ -280,6 +280,8 @@ def get_action_keymask(model, obs_window, prev_action_window, class_to_keymask_m
         
         return keymask, probs.max().item()
 
+print("test")
+
 if __name__ == "__main__":
     TRAINING_ROOT_DIR = "private/training_data"
     data_dirs = [x[0] for x in os.walk(TRAINING_ROOT_DIR)][1:]
