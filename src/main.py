@@ -1,5 +1,7 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from multiprocessing import Process, freeze_support
+from uuid import UUID
 from desmume.frontend.gtk_drawing_impl.software import SCREEN_HEIGHT, SCREEN_WIDTH
 import os, torch, gi, pynput
 
@@ -9,11 +11,11 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
 from src.core.emulator import MarioKart, FX32_SCALE_FACTOR
-from src.display.window import (
-    EmulatorWindow,
-    RealWindow,
-    VirtualWindow,
-)
+# from src.display.window import (
+#     EmulatorWindow,
+#     RealWindow,
+#     VirtualWindow,
+# )
 from src.display.overlay import (
     SensorOverlay,
     CollisionOverlay,
@@ -21,7 +23,8 @@ from src.display.overlay import (
     OrientationOverlay,
     DriftOverlay,
 )
-from src.display.multiwindow import MultiEmulatorWindow
+#from src.display.multiwindow import MultiEmulatorWindow
+from src.display.window import EmulatorBackend, EmulatorCallable, EmulatorConfig, EmulatorFrontend, WindowBackend
 from desmume.controls import Keys, keymask
 from contextlib import nullcontext
 from argparse import ArgumentParser
@@ -30,7 +33,7 @@ import ctypes
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
-from typing import Literal, TypedDict, Unpack, Optional, cast
+from typing import Any, Literal, TypedDict, Unpack, Optional, cast
 from src.utils.recording.extract_ghost import (
     get_normal_ghost_data,
     has_ghost,
@@ -74,320 +77,74 @@ USER_KEYMAP = {
 }
 
 
-# async keyboard handler
-def start_keyboard_listener():
-    """Starts a non-blocking keyboard listener in a separate thread."""
-    input_state = set()
-
-    def on_press(key):
-        try:
-            name = key.char.lower() if hasattr(key, "char") else key.name
-            input_state.add(name)
-
-        except Exception:
-            pass
-
-    def on_release(key):
-        try:
-            name = key.char.lower() if hasattr(key, "char") else key.name
-            input_state.discard(name)
-        except Exception:
-            pass
-
-    listener = pynput.keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.daemon = True
-    listener.start()
-
-    return listener, input_state
 
 
-class MainKwargs(TypedDict):
-    rom_path: Path
-    record: Optional[Path]
-    record_data: Optional[Path]
-    fps: Optional[float]
-    movie: Optional[Path]
-    sram: Optional[Path]
-    savestate: Optional[Path]
-    force_overlay: bool
-    id: Optional[int]
-    verbose: Optional[bool]
-    model: Optional[Path]
-
+# example entry config type signature
+@dataclass
+class MainKwargs(EmulatorConfig):
+    scale: Optional[int]
+    native_scale: Optional[int]
 
 def main(
-    emu: Optional[MarioKart] = None,
-    window: Optional[VirtualWindow | RealWindow] = None,
-    virtual: Optional[bool] = None,
-    **kwargs: Unpack[MainKwargs],
+    emu: MarioKart,
+    config: MainKwargs,
+    input_state: Optional[set[str]]
 ):
-    overlays = OVERLAYS
-    listener, input_state = start_keyboard_listener()
+    if emu.memory.race_ready:
+        progress = emu.memory.race_status.driverStatus[0].raceProgress
+        progress *= FX32_SCALE_FACTOR
+        if progress > 1.0 or emu.movie.is_finished():
+            if emu.file_io is not None:
+                emu.file_io.close(None)
 
-    # Initialize the emulator
-    has_grad = kwargs["record"] is not None or kwargs["record_data"] is not None
-    DEVICE = torch.device("cpu")
-    if emu is None:
-        emu = MarioKart(n_rays=32, max_dist=3000.0, has_grad=has_grad, device=DEVICE)
-        emu.open(str(kwargs["rom_path"]))
-        emu.volume_set(0)  # mute volume so I don't go INSANE
-    else:
-        emu.reset()
+            end_reached = True
+            return False
 
-    if window is None:
-        if "id" not in kwargs:
-            kwargs["id"] = 0
+    
+    emu.cycle()
+    emu.input.keypad_update(0)
 
-        if virtual:
-            window = EmulatorWindow(
-                emu,
-                overlays,
-                width=SCREEN_WIDTH,
-                height=SCREEN_HEIGHT,
-                orientation=SCREEN_ORIENTATION,
-                scale=1,
-                device=DEVICE,
-                virtual_screen=True,
-                id=kwargs["id"] if kwargs["id"] is not None else 0,
-            )
-        else:
-            window = EmulatorWindow(
-                emu,
-                overlays,
-                width=SCREEN_WIDTH,
-                height=SCREEN_HEIGHT,
-                orientation=SCREEN_ORIENTATION,
-                scale=SCREEN_SCALE,
-                device=DEVICE,
-                virtual_screen=False,
-                id=kwargs["id"] if kwargs["id"] is not None else 0,
-            )
-        window.show_all()
-
-    # Emulator speed
-    fps = 60.0  # default fps when not playing .dsm
-    if kwargs["fps"] is not None:
-        fps = float(kwargs["fps"])
-
-    # DeSmuME movie replay
-    # listener, input_state = None, None # realtime keyboard input unnecessary during movie playback
-    if kwargs["movie"] is not None:
-        emu.movie.play(str(kwargs["movie"]))
-
-        # DeSmuME ROM Save file (critical for loading external .dsm files)
-        if kwargs["sram"] is not None:
-            emu.backup.import_file(str(kwargs["sram"]))
-
-    # DeSmuME movie record
-    if kwargs["record"] is not None:
-        emu.movie.record(
-            str(kwargs["record"]), author_name="test", sram_save=str(kwargs["sram"])
-        )
-
-    # DeSmuME load from savestate
-    if kwargs["savestate"] is not None:
-        assert (
-            kwargs["movie"] is None
-        ), "savestates cannot be loaded during movie replays"
-        emu.savestate.load_file(str(kwargs["savestate"]))
-
-    # Record training data
-    if kwargs["record_data"] is not None:
-        # speed up fps by default if recording training data from desmume movie replay
-        fps: float = (
-            fps if kwargs["fps"] is not None and kwargs["movie"] is None else 240.0
-        )
-        overlays = overlays if kwargs["force_overlay"] else []
-        # specify the directory that stores all training directories
-        output_dir = (
-            str(kwargs["record_data"])
-            if str(kwargs["record_data"]) != "."
-            else os.getcwd()
-        )
-    else:
-        output_dir = os.getcwd()
-
-    assert fps > 0.0, "fps must be greater than 0"
-
-    # Extra logic for recording training data, specifically for saving all .dat files
-    if kwargs["movie"] is not None:
-        output_base = os.path.basename(kwargs["movie"]).split(".")[0]
-    else:
-        output_base = f"TRAINING_{datetime.today().strftime('%Y%m%d')}"
-
-    dataset_path = f"{output_dir}/{output_base}"
-    if not os.path.exists(dataset_path) and kwargs["record_data"] is not None:
-        os.makedirs(dataset_path)
-
-    samples_path = f"{dataset_path}/samples.dat"
-    targets_path = f"{dataset_path}/targets.dat"
-    metadata_path = f"{dataset_path}/metadata.json"
-
-    if kwargs["verbose"]:
-        print(
-            f"""
-    DeSmuME Savestate:           {kwargs['savestate'] if kwargs['savestate'] else "None"}
-    DeSmuME Movie (loading):     {kwargs['movie'] if kwargs['movie'] else "None"}
-    DeSmuME Movie (saving):      {kwargs['record'] if kwargs['record'] else "None"}
-    Training Data Directory:     {dataset_path if kwargs['record_data'] else "None"}
-    FPS:                         {fps:.1f}
-        """
-        )
-
-    # Expect the race to end when recording training data
-    kill_on_race_complete = kwargs["record_data"] or kwargs["record"] or kwargs["movie"]
-    end_reached = not kill_on_race_complete
-
-    prompt_new_savestate = False
-    tmp_save_state_loaded = False
-
-    def tick():
-        nonlocal input_state, end_reached, prompt_new_savestate, tmp_save_state_loaded
-        if not window.running and emu.memory.race_ready:
-            window.start_overlay_threads()
-            GLib.idle_add(window.toggle_display_mode)
-
-        GLib.idle_add(emu.cycle)
-        window.game_area.queue_draw()
-
-        if emu.memory.race_ready and kill_on_race_complete:
-            progress = emu.memory.race_status.driverStatus[0].raceProgress
-            progress *= FX32_SCALE_FACTOR
-            if progress > 1.0 or emu.movie.is_finished():
-                if emu._io is not None:
-                    emu._io.close(None)
-
-                end_reached = True
-                GLib.idle_add(window.on_window_destroy)
-        elif emu.memory.race_ready and not tmp_save_state_loaded:
-            tmp_save_state_loaded = True
-            emu.savestate.save(0)
-
-        emu.input.keypad_update(0)
-
-        
-        try:
+    try:
+        if input_state:
             for key in input_state:
                 if key in USER_KEYMAP:
                     emu.input.keypad_add_key(keymask(USER_KEYMAP[key]))
-                elif key == "t":
-                    GLib.idle_add(window.toggle_display_mode)
-                elif key == "m":
-                    prompt_new_savestate = True
-                    GLib.idle_add(window.on_window_destroy)
                 elif key == "r":
                     emu.savestate.load(0)
-        except:
-            pass
+    except:
+        pass
 
-        if not emu.memory.race_ready:
-            return True
-
-        # memory debugging code comes below here
-
-        # to here
+    if not emu.memory.race_ready:
         return True
 
-    refresh_rate = int(1000.0 // fps)  # Hz
-    with (
-        (
-            open(samples_path, "wb")
-            if kwargs["record_data"] is not None
-            else nullcontext()
-        ) as sf,
-        (
-            open(targets_path, "wb")
-            if kwargs["record_data"] is not None
-            else nullcontext()
-        ) as tf,
-        (
-            open(metadata_path, "w")
-            if kwargs["record_data"] is not None
-            else nullcontext()
-        ) as mf,
-    ):
-        if all([sf, tf, mf]):
-            # enable recording of training data
-            emu.enable_file_io(sf, tf, mf)
+    # memory debugging code comes below here
 
-        GLib.timeout_add(refresh_rate, tick)
-        Gtk.main()
-
-        listener.stop()  # end keyboard listener
-
-        if kill_on_race_complete and not end_reached:
-            print(
-                "Warning: User did not complete race. Recorded data/inputs may be incomplete."
-            )
-
-        if prompt_new_savestate:
-            savestate_filename = input("Savestate file name (must end in .dst): ")
-            emu.savestate.save_file(savestate_filename)
-
-        if kwargs["sram"] is not None:
-            emu.backup.export_file(str(kwargs["sram"]))
-
-        return emu
-
-
-def batch(configs: list[MainKwargs], func=main):
-    freeze_support()
-    stop = SharedMemory(name="stop", create=True, size=1)
-    assert stop.buf is not None
-    stop.buf[0] = 0
-
-    processes = []
-    shm_names = []
-    for id, config in enumerate(configs):
-        shm_name = f"display_{id}"
-        try:
-            SharedMemory(
-                name=shm_name, create=True, size=SCREEN_WIDTH * SCREEN_HEIGHT * 8
-            )
-        except:
-            SharedMemory(
-                name=shm_name, create=False, size=SCREEN_WIDTH * SCREEN_HEIGHT * 8
-            )
-
-        config["id"] = id
-        proc = Process(target=func, kwargs={"virtual": True, **config}, daemon=True)
-        processes.append(proc)
-        shm_names.append(shm_name)
-
-    for p in processes:
-        p.start()
-
-    win = MultiEmulatorWindow(
-        SCREEN_WIDTH, SCREEN_HEIGHT, "horizontal", 1, len(configs)
-    )  # Should result in a 3x2 grid (3 cols, 2 rows)
-    win.show_all()
-    Gtk.main()
-
-    stop.buf[0] = 1
-
-    for p in processes:
-        p.join()
-
-    print("All child processes cleaned up.")
-
-    # Join processes
-    for p in processes:
-        p.join()
-
-    for n in shm_names:
-        shm = SharedMemory(name=n)
-        shm.close()
-        shm.unlink()
-
-    stop.close()
-    stop.unlink()
+    # to here
+    return True
+    
+    
+        
+SCALE = 2
+NATIVE_SCALE = 1
+def batch(func: EmulatorCallable[MainKwargs], batch_config: list[MainKwargs]):
+    # make a new emulation process for each config
+    backend = EmulatorBackend(batch_config[0].native_scale or NATIVE_SCALE)
+    
+    for config in batch_config:
+        backend.add_instance(func, config, OVERLAYS)
+    
+    backend.start()
+    # attach all shared display buffers to a gtk window
+    frontend = EmulatorFrontend(backend, batch_config[0].scale or SCALE)
+    frontend.start()
+    
+    
 
 if __name__ == "__main__":
     parser = ArgumentParser(
         prog="main.py",
         description="Main entry point for the Mario Kart DS ML visualization application.",
     )
-    subparsers = parser.add_subparsers(dest="command")
 
     # Main parser #
     parser.add_argument(
@@ -419,54 +176,26 @@ if __name__ == "__main__":
 
     parser.set_defaults(func=main)
     args = parser.parse_args()
-
-    if args.movie is None:
-        args.func(**args.__dict__)
-        exit()
-
-    elif os.path.isdir(args.movie):
-        movie_dir = args.movie
-        movie_files = [
-            f for f in listdir(str(movie_dir)) if isfile(join(str(movie_dir), f))
-        ]
-        configs = []
-        for movie_f in movie_files:
-            config = {**args.__dict__, "movie": Path(f"{movie_dir}/{movie_f}"), 'verbose': False}
-            configs.append(config)
-
-        batch(configs, args.func)
-    elif os.path.isdir(args.model):
-        model_dir = args.model
-        model_files = [
-            f for f in listdir(str(model_dir)) if isfile(join(str(model_dir), f))
-        ]
-        configs = []
-        for model_f in model_files:
-            config = {**args.__dict__, "model": Path(f"{model_dir}/{model_f}")}
-            configs.append(args.__dict__)
-
-        batch(configs, args.func)
-
-    elif args.movie.suffix == ".sav":
-        print("Save file detected, extracting ghost inputs and converting to dsm.")
-        contents: bytearray
-        with open(args.movie, "rb") as fs:
-            contents = bytearray(fs.read())
-            contents = bytearray(fs.read())
-
-        course_count = 0
-        for course_id in range(32):
-            if has_ghost(contents, course_id):
-                continue
-            course_count += 1
-            ghost_data = get_normal_ghost_data(contents, course_id)
-            ghost_data = data_to_dict(ghost_data)
-            assert isinstance(args.movie, Path)
-            output_file_name = (
-                f"{args.movie.stem}_{COURSE_ABBREVIATIONS[course_id]}.dsm"
-            )
-            convert_to_dsm(output_file_name)
-            args.movie = output_file_name
-            main(**args.__dict__)
-    else:
-        args.func(**args.__dict__)
+    
+    if args.movie:
+        if os.path.isdir(args.movie):
+            movie_dir = args.movie
+            movie_files = [
+                f for f in listdir(str(movie_dir)) if isfile(join(str(movie_dir), f))
+            ]
+            configs = []
+            for movie_f in movie_files:
+                kwargs = args.__dict__.copy()
+                del kwargs['func']
+                config = MainKwargs(**kwargs, native_scale=1, scale=1)
+                config.movie = Path(f"{movie_dir}/{movie_f}")
+                config.verbose = False
+                configs.append(config)
+    
+            batch(args.func, configs)
+            exit()
+    
+    kwargs = args.__dict__.copy()
+    del kwargs['func']
+    config = MainKwargs(**kwargs, native_scale=3, scale=3)
+    batch(args.func, [config])

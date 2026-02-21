@@ -2,8 +2,8 @@ from typing import TypeVar, Generic, TypedDict
 from multiprocessing.shared_memory import SharedMemory
 import threading
 
+from src.core.emulator import MarioKart, MarioKart_Memory
 from desmume.emulator import SCREEN_WIDTH, SCREEN_HEIGHT
-from src.display._impl import AsyncOverlay, draw_lines, draw_triangles, draw_points
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -54,8 +54,153 @@ COLOR_MAP = [
     [0, 255, 0],  # 22: Force Recalc (Lime Green - Debug visual)
 ]
 
+def draw_points(ctx: cairo.Context, pts: np.ndarray, colors: np.ndarray, radius_scale: float | np.ndarray):
+    if isinstance(radius_scale, float):
+        radius_scale = radius_scale * np.array(1)
 
+    if pts.ndim == 1:
+        pts = pts[None, :]
 
+    if colors.ndim == 1:
+        colors = colors[None, :]
+
+    assert colors.shape[0] == 1 or colors.shape[0] == pts.shape[0]
+    if colors.shape[0] == 1:
+        colors = colors.repeat(pts.shape[0], axis=0)
+
+    for (x, y, z), (r, g, b) in zip(pts, colors):
+        ctx.set_source_rgb(r, g, b)
+        ctx.arc(x, y, radius_scale * z, 0, 2 * np.pi)
+        ctx.fill()
+
+def draw_lines(ctx: cairo.Context, pts1: np.ndarray, pts2: np.ndarray, colors: np.ndarray, stroke_width_scale=1.0):
+    if pts1.ndim == 1:
+        pts1 = pts1[None, :]
+
+    if pts2.ndim == 1:
+        pts2 = pts2[None, :]
+
+    assert pts2.shape[0] == pts1.shape[0], "All point arrays must have the same batch size"
+
+    if colors.ndim == 1:
+        colors = colors[None, :]
+
+    assert colors.shape[0] == 1 or colors.shape[0] == pts1.shape[0]
+    if colors.shape[0] == 1:
+        colors = colors.repeat(pts1.shape[0], axis=0)
+
+    for (p1, p2, (r, g, b)) in zip(pts1, pts2, colors):
+        ctx.set_source_rgb(r, g, b)
+        ctx.set_line_width(stroke_width_scale)
+        ctx.move_to(*p1[:2])
+        ctx.line_to(*p2[:2])
+        ctx.stroke()
+
+def draw_triangles(
+    ctx: cairo.Context,
+    pts1: np.ndarray,
+    pts2: np.ndarray,
+    pts3: np.ndarray,
+    colors: np.ndarray
+):
+    n = pts1.shape[0]
+    assert pts2.shape[0] == n and pts3.shape[0] == n, "All point arrays must have the same batch size"
+
+    colors = np.asarray(colors)
+    if colors.ndim == 1:
+        colors = colors[None, :]
+    assert colors.shape[1] == 3, "colors must have 3 channels (RGB)"
+    if colors.shape[0] == 1:
+        colors = np.repeat(colors, n, axis=0)
+    else:
+        assert colors.shape[0] == n, "colors must be [1,3] or [N,3]"
+
+    l1 = np.concatenate([pts2, pts3, pts1], axis=0)  # p2->p3, p3->p1, p1->p2
+    l2 = np.concatenate([pts3, pts1, pts2], axis=0)
+    c3 = np.tile(colors, (3, 1))
+
+    draw_lines(ctx, l1, l2, c3)  # assumes draw_lines accepts NumPy arrays
+
+T = TypeVar("T")
+class AsyncOverlay(Gtk.DrawingArea, Generic[T]):
+    def __init__(self, emu: MarioKart, width: int, height: int, scale: int, device, uuid, n_bytes, refresh_rate=60.0):
+        super(Gtk.DrawingArea, self).__init__()
+        self.device = device
+        self.scale = scale
+        self.refresh_interval = 1.0 / refresh_rate
+        self.memory = MarioKart_Memory(emu, device=device)
+        self.shm = None
+        self.shm_buf = None
+        self.width = width
+        self.height = height
+        self.shm = SharedMemory(name=uuid, size=n_bytes)
+        self.shm_buf = self.shm.buf
+
+        self.set_app_paintable(True)
+        self.connect("draw", self._on_draw_wrapper)
+
+        self._running = False
+        self.lock = threading.Lock()
+        self.rendering_state: T | None = None  # cache
+        self.thread = threading.Thread(target=self._worker_loop, daemon=True)
+
+    def start(self):
+        if not self._running:
+            self._running = True
+            self.thread.start()
+
+    def end(self):
+        self._running = False
+
+    def _worker_loop(self):
+        """Runs in background. Reads memory, does math."""
+        while self._running:
+            start_time = time.time()
+
+            # 1. READ MEMORY & COMPUTE
+            # We copy the result to a local var so we don't block the UI thread
+            # during the actual heavy calculation.
+            new_state = self.compute(self.rendering_state)
+
+            # 2. UPDATE STATE SAFELY
+            with self.lock:
+                self.rendering_state = new_state
+
+            # 3. REQUEST REDRAW (Thread-safe)
+            # This tells GTK: "When you have a moment, call my draw function."
+            GLib.idle_add(self.queue_draw)
+
+            # Sleep to maintain target refresh rate for this specific overlay
+            elapsed = time.time() - start_time
+            sleep_time = max(0, self.refresh_interval - elapsed)
+            time.sleep(sleep_time)
+
+    def _on_draw_wrapper(self, widget, ctx):
+        """Runs on Main UI Thread."""
+        with self.lock:
+            state = self.rendering_state
+
+        if state is None:
+            return False
+
+        assert self.shm_buf
+        surf = cairo.ImageSurface.create_for_data(
+            self.shm_buf, cairo.FORMAT_RGB24, self.width * self.scale, self.height * self.scale
+        )
+        surf_ctx = cairo.Context(surf)
+        surf_ctx.scale(self.scale, self.scale)
+        
+        surf_ctx.save()
+
+        self.draw_overlay(surf_ctx, state)
+
+        surf_ctx.restore()
+        return False
+
+    def compute(self, state: T | None) -> T: ...
+
+    def draw_overlay(self, ctx: cairo.Context, state: T):
+        pass
 
 class CheckpointOverlayI(TypedDict):
     layer_1: np.ndarray
