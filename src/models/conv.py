@@ -1,9 +1,9 @@
 import torch.nn as nn
 import torch
 
-class ConvModel(nn.Module):
+class MarioKartCNN(nn.Module):
     def __init__(self, obs_size, out_channels, stride, kernel_size, dilation, embedding_size, n_layers):
-        super(ConvModel, self).__init__()
+        super(MarioKartCNN, self).__init__()
         assert n_layers > 0, "must have at least one conv layer"
         self.action_embed = nn.Embedding(out_channels, embedding_size)
         
@@ -31,10 +31,8 @@ class ConvModel(nn.Module):
         self.proj = nn.Linear(out_channels, out_channels)
         
         
-    def forward(self, x: torch.Tensor):
-        B, T, C = x.shape
-        
-        obs, act_ids = x[:, :, :-1], x[:, :, -1]
+    def forward(self, data: dict[str, torch.Tensor]):
+        obs, act_ids = data["wall_distances"], data["keymask"]
         action_embed = self.action_embed(act_ids.to(torch.int)) # -> (B, T, embedding_size)
         features = torch.cat([obs, action_embed], dim=-1) # -> (B, T, obs_dim+embedding_size-1)
         features = features.permute(0, 2, 1)
@@ -47,7 +45,7 @@ class ConvModel(nn.Module):
         
         
 def main():
-    model = ConvModel(
+    model = MarioKartCNN(
         obs_size=13, 
         out_channels=11, 
         stride=1, 

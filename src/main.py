@@ -1,201 +1,241 @@
-from __future__ import annotations
-from dataclasses import dataclass
-from multiprocessing import Process, freeze_support
-from uuid import UUID
-from desmume.frontend.gtk_drawing_impl.software import SCREEN_HEIGHT, SCREEN_WIDTH
-import os, torch, gi, pynput
-
-from src.utils.recording import extract_ghost
-
-gi.require_version("Gtk", "3.0")
-gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk, Gdk, GLib
-from src.core.emulator import MarioKart, FX32_SCALE_FACTOR
-# from src.display.window import (
-#     EmulatorWindow,
-#     RealWindow,
-#     VirtualWindow,
-# )
-from src.display.overlay import (
-    SensorOverlay,
-    CollisionOverlay,
-    CheckpointOverlay,
-    OrientationOverlay,
-    DriftOverlay,
-)
-#from src.display.multiwindow import MultiEmulatorWindow
-from src.display.window import EmulatorBackend, EmulatorCallable, EmulatorConfig, EmulatorFrontend, WindowBackend
-from desmume.controls import Keys, keymask
-from contextlib import nullcontext
 from argparse import ArgumentParser
-from datetime import datetime
-import ctypes
-from os import listdir
-from os.path import isfile, join
-from pathlib import Path
-from typing import Any, Literal, TypedDict, Unpack, Optional, cast
-from src.utils.recording.extract_ghost import (
-    get_normal_ghost_data,
-    has_ghost,
-    data_to_dict,
-    COURSE_ABBREVIATIONS,
+from gymnasium.wrappers import FrameStackObservation
+import torch
+from torch import optim
+from src.gym.wrapper import (
+    OverlayWrapper,
+    DatasetWrapper,
+    sensor_overlay,
+    collision_overlay,
+    compose_overlays,
 )
-from src.utils.recording.convert_to_dsm import convert_to_dsm
-from src.mkdslib.mkdslib import *
-from multiprocessing.shared_memory import SharedMemory
+from src.gym.env import MarioKartEnv
+from src.gym.window import VecEnvWindow
+from src.models.registry import get_model
+from gymnasium.vector import AsyncVectorEnv
+import os
+from pathlib import Path
+from functools import partial
+from datetime import datetime
+import shutil
+from src.train.run import prepare_data, run
+import json
 
-DEFAULT_USER_FPS = 60.0
-DEFAULT_HEADLESS_FPS = 240.0
-SCREEN_SCALE = 3
-SCREEN_ORIENTATION = "horizontal"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+ROM_PATH = ROOT_DIR / "private" / "mariokart_ds.nds"
+OVERLAYS = [sensor_overlay, collision_overlay]
+DATASET_PATH = ROOT_DIR / "data"
+RAW_DATASET_PATH = DATASET_PATH / "raw"  # this is where .dsm input recordings are held
+INTERIM_DATASET_PATH = (
+    DATASET_PATH / "interim"
+)  # this is where collected observation data is held
 
-OVERLAYS = [
-    CollisionOverlay,
-    CheckpointOverlay,
-    SensorOverlay,
-    DriftOverlay,
-    OrientationOverlay,
-]
+EXPERIMENTS_PATH = ROOT_DIR / "experiments"
 
-# key mapping
-USER_KEYMAP = {
-    "w": Keys.KEY_UP,
-    "s": Keys.KEY_DOWN,
-    "a": Keys.KEY_LEFT,
-    "d": Keys.KEY_RIGHT,
-    "z": Keys.KEY_B,
-    "x": Keys.KEY_A,
-    "u": Keys.KEY_X,
-    "i": Keys.KEY_Y,
-    "q": Keys.KEY_L,
-    "e": Keys.KEY_R,
-    " ": Keys.KEY_START,
-    "left": Keys.KEY_LEFT,
-    "right": Keys.KEY_RIGHT,
-    "up": Keys.KEY_UP,
-    "down": Keys.KEY_DOWN,
-}
+RAW_DATASET_PATH.mkdir(parents=True, exist_ok=True)
+EXPERIMENTS_PATH.mkdir(parents=True, exist_ok=True)
+INTERIM_DATASET_PATH.mkdir(parents=True, exist_ok=True)
+
+RAY_MAX_DIST = 3000
+RAY_COUNT = 20
+
+BATCH_SIZE = 16
+SEQ_LEN = 32
+EMBED_SIZE = 32
+EMBED_COUNT = 2048  # number of possible 11-bit keymask
+NUM_FEATURES = RAY_COUNT + EMBED_SIZE
+EPOCHS = 15
+SPLIT_RATIO = 0.8
+LEARNING_RATE = 1e-4
+DEVICE = "cpu"
 
 
+def EXPERIMENT_CAPSULE_PATH(name: str, version: int):
+    return EXPERIMENTS_PATH / f"{name}_v{str(version)}"
 
 
-# example entry config type signature
-@dataclass
-class MainKwargs(EmulatorConfig):
-    scale: Optional[int]
-    native_scale: Optional[int]
+def _parse_movie(args):
+    if args.movie:
+        assert os.path.isfile(args.movie), "Movie file is not a file"
+        movie_paths = [ROOT_DIR / args.movie]
+    elif args.movie_dir:
+        movie_dir = ROOT_DIR / args.movie_dir
+        assert os.path.isdir(movie_dir), "Movie directory is not a directory"
+        movie_paths = list(map(Path, os.listdir(movie_dir)))
+        movie_paths = list(map(lambda x: movie_dir / x, movie_paths))
 
-def main(
-    emu: MarioKart,
-    config: MainKwargs,
-    input_state: Optional[set[str]]
-):
-    if emu.memory.race_ready:
-        progress = emu.memory.race_status.driverStatus[0].raceProgress
-        progress *= FX32_SCALE_FACTOR
-        if progress > 1.0 or emu.movie.is_finished():
-            if emu.file_io is not None:
-                emu.file_io.close(None)
+        movie_paths = list(movie_paths)
+    else:
+        raise ValueError("Either movie or movie_dir must be specified")
+        
+    return movie_paths
 
-            end_reached = True
-            return False
+def record(args):
+    movie_paths = _parse_movie(args)
 
-    
-    emu.cycle()
-    emu.input.keypad_update(0)
+    def create_env(m: Path):
+        base_env = MarioKartEnv(
+            rom_path=str(ROM_PATH),
+            movie_path=str(m),
+            ray_max_dist=RAY_MAX_DIST,
+            ray_count=RAY_COUNT,
+        )
+        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
+        overlay_env = OverlayWrapper(base_env, func=composed_overlays)
+        movie_prefix = m.name.split(".")[0]
+        raw_path = RAW_DATASET_PATH / m.name
+        out_path = INTERIM_DATASET_PATH / movie_prefix
+
+        # backup the movie file
+        if not os.path.exists(raw_path):
+            shutil.copy(m, raw_path)
+
+        dataset_env = DatasetWrapper(overlay_env, str(out_path))
+        return dataset_env
+
+    print(movie_paths)
+    movie_paths = list(filter(os.path.isfile, movie_paths))
+    assert len(movie_paths) > 0, "No movie files were found"
+    env = AsyncVectorEnv([(lambda m=m: create_env(m)) for m in movie_paths])
+    window = VecEnvWindow(env)
+    obs, _ = env.reset()
 
     try:
-        if input_state:
-            for key in input_state:
-                if key in USER_KEYMAP:
-                    emu.input.keypad_add_key(keymask(USER_KEYMAP[key]))
-                elif key == "r":
-                    emu.savestate.load(0)
-    except:
-        pass
+        print("Starting environment loop. Press Ctrl+C in terminal to exit.")
+        while window.is_alive:
+            actions = [0] * len(movie_paths)
+            obs, reward, terminated, truncated, info = env.step(actions)
+            window.update()
+    except KeyboardInterrupt:
+        print("Loop interrupted by user.")
+    finally:
+        env.close()
 
-    if not emu.memory.race_ready:
-        return True
 
-    # memory debugging code comes below here
+def train(args):
+    train_split, test_split = prepare_data(
+        data_folders=args.data_paths,
+        batch_size=args.batch_size,
+        seq_len=args.seq_len,
+        split_ratio=args.split_ratio,
+    )
+    model = get_model(
+        args.model_name,
+        num_features=RAY_COUNT,
+        embed_size=EMBED_SIZE,
+        embed_count=EMBED_COUNT,
+    )
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    if args.device == "mps":
+        device = torch.device("mps")
+    elif args.device == "cuda":
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
 
-    # to here
-    return True
-    
-    
-        
-SCALE = 2
-NATIVE_SCALE = 1
-def batch(func: EmulatorCallable[MainKwargs], batch_config: list[MainKwargs]):
-    # make a new emulation process for each config
-    backend = EmulatorBackend(batch_config[0].native_scale or NATIVE_SCALE)
-    
-    for config in batch_config:
-        backend.add_instance(func, config, OVERLAYS)
-    
-    backend.start()
-    # attach all shared display buffers to a gtk window
-    frontend = EmulatorFrontend(backend, batch_config[0].scale or SCALE)
-    frontend.start()
-    
-    
+    run(
+        model,
+        train_split,
+        test_split,
+        num_epochs=args.epochs,
+        optimizer=optimizer,
+        device=device,
+    )
 
-if __name__ == "__main__":
+
+def eval(args):
+    movie_paths = _parse_movie(args)
+    
+    def create_env(m: Path):
+        base_env = MarioKartEnv(
+            rom_path=str(ROM_PATH),
+            movie_path=str(m),
+            ray_max_dist=RAY_MAX_DIST,
+            ray_count=RAY_COUNT,
+        )
+        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
+        overlay_env = OverlayWrapper(base_env, func=composed_overlays)
+        movie_prefix = m.name.split(".")[0]
+        raw_path = RAW_DATASET_PATH / m.name
+        out_path = INTERIM_DATASET_PATH / movie_prefix
+
+        stacked_env = FrameStackObservation(overlay_env, stack_size=SEQ_LEN)
+        return stacked_env
+
+
+def main():
     parser = ArgumentParser(
         prog="main.py",
         description="Main entry point for the Mario Kart DS ML visualization application.",
     )
+    subparsers = parser.add_subparsers(dest="command")
 
-    # Main parser #
-    parser.add_argument(
-        "-p",
-        "--rom-path",
-        default="private/mariokart_ds.nds",
-        help="Path to the Mario Kart DS ROM file.",
+    record_parser = subparsers.add_parser("record", help="Collect model training data.")
+    movie_path_group = record_parser.add_mutually_exclusive_group(required=True)
+    movie_path_group.add_argument(
+        "--movie", help="The file path of the movie to record a dataset of", type=Path
+    )
+    movie_path_group.add_argument(
+        "--movie-dir",
+        help="The directory of movie file paths to record a batch of datasets of",
         type=Path,
     )
-    parser.add_argument("-r", "--record", help="Path to record gameplay to.", type=Path)
-    parser.add_argument(
-        "-d", "--record-data", help="Path to record gameplay data to.", type=Path
-    )
-    parser.add_argument(
-        "-m", "--movie", help="Path to a movie file to playback.", type=Path
-    )
-    parser.add_argument(
-        "-s", "--savestate", help="Path to a savestate file to load.", type=Path
-    )
-    parser.add_argument("--sram", help="Path to SRAM file.")
-    parser.add_argument("--fps", help="Target frames per second.")
-    parser.add_argument(
-        "--force-overlay", action="store_true", help="Flag to force overlay display."
-    )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Flag to enable verbose output."
-    )
-    parser.add_argument("--model", help="Path to a model file to load.", type=Path)
+    record_parser.set_defaults(func=record)
 
-    parser.set_defaults(func=main)
+    train_parser = subparsers.add_parser("train", help="Train a model")
+    train_parser.add_argument(
+        "--model-name",
+        help="The name of the model to record a checkpoint of after training",
+    )
+    train_parser.add_argument(
+        "--data-paths",
+        nargs="+",
+        help="List of training data sources to use",
+        type=Path,
+    )
+    train_parser.add_argument(
+        "--device",
+        help="Name of pytorch device to use ('cuda', 'mps', ect.)"
+    )
+    hyper_params_group = train_parser.add_argument_group("Training Hyperparameters")
+    hyper_params_group.add_argument(
+        "--epochs", "-e", help="Number of training epochs.", default=EPOCHS
+    )
+    hyper_params_group.add_argument("--lr", help="Learning rate", default=LEARNING_RATE)
+    hyper_params_group.add_argument(
+        "--batch-size", help="Batch size", default=BATCH_SIZE
+    )
+    hyper_params_group.add_argument(
+        "--split-ratio",
+        help="Ratio of training data to split into train and test sets",
+        default=SPLIT_RATIO,
+    )
+    hyper_params_group.add_argument(
+        "--seq-len",
+        help="Size of the sequence length of the training samples",
+        default=SEQ_LEN,
+    )
+    train_parser.set_defaults(func=train)
+
+    eval_parser = subparsers.add_parser("eval", help="Evaluate a model")
+    eval_group = eval_parser.add_mutually_exclusive_group(required=True)
+    eval_group.add_argument("--model", help="The model to evaluate")
+    eval_group.add_argument(
+        "--model-dir", help="The directory of model file paths to evaluate"
+    )
+    eval_group.add_argument(
+        "--user",
+        action="store_true",
+        help="Enable keyboard input (this mode is for debugging)",
+    )
+    eval_parser.set_defaults(func=eval)
+
     args = parser.parse_args()
-    
-    if args.movie:
-        if os.path.isdir(args.movie):
-            movie_dir = args.movie
-            movie_files = [
-                f for f in listdir(str(movie_dir)) if isfile(join(str(movie_dir), f))
-            ]
-            configs = []
-            for movie_f in movie_files:
-                kwargs = args.__dict__.copy()
-                del kwargs['func']
-                config = MainKwargs(**kwargs, native_scale=1, scale=1)
-                config.movie = Path(f"{movie_dir}/{movie_f}")
-                config.verbose = False
-                configs.append(config)
-    
-            batch(args.func, configs)
-            exit()
-    
-    kwargs = args.__dict__.copy()
-    del kwargs['func']
-    config = MainKwargs(**kwargs, native_scale=3, scale=3)
-    batch(args.func, [config])
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

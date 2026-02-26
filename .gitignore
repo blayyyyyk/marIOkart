@@ -18,3 +18,4 @@ mkds_c/external_include
 private
 .vscode
 todo.txt
+.mypy_cache
