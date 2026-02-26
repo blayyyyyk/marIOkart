@@ -3,7 +3,6 @@ import random
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from src.utils.dataset import RaceDataset
 from desmume.controls import keymask, Keys
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
