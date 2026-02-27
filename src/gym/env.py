@@ -2,7 +2,6 @@ import multiprocessing
 from multiprocessing.shared_memory import SharedMemory
 from desmume.emulator import SCREEN_HEIGHT, SCREEN_HEIGHT_BOTH, SCREEN_PIXEL_SIZE, SCREEN_WIDTH
 from desmume.frontend.gtk_drawing_impl.software import cairo
-from gi.repository.Gtk import Overlay
 import gymnasium as gym
 from typing import Any, Callable, Optional, TypedDict, cast
 from functools import partial
@@ -65,7 +64,8 @@ class MarioKartEnv(gym.Env):
         
         return {
             "wall_distances": dist,
-            "keymask": np.array([keymask], dtype=np.uint16)
+            "keymask": np.array([keymask], dtype=np.uint16),
+            
         }
         
     def _get_info(self):

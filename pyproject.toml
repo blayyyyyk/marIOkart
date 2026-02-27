@@ -13,4 +13,4 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src", "."] # search in both src/ and root
-include = ["core*", "misc*", "utils*", "gym*", "models*", "train*", "mkdslib*"]
+include = ["core*", "utils*", "gym*", "models*", "train*", "mkdslib*"]

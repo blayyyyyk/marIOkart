@@ -1,10 +1,13 @@
 from torch.optim.optimizer import Optimizer
+from src.models.model_impl import Model
 from src.train.dataset import ConcatMarioKartDataset, RandomSequenceBatchSampler, SequenceCollate, MarioKartDataset
 from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
 import torch
 from torch import optim
-from typing import cast
+from typing import Optional, TypedDict, cast
+from pathlib import Path
+from src.models.registry import get_model
 
 
 
@@ -41,10 +44,10 @@ def prepare_data(data_folders: list[str], batch_size, seq_len, split_ratio: floa
         num_workers=4
     )
     
-    return train_dataloader, test_dataloader
+    return train_dataloader, test_dataloader, dataset.mdata
 
 def run(
-    model: nn.Module, 
+    model: Model, 
     train_dataloader: DataLoader,
     test_dataloader: DataLoader,
     num_epochs: int,
@@ -105,5 +108,29 @@ def run(
             print(f"Epoch {epoch+1} | Train Loss: {avg_train:.4f} | Test Loss: {avg_test:.4f} | Acc: {accuracy:.2f}%")
                 
         
+class CheckpointState(TypedDict):
+    epoch: int
+    state_dict: dict
+    optimizer: dict
+    scheduler: Optional[dict]
+    model_name: str
+    mdata: dict
+    config: dict
+        
+def save_checkpoint(folder: Path, state: CheckpointState):
+    folder.mkdir(parents=True, exist_ok=True)
+    torch.save(state, folder / 'checkpoint.ckpt')
+    
+def load_checkpoint(folder: Path, model_name: str, device: Optional[torch.device] = None)
+    files = sorted(
+        folder.iterdir(), 
+        key=lambda f: f.stat().st_mtime, 
+        reverse=True
+    )
+    checkpoint = torch.load(files[-1], map_location=(device or torch.device("cpu")))
+    config = checkpoint['config']
+    model = get_model(model_name, **config)
+    model.load_state_dict(checkpoint['state_dict'])
+    return model, checkpoint
     
     

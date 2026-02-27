@@ -58,6 +58,7 @@ class MarioKartLSTM(Model):
         # prev_actions shape: (batch, seq_len)
         features = super().forward(data)
         
+        
         lstm_out, _ = self.lstm(features)
         
         # last hidden state for prediction
