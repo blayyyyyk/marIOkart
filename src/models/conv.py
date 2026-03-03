@@ -1,15 +1,35 @@
 import torch.nn as nn
 import torch
 
-class MarioKartCNN(nn.Module):
-    def __init__(self, obs_size, out_channels, stride, kernel_size, dilation, embedding_size, n_layers):
-        super(MarioKartCNN, self).__init__()
-        assert n_layers > 0, "must have at least one conv layer"
-        self.action_embed = nn.Embedding(out_channels, embedding_size)
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from src.models.model_impl import Model
+
+class MarioKartCNN(Model):
+    def __init__(self, num_features, embed_size, embed_count, out_channels=64, 
+                 stride=1, kernel_size=3, dilation=1, n_layers=1, device=None, **kwargs):
         
-        in_channels = obs_size + embedding_size
+        # Pass configuration args up to Model so get_config() tracks them
+        super(MarioKartCNN, self).__init__(
+            num_features=num_features, 
+            embed_size=embed_size, 
+            embed_count=embed_count, 
+            device=device,
+            out_channels=out_channels,
+            stride=stride,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            n_layers=n_layers,
+            **kwargs
+        )
+        
+        assert n_layers > 0, "must have at least one conv layer"
+        
+        in_channels = self.num_features + self.embed_size
         self.conv_seq = nn.Sequential()
         
+        # First convolutional layer
         self.conv_seq.append(nn.Conv1d(
             in_channels=in_channels, 
             out_channels=out_channels, 
@@ -18,50 +38,44 @@ class MarioKartCNN(nn.Module):
             dilation=dilation
         ))
         
-        for i in range(n_layers-1):
-            conv = nn.Conv1d(
+        # Subsequent convolutional layers
+        for _ in range(n_layers - 1):
+            self.conv_seq.append(nn.Conv1d(
                 in_channels=out_channels, 
                 out_channels=out_channels, 
                 kernel_size=kernel_size, 
                 stride=stride,
                 dilation=dilation
-            )
-            self.conv_seq.append(conv)
+            ))
         
-        self.proj = nn.Linear(out_channels, out_channels)
+        # Projection layer (embedding space to probability space)
+        self.fc = nn.Linear(out_channels, self.embed_count)
         
+    def forward(self, data: dict[str, torch.Tensor], targets=None):
+        # 2. Extract and embed features
+        # Shape: (batch, seq_len, num_features + embed_size)
+        features = self.combine_features(data)
         
-    def forward(self, data: dict[str, torch.Tensor]):
-        obs, act_ids = data["wall_distances"], data["keymask"]
-        action_embed = self.action_embed(act_ids.to(torch.int)) # -> (B, T, embedding_size)
-        features = torch.cat([obs, action_embed], dim=-1) # -> (B, T, obs_dim+embedding_size-1)
+        # 3. Permute for PyTorch Conv1d
+        # Conv1d expects (batch, channels, seq_len)
         features = features.permute(0, 2, 1)
         
-        conv = self.conv_seq(features)
-        conv = conv.permute(0, 2, 1)
+        # 4. Pass through CNN
+        conv_out = self.conv_seq(features)
         
-        logits = self.proj(conv)
-        return logits
+        # 5. Permute back: (batch, channels, seq_len) -> (batch, seq_len, channels)
+        conv_out = conv_out.permute(0, 2, 1)
         
+        # 6. Extract last hidden state for prediction (matching LSTM setup)
+        last_step_out = conv_out[:, -1, :] 
         
-def main():
-    model = MarioKartCNN(
-        obs_size=13, 
-        out_channels=11, 
-        stride=1, 
-        kernel_size=3, 
-        dilation=1, 
-        embedding_size=8, 
-        n_layers=1
-    )
-    x1 = torch.rand(20, 23, 13)
-    x2 = torch.randint(0, 8, (20, 23, 1), dtype=torch.float)
-    x = torch.cat([x1, x2], dim=-1)
-    y = model(x)
-    print(x.shape, y.shape)
-    
-    
-if __name__ == "__main__":
-    main()
-        
+        # 7. Convert to probability space
+        logits = self.fc(last_step_out)
+            
+        # 9. Compute Loss
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits, targets)
+            
+        return logits, loss
         

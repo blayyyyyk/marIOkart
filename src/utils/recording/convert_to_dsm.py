@@ -1,7 +1,7 @@
 from desmume.emulator import StartFrom, DeSmuME
 from desmume.controls import Keys, keymask
 
-from src.mkdslib.mkdslib import (
+from desmume.mkds.mkds import (
     RACE_STATE_PTR_ADDR, 
     RACE_CONFIG_PTR_ADDR, 
     SCENE_STATE_PTR_ADDR, 
@@ -17,8 +17,8 @@ import sys
 MKDS_TO_DESMUME_BUTTONS = [
     (0x10, 'R'),
     (0x20, 'L'),
-    (0x80, 'D'),
-    (0x40, 'U'),
+    (0x40, 'D'),
+    (0x80, 'U'),
     (0x100, 'T'),
     (0x100, 'S'),
     (0x02, 'B'),
@@ -32,18 +32,18 @@ MKDS_TO_DESMUME_BUTTONS = [
 
 SAVE_FILE_LOCATION = 'src/utils/recording/100percent.sav'
 
-def get_scene_state(emu: DeSmuME):
+def get_scene_state(emu):
     addr = emu.memory.unsigned.read_long(SCENE_STATE_PTR_ADDR)
     if addr == 0:
         return 0
     else:
         addr += 0x10C
         return emu.memory.unsigned[addr]
-def get_race_timer(emu: DeSmuME):
+def get_race_timer(emu):
     addr = emu.memory.unsigned.read_long(RACE_STATE_PTR_ADDR)
     return emu.memory.signed.read_long(addr + 4) # frameCounter
 
-def validate(emu: DeSmuME, data: dict):
+def validate(emu, data: dict):
     raceConfig = emu.memory.unsigned.read_long(RACE_CONFIG_PTR_ADDR)
     playerConfig = raceConfig + 0x68
     if data['characterId'] != emu.memory.unsigned[playerConfig]:
@@ -55,7 +55,7 @@ def validate(emu: DeSmuME, data: dict):
 
     return True
 
-def do_menu(emu: DeSmuME, character: int, kart: int, course: int):
+def do_menu(emu, character: int, kart: int, course: int):
     def press(key):
         emu.input.keypad_update(keymask(key))
         emu.cycle(False)
@@ -158,12 +158,11 @@ def do_menu(emu: DeSmuME, character: int, kart: int, course: int):
         emu.movie.stop()
         raise Exception('Race did not start! Something went wrong with the menuing.')
 
-def convert_to_dsm(output_file, **data):
+def convert_to_dsm(emu, output_file, **data):
     inputs = data['ghostInputs']
     assert len(inputs) == 0xdcc
    
-    emu = DeSmuME()
-    emu.open('private/mariokart_ds.nds')
+    emu.reset()
     emu.backup.import_file(SAVE_FILE_LOCATION)
     emu.movie.record(output_file, 'marIOkart', StartFrom.START_SRAM, SAVE_FILE_LOCATION)
     emu.input.keypad_update(0)
@@ -173,10 +172,11 @@ def convert_to_dsm(output_file, **data):
    
     # Just make sure we're on the first frame
     while get_race_timer(emu) != 1:
-        emu.cycle(False)
+        emu.cycle(with_joystick=False)
    
     start_frame = emu.movie.get_length()
     emu.movie.stop()
+    
     if not validate(emu, data):
         raise Exception('We somehow got the wrong combo or course. Something went wrong with the menuing.')
    
@@ -222,6 +222,7 @@ def convert_to_dsm(output_file, **data):
    
     with open(output_file, 'w') as fs:
         fs.writelines(movie_contents)
+    
 
 def run(input_file:str, output_file: str | None = None):
     output_file = output_file or input_file[:-4] + 'dsm'

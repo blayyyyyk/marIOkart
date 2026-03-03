@@ -1,63 +1,36 @@
 from argparse import ArgumentParser
+from gym_mkds.wrappers.window_overlay import MarioKart
 from gymnasium.wrappers import FrameStackObservation
 import torch
 from torch import optim
-from src.gym.wrapper import (
+from gym_mkds.wrappers import (
+    VecEnvWindow,
+    MoviePlaybackWrapper,
     OverlayWrapper,
-    DatasetWrapper,
-    sensor_overlay,
-    collision_overlay,
     compose_overlays,
 )
-from src.gym.env import MarioKartEnv
-from src.gym.window import VecEnvWindow
-from src.models.registry import get_model
+import multiprocessing
+from typing import Optional
+import numpy as np
+import shutil
+from src.utils import sav_to_dsm
+import src.models.registry as registry
+from src.models.registry import CheckpointState
 from gymnasium.vector import AsyncVectorEnv
+import gymnasium
 import os
 from pathlib import Path
 from functools import partial
 from datetime import datetime
 import shutil
-from src.train.run import (
-    CheckpointState,
+from src.train import (
+    MarioKartDataset,
+    ConcatMarioKartDataset,
+    DatasetWrapper,
     prepare_data,
-    run,
-    save_checkpoint,
-    load_checkpoint,
+    train_loop,
 )
-import json
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
-ROM_PATH = ROOT_DIR / "private" / "mariokart_ds.nds"
-OVERLAYS = [sensor_overlay, collision_overlay]
-DATASET_PATH = ROOT_DIR / "data"
-RAW_DATASET_PATH = DATASET_PATH / "raw"  # this is where .dsm input recordings are held
-INTERIM_DATASET_PATH = (
-    DATASET_PATH / "interim"
-)  # this is where collected observation data is held
-
-CHECKPOINTS_PATH = ROOT_DIR / "checkpoints"
-
-RAW_DATASET_PATH.mkdir(parents=True, exist_ok=True)
-CHECKPOINTS_PATH.mkdir(parents=True, exist_ok=True)
-INTERIM_DATASET_PATH.mkdir(parents=True, exist_ok=True)
-
-RAY_MAX_DIST = 3000
-RAY_COUNT = 20
-
-BATCH_SIZE = 16
-SEQ_LEN = 32
-EMBED_SIZE = 32
-EMBED_COUNT = 2048  # number of possible 11-bit keymask
-NUM_FEATURES = RAY_COUNT + EMBED_SIZE
-EPOCHS = 15
-SPLIT_RATIO = 0.8
-LEARNING_RATE = 1e-4
-DEVICE = "cpu"
-
-
-def CHECKPOINT_CAPSULE_PATH(name: str, version: int):
-    return CHECKPOINTS_PATH / f"{name}_v{str(version)}"
+from src.config import *
 
 
 def _parse_movie(args):
@@ -77,34 +50,56 @@ def _parse_movie(args):
     return movie_paths
 
 
-def record(args):
-    movie_paths = _parse_movie(args)
+def collect_dsm(in_path: Path) -> list[Path]:
+    movie_paths = []
+    if in_path.is_dir():
+        for mp in in_path.rglob("*.dsm"):
+            movie_paths.append(mp)
+    elif in_path.is_file() and in_path.suffix == ".dsm":
+        movie_paths.append(in_path)
 
-    def create_env(m: Path):
-        base_env = MarioKartEnv(
+    return movie_paths
+
+
+def _record(movie_paths: list[Path], out_paths: list[Path], show: bool = True):
+    def create_env(m: Path, o: Path):
+        # specify save path for dataset assets
+        movie_prefix = m.name.split(".")[0]
+        out_path = o / movie_prefix
+
+        # combine several overlays (optional)
+        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
+
+        # build environment
+        env = gymnasium.make(
+            id="gym_mkds/MarioKartDS-v0",
             rom_path=str(ROM_PATH),
-            movie_path=str(m),
             ray_max_dist=RAY_MAX_DIST,
             ray_count=RAY_COUNT,
         )
-        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
-        overlay_env = OverlayWrapper(base_env, func=composed_overlays)
-        movie_prefix = m.name.split(".")[0]
-        raw_path = RAW_DATASET_PATH / m.name
-        out_path = INTERIM_DATASET_PATH / movie_prefix
+        # enable movie playback
+        env = MoviePlaybackWrapper(
+            env, path=str(m), func=lambda emu: emu.movie.is_playing()
+        )
+        # enable visual overlay
+        env = OverlayWrapper(env, func=composed_overlays)
+        # enable dataset recording
+        env = DatasetWrapper(env, str(out_path))
 
-        # backup the movie file
-        if not os.path.exists(raw_path):
-            shutil.copy(m, raw_path)
-
-        dataset_env = DatasetWrapper(overlay_env, str(out_path))
-        return dataset_env
+        return env
+        
+        
 
     movie_paths = list(filter(os.path.isfile, movie_paths))
     assert len(movie_paths) > 0, "No movie files were found"
-    env = AsyncVectorEnv([(lambda m=m: create_env(m)) for m in movie_paths])
+        
+    env = AsyncVectorEnv(
+        [(lambda m=m, o=o: create_env(m, o)) for m, o in zip(movie_paths, out_paths)]
+    )
+    
     window = VecEnvWindow(env)
-    obs, _ = env.reset()
+    
+    obs, info = env.reset()
 
     try:
         print("Starting environment loop. Press Ctrl+C in terminal to exit.")
@@ -112,35 +107,93 @@ def record(args):
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
             window.update()
+            if not np.any(info['movie_playing']):
+                window.on_destroy()
+        
     except KeyboardInterrupt:
         print("Loop interrupted by user.")
     finally:
+        progress = info["race_progress"].tolist()
+        for m, p in zip(movie_paths, progress):
+            if p >= MIN_PROGRESS_FOR_GOOD_DATASET:
+                shutil.copy2(m, PROCESSED_GOOD_DATASET_PATH)
+                
+        window.close()
         env.close()
 
 
+def record(args):
+    if args.process:
+        process(args)
+    
+    # load paths of backup dsm files
+    movie_paths = list(PROCESSED_BAD_DATASET_PATH.rglob("*.dsm"))
+    movie_count = len(movie_paths)
+    out_paths = [args.dest] * movie_count
+
+    # record in batches
+    stride = args.num_proc or movie_count
+    for start in range(0, movie_count, stride):
+        end = min(start + stride, movie_count)
+        mp = movie_paths[start:end]
+        op = out_paths[start:end]
+        if args.verbose:
+            print(f"recorded movies ({start+1} to {end+1} / {movie_count}) ")
+        
+        p = multiprocessing.Process(target=_record, args=(mp, op))
+        p.start()
+        p.join() # Wait for the batch to finish entirely
+        
+        # Catch if the C++ core threw a SIGBUS and crashed the batch
+        if p.exitcode != 0:
+            print(f"Warning: Batch {start+1}-{end} crashed with exit code {p.exitcode}. Moving to next batch.")
+
+    if args.verbose:
+        print(f"{movie_count} movie saved to ")
+
+
 def train(args):
+    
+    dat_folders = set([])
+    for x in args.source:
+        for y in x.rglob('*.dat'):
+            dat_folders.add(y.parent)
+    data_paths: list[str] = [str(p) for p in dat_folders]
+    
+    # build training data train/test split
     train_split, test_split, mdata = prepare_data(
-        data_folders=args.data_paths,
+        data_folders=data_paths,
         batch_size=args.batch_size,
         seq_len=args.seq_len,
         split_ratio=args.split_ratio,
     )
-    model = get_model(
-        args.model_name,
-        num_features=RAY_COUNT,
-        embed_size=EMBED_SIZE,
-        embed_count=EMBED_COUNT,
-    )
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    device = torch.device(args.device)
 
-    run(
+    model_dir = CHECKPOINTS_PATH / args.model_name
+    ckpt_iter = model_dir.glob("*.ckpt")
+    is_empty = not any(ckpt_iter)
+    # load most recent checkpoint of specified model
+    # or start fresh if there is none
+    if not is_empty:
+        files = sorted(ckpt_iter, key=lambda f: f.stat().st_mtime, reverse=True)
+        model, _ = registry.load(args.model_name, model_dir, args.device)
+    else:
+        model = registry.get(
+            args.model_name,
+            num_features=RAY_COUNT,
+            embed_size=EMBED_SIZE,
+            embed_count=EMBED_COUNT,
+        )
+
+    #
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+
+    train_loop(
         model,
         train_split,
         test_split,
         num_epochs=args.epochs,
         optimizer=optimizer,
-        device=device,
+        device=args.device,
     )
 
     checkpoint: CheckpointState = {
@@ -154,107 +207,118 @@ def train(args):
     }
 
     folder = CHECKPOINTS_PATH / f"{args.model_name}"
-    save_checkpoint(folder, checkpoint)
+    registry.save(args.model_name, folder, checkpoint)
     print(f"Checkpoint save in {folder}")
 
 
 # TODO
 def eval(args):
-    # Determine if we are driving with a model, or if a user is debugging
-    driving_mode = "model" if getattr(args, "model", None) else "user"
-    movie_paths = _parse_movie(args)
+    movie_paths = collect_dsm(args.source)
+    
+    
+        
 
     def create_env(m: Path):
-        base_env = MarioKartEnv(
+        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
+        count = 0
+        def stop_func(emu: MarioKart):
+            nonlocal count
+            if emu.memory.race_ready:
+                count += 1
+                
+            return count < 500
+        
+        env = gymnasium.make(
+            id="gym_mkds/MarioKartDS-v0",
             rom_path=str(ROM_PATH),
-            movie_path=str(m),
             ray_max_dist=RAY_MAX_DIST,
             ray_count=RAY_COUNT,
         )
-        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
-        overlay_env = OverlayWrapper(base_env, func=composed_overlays)
-        
-        # Note: If your obs space is a Dict, ensure FrameStackObservation 
-        # handles it correctly, or use a custom dict-stacker.
-        stacked_env = FrameStackObservation(overlay_env, stack_size=SEQ_LEN)
-        return stacked_env
+        env = MoviePlaybackWrapper(env, path=str(m), func=stop_func)
+        env = OverlayWrapper(env, func=composed_overlays)
+        env = FrameStackObservation(env, stack_size=SEQ_LEN)
+        return env
 
     movie_paths = list(filter(os.path.isfile, movie_paths))
     assert len(movie_paths) > 0, "No movie files were found"
+
+    # Load a registered model architecture
+    model = registry.get(
+        args.model_name,
+        num_features=RAY_COUNT,
+        embed_size=EMBED_SIZE,
+        embed_count=EMBED_COUNT,
+    )
     
     # Initialize the parallel environments
     env = AsyncVectorEnv([(lambda m=m: create_env(m)) for m in movie_paths])
-    window = VecEnvWindow(env)
-    
-    # AsyncVectorEnv returns a batched observation.
-    # If it's a Dict space, obs will be a dict of batched arrays: 
-    # e.g., {'image': ndarray[batch, seq, h, w, c], 'speed': ndarray[batch, seq, 1]}
+    window = VecEnvWindow(env) # attach vectorized GTK window
     obs, _ = env.reset()
 
-    model = None
-    device = None
-    mdata = None
 
-    if driving_mode == "model":
-        device = torch.device(getattr(args, "device", "cpu"))
-        folder = CHECKPOINTS_PATH / args.model
-        # Assume load_checkpoint returns the model and the full checkpoint dict
-        model, checkpoint = load_checkpoint(folder, args.model, device=device)
-        model.eval()
-        
-        # Extract the normalization metadata saved during training
-        mdata = checkpoint.get("mdata", {})
+    
 
     try:
         print("Starting environment loop. Press Ctrl+C in terminal to exit.")
         while window.is_alive:
-            
-            if driving_mode == "user":
-                # For debugging, just send 0s or capture actual keyboard input
-                actions = [0] * len(movie_paths)
-            
-            else:
-                # --- MODEL INFERENCE ---
-                with torch.no_grad():
-                    # 1. Convert the batched numpy arrays to PyTorch tensors
+            with torch.no_grad():
                     tensor_obs = {}
                     for key, val in obs.items():
                         # AsyncVectorEnv creates numpy arrays. Convert to tensor and add to device
                         t = torch.from_numpy(val).to(device)
-                        
+
                         # 2. Apply Normalization (CRITICAL for evaluation)
-                        if mdata and key in mdata and 'mean' in mdata[key]:
+                        if mdata and key in mdata and "mean" in mdata[key]:
                             # Ensure we are doing float math
                             t = t.to(torch.float32)
-                            
+
                             # Move stats to the correct device
-                            mean = torch.tensor(mdata[key]['mean'], device=device, dtype=torch.float32)
-                            std = torch.tensor(mdata[key]['std'], device=device, dtype=torch.float32)
-                            
+                            mean = torch.tensor(
+                                mdata[key]["mean"], device=device, dtype=torch.float32
+                            )
+                            std = torch.tensor(
+                                mdata[key]["std"], device=device, dtype=torch.float32
+                            )
+
                             # Broadcast normalize the batch
                             t = (t - mean) / (std + 1e-8)
-                            
+
                         tensor_obs[key] = t
 
                     # 3. Forward pass
                     # model expects batched dict: {key: tensor[Batch, Seq, ...]}
                     logits = model(tensor_obs)
-                    
+
                     # 4. Get the predicted actions
                     # Assuming logits shape is [Batch, Num_Classes]
                     _, predicted_classes = torch.max(logits, dim=1)
-                    
+
                     # 5. Convert back to a CPU python list for the environment
                     actions = predicted_classes.cpu().tolist()
 
             # Step the environments forward with the generated actions
             obs, reward, terminated, truncated, info = env.step(actions)
             window.update()
-            
+
     except KeyboardInterrupt:
         print("Loop interrupted by user.")
     finally:
         env.close()
+        
+def process(args):
+    # convert any sav files
+    sav_to_dsm(args.source, PROCESSED_BAD_DATASET_PATH, args.verbose)
+
+    # backup any dsm files
+    shutil.copytree(
+        RAW_DATASET_PATH,
+        PROCESSED_BAD_DATASET_PATH,
+        ignore=shutil.ignore_patterns("*.sav"),
+        dirs_exist_ok=True,
+    )
+    
+    if args.verbose:
+        print(f"movie files successfully processed and copied to {PROCESSED_BAD_DATASET_PATH}")
 
 
 def main():
@@ -262,33 +326,55 @@ def main():
         prog="main.py",
         description="Main entry point for the Mario Kart DS ML visualization application.",
     )
+    parser.add_argument(
+        "--device",
+        help="PyTorch device name (ex. 'cpu', 'mps', 'cuda')",
+        type=torch.device,
+        default=torch.device(DEFAULT_DEVICE_NAME),
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        help="Enable verbose console logging for debugging",
+        action="store_true",
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     record_parser = subparsers.add_parser("record", help="Collect model training data.")
-    movie_path_group = record_parser.add_mutually_exclusive_group(required=True)
-    movie_path_group.add_argument(
-        "--movie", help="The file path of the movie to record a dataset of", type=Path
+    record_parser.add_argument(
+        "source",
+        nargs="+",
+        help="Movie files (.dsm) or Game saves (.sav) to collect observation datasets from. Can either be individual files, a list of files, or a directory of acceptable files.",
+        type=Path
     )
-    movie_path_group.add_argument(
-        "--movie-dir",
-        help="The directory of movie file paths to record a batch of datasets of",
-        type=Path,
+    record_parser.add_argument(
+        "--dest",
+        "-o",
+        help="Where to output the datasets to",
+        default=INTERIM_DATASET_PATH,
+    )
+    record_parser.add_argument(
+        "--num-proc",
+        help="maximum number of subprocesses to spawn",
+        default=NUM_PROC
+    )
+    record_parser.add_argument(
+        "--process",
+        help="when flag is enabled, will make a call to process() before collecting datasets",
+        action="store_true",
     )
     record_parser.set_defaults(func=record)
 
     train_parser = subparsers.add_parser("train", help="Train a model")
     train_parser.add_argument(
-        "--model-name",
-        help="The name of the model to record a checkpoint of after training",
-    )
-    train_parser.add_argument(
-        "--data-paths",
+        "source",
         nargs="+",
         help="List of training data sources to use",
         type=Path,
     )
     train_parser.add_argument(
-        "--device", help="Name of pytorch device to use ('cuda', 'mps', ect.)"
+        "--model-name",
+        help="The name of the model to record a checkpoint of after training",
     )
     hyper_params_group = train_parser.add_argument_group("Training Hyperparameters")
     hyper_params_group.add_argument(
@@ -313,9 +399,6 @@ def main():
     eval_parser = subparsers.add_parser("eval", help="Evaluate a model")
     eval_group = eval_parser.add_mutually_exclusive_group(required=True)
     eval_group.add_argument("--model", help="The model to evaluate")
-    eval_parser.add_argument(
-        "--device", help="Name of pytorch device to use ('cuda', 'mps', ect.)"
-    )
     eval_group.add_argument(
         "--model-dir", help="The directory of model file paths to evaluate"
     )
@@ -325,6 +408,14 @@ def main():
         help="Enable keyboard input (this mode is for debugging)",
     )
     eval_parser.set_defaults(func=eval)
+    process_parser = subparsers.add_parser("process", help="Process movie files")
+    process_parser.add_argument(
+        "source",
+        nargs="+",
+        help="Movie files (.dsm) or Game saves (.sav) to collect observation datasets from. Can either be individual files, a list of files, or a directory of acceptable files.",
+        type=Path
+    )
+    process_parser.set_defaults(func=process)
 
     args = parser.parse_args()
     if hasattr(args, "func"):

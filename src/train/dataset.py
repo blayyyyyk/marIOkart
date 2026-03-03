@@ -5,13 +5,15 @@ from pathlib import Path
 import numpy as np
 import json
 from typing import cast
+from torch.utils.data import DataLoader, random_split
 
 class MarioKartDataset(Dataset):
-    def __init__(self, folder_path: str):
+    def __init__(self, folder_path: str, window: int):
         
         self.data = {}
         self.folder_path = Path(folder_path)
         self.mdata = {}
+        self.window = window
         with open(self.folder_path / "mdata.json", "r") as f:
             self.mdata = json.load(f)
         
@@ -31,12 +33,12 @@ class MarioKartDataset(Dataset):
             self.mdata[key]['mean'] = torch.tensor(self.mdata[key]['mean'])
             
     def __len__(self):
-        return self.batch_size
+        return self.batch_size - self.window
         
     def __getitem__(self, idx):
         out = {}
         for key, arr in self.data.items():
-            t = torch.from_numpy(arr[idx])
+            t = torch.from_numpy(arr[idx:idx+self.window])
             if 'std' in self.mdata[key] and 'mean' in self.mdata[key]:
                 std = self.mdata[key]['std']
                 mean = self.mdata[key]['mean']
@@ -92,8 +94,8 @@ class ConcatMarioKartDataset(ConcatDataset):
             
             for ds in self.mk_datasets:
                 n = len(ds)
-                mu = ds.mdata[key]['mean'].to(torch.float32)
-                std = ds.mdata[key]['std'].to(torch.float32)
+                mu: torch.Tensor = ds.mdata[key]['mean'].to(torch.float32)
+                std: torch.Tensor = ds.mdata[key]['std'].to(torch.float32)
                 
                 # Variance is std squared
                 var = std ** 2 
@@ -101,7 +103,7 @@ class ConcatMarioKartDataset(ConcatDataset):
                 # Pooled variance formula
                 sum_weighted_vars += n * (var + (mu - global_mean) ** 2)
                 
-            global_var = sum_weighted_vars / total_samples
+            global_var: torch.Tensor = sum_weighted_vars / total_samples
             global_std = torch.sqrt(global_var)
             
             # Store the computed stats for this feature
@@ -111,79 +113,58 @@ class ConcatMarioKartDataset(ConcatDataset):
             }
             
         return global_stats
-
-class RandomSequenceBatchSampler(Sampler):
-    def __init__(self, dataset_length: int, batch_size: int, seq_len: int):
-        self.dataset_length = dataset_length
-        self.batch_size = batch_size
-        self.seq_len = seq_len
-        
-        # The highest index we can start a sequence at without going out of bounds
-        self.valid_starts = dataset_length - seq_len + 1
-        self.num_batches = self.valid_starts // batch_size
-
-    def __iter__(self):
-        # Generate random start indices for the whole epoch
-        starts = torch.randperm(self.valid_starts).tolist()
-
-        # Group them into batches
-        for i in range(self.num_batches):
-            batch_starts = starts[i * self.batch_size : (i + 1) * self.batch_size]
             
-            batch_indices = []
-            for start in batch_starts:
-                # Add the sequential chunk for each random start
-                batch_indices.extend(range(start, start + self.seq_len))
-                
-            yield batch_indices
-
-    def __len__(self):
-        return self.num_batches
-        
-class SequenceCollate:
-    def __init__(self, batch_size: int, seq_len: int):
-        self.batch_size = batch_size
-        self.seq_len = seq_len
-
-    def __call__(self, batch_list):
-        # 1. default_collate turns a list of dicts into a dict of batched tensors.
-        # Shape will currently be: [batch_size * seq_len, Channels, Height, Width]
-        collated = default_collate(batch_list)
-
-        # 2. Reshape into [Batch, Seq_len, Channels, Height, Width]
-        for key, tensor in collated.items():
-            feature_dims = tensor.shape[1:] # Grab the spatial/feature dimensions
-            collated[key] = tensor.view(self.batch_size, self.seq_len, *feature_dims)
-
-        return collated
-            
+def prepare_data(data_folders: list[str], batch_size, seq_len, split_ratio: float):
+    # Concat all dataset sources
+    datasets = []
+    for path in data_folders:
+        ds = MarioKartDataset(path, window=seq_len)
+        datasets.append(ds)
+    
+    dataset = ConcatMarioKartDataset(datasets)
+    
+    # Make train/test split
+    train_size = int(split_ratio * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    
+    # Random batch sequences
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
+    
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
+    
+    return train_dataloader, test_dataloader, dataset.mdata
+    
 if __name__ == "__main__":
     # Configuration
     BATCH_SIZE = 32
     SEQ_LEN = 16
     
     # 1. Init Dataset
-    dataset_1 = MarioKartDataset("data/interim/f8c_pikalex")
-    dataset_2 = MarioKartDataset("data/interim/f8c_pikalex")
-    dataset = ConcatRaceDataset([dataset_1, dataset_2])
+    dataset_1 = MarioKartDataset("data/interim/f8c_pikalex", 32)
+    dataset_2 = MarioKartDataset("data/interim/f8c_pikalex", 32)
+    dataset = ConcatMarioKartDataset([dataset_1, dataset_2])
     print(len(dataset_1), len(dataset_2), len(dataset))
-    
-    # 2. Init Sampler and Collater
-    batch_sampler = RandomSequenceBatchSampler(len(dataset), BATCH_SIZE, SEQ_LEN)
-    collate_fn = SequenceCollate(BATCH_SIZE, SEQ_LEN)
     
     # 3. Build the DataLoader
     dataloader = DataLoader(
         dataset,
-        batch_sampler=batch_sampler,
-        collate_fn=collate_fn,
-        num_workers=4
+        batch_size=BATCH_SIZE,
+        shuffle=True
     )
     
     # Test the output
     count = 0
     for batch in dataloader:
         # Expected output: torch.Size([32, 16, C, H, W])
-        print(batch['wall_distances']) 
-        if count > 10: break
+        print(batch['wall_distances'].shape) 
+        if count > 2: break
         count += 1

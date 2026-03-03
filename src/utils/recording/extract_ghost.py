@@ -142,11 +142,11 @@ def data_to_dict(data: bytearray):
         'courseId': course_id,
         'ghostInputs': [x for x in inputs],
     }
-    content = json.dumps(json_data)
-    return content
+    return json_data
 
 def data_to_json(data: bytearray, file: str):
-    content = data_to_dict(data)
+    json_data = data_to_dict(data)
+    content = json.dumps(json_data)
     with open(file, 'w') as fs:
         fs.write(content)
 
@@ -166,7 +166,7 @@ def has_ghost(data: bytearray, ordered_course_id: int) -> bool:
         raise Exception("Invalid course ID given. Expected 0-31.")
 
     addr = GHOSTS_ADDR + GHOST_SIZE * ordered_course_id
-    return data[addr] == 0xff and data[addr+1] == 0xff
+    return data[addr] != 0xff or data[addr+1] != 0xff
 
 def main(save_path, course, out_path):
     contents: bytearray
@@ -175,7 +175,7 @@ def main(save_path, course, out_path):
 
     if course == 'all':
         for i in range(32):
-            if has_ghost(contents, i): continue # here
+            if not has_ghost(contents, i): continue # here
             print(f"Found course {i}")
             ghost_data = get_normal_ghost_data(contents, i)
             data_to_json(ghost_data, f'{out_path}/{COURSE_ABBREVIATIONS[i]}.json')
