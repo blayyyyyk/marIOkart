@@ -1,5 +1,6 @@
 from pathlib import Path
 from gym_mkds.wrappers import sensor_overlay, collision_overlay
+from stable_baselines3 import PPO, DQN, A2C
 
 # Default paths for folders and files #
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -28,8 +29,8 @@ RAY_COUNT = 20  # number of rays extending from the kart's position, outward, al
 BATCH_SIZE = (
     128  # number of training/testing examples processed by the model in parallel
 )
-SEQ_LEN = 32  # amount of context to give to the model for decision-making
-EMBED_SIZE = 32  # number of embedding dims for the keymask embeddings
+SEQ_LEN = 256  # amount of context to give to the model for decision-making
+EMBED_SIZE = 128  # number of embedding dims for the keymask embeddings
 EMBED_COUNT = 2048  # number of possible 11-bit keymask
 NUM_FEATURES = (
     RAY_COUNT + EMBED_SIZE
@@ -44,6 +45,19 @@ LEARNING_RATE = (
 
 # If you change this, when you don't specify a device name in the cli, pytorch will use this device instead. It would be wise to keep this as 'cpu'
 DEFAULT_DEVICE_NAME = "cpu"
+DEFAULT_MODEL_NAME = "lstm"
+DEFAULT_COURSE_NAME = "f8c"
 NUM_PROC = 9
 
 MIN_PROGRESS_FOR_GOOD_DATASET = 0.9
+
+ALGO_MAP = {
+    "ppo": PPO,
+    "dqn": DQN,
+    "a2c": A2C
+}
+
+ALGO_KWARGS = {
+    "ppo": {"n_steps": 2048, "learning_rate": 3e-4},
+    "dqn": {"buffer_size": 10000, "learning_rate": 1e-3},
+}

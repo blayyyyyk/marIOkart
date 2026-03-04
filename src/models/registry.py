@@ -65,7 +65,6 @@ def save(name: str, folder: Path, state: CheckpointState):
     
 @registered_only
 def load(name: str, folder: Path, device: Optional[torch.device] = None):
-    
     files = sorted(
         folder.iterdir(), 
         key=lambda f: f.stat().st_mtime, 
