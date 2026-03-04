@@ -6,7 +6,6 @@ from src.scripts.eval import eval_parser
 from src.scripts.process import process_parser
 from src.scripts.train_rl import train_rl_parser
 from src.scripts.util import general_parser, window_parser
-import multiprocessing as mp
 
 
 def main():
@@ -31,5 +30,4 @@ def main():
 
 
 if __name__ == "__main__":
-    mp.set_start_method('spawn', force=True)
     main()
