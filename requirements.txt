@@ -1,2 +1,2 @@
-mkds>=0.1.11
-py-desmume==0.0.9
+gym-mkds==0.1.1
+py-desmume-mkds==0.0.15
