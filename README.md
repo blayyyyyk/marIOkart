@@ -22,8 +22,8 @@ git clone https://github.com/blayyyyyk/marIOkart.git
 ```
 
 2. Install the dependencies
-    > [!TIP]
-    > A virtual environment is recommended for installation
+> [!TIP]
+> A virtual environment is recommended for installation
 
 ```
 pip install -r requirements.txt
