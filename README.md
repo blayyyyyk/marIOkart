@@ -1,8 +1,7 @@
 # MarI/O Kart
-
-## Training an AI model to perform advanced speedrunner inputs of the popular racing title Mario Kart DS
-
-# Table of Contents
+> Training an AI model to perform advanced speedrunner inputs of the popular racing title Mario Kart DS
+  
+**Table of Contents**
 1. [Installation Guide](#installation-guide)
 2. [Usage Guide](#usage-guide)
 - 2.1 [Dataset Collection](#dataset-collection)
