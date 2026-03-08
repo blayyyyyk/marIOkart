@@ -180,8 +180,41 @@ options:
   --device DEVICE  PyTorch device name (ex. 'cpu', 'mps', 'cuda')
   --verbose, -v    Enable verbose console logging for debugging
 ```
+## Working With the MarioKart DS Memory API
+Under the hood, we use a popular library called `py-desmume`. It is a python library for interfacing with the DeSmuME C API. We forked the python project and integrated custom functionality for accessing game attributes from memory. This enables not only *100x* performance improvements in memory reads, but also enables users to access memory attributes in an intuitive and object-oriented fashion.
+**Installation**
+```bash
+pip install py-desmume-mkds
+```
+**Example Usage**
+```python
+from desmume.emulator_mkds import MarioKart
+import torch
+
+emu = MarioKart()
+emu.open('pathtorom.nds')
+
+# Create the window for the emulator
+window = emu.create_sdl_window()
+
+# Run the emulation as fast as possible until quit
+while not window.has_quit():
+    window.process_input()   # Controls are the default DeSmuME controls, see below.
+    emu.cycle()
+    window.draw()
+
+    # checks if a race has started
+    if not emu.memory.race_ready: continue
+    
+    # access the player's current kart position
+    kart_position: torch.Tensor = emu.memory.driver.position
+
+    # access the player's current boost timer
+    boost_timer: float = self.emu.memory.driver.boostTimer
+
+    # access the player's current race_progress
+    race_progress: float = emu.memory.race_status.driverStatus[0].raceProgress
+```
 
 ## Working With Gymnasium
-> Details coming soon
-## Working With the MarioKart DS Memory API
 > Details coming soon
