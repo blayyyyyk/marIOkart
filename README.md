@@ -181,7 +181,9 @@ options:
   --verbose, -v    Enable verbose console logging for debugging
 ```
 ## Working With the MarioKart DS Memory API
-Under the hood, we use a popular library called `py-desmume`. It is a python library for interfacing with the DeSmuME C API. We forked the python project and integrated custom functionality for accessing game attributes from memory. This enables not only *100x* performance improvements in memory reads, but also enables users to access memory attributes in an intuitive and object-oriented fashion.
+Under the hood, we use a popular library called `py-desmume`. It is a python library for interfacing with the DeSmuME C API. We forked the python project and integrated custom functionality for accessing game attributes from memory. By optimizing the C/C++ to Python interoperability, this enables not only *100x* performance improvements in memory reads by bypassing traditional hooking overhead, but it also allows users to extract variables in an intuitive and object-oriented fashion. This high-speed data pipeline is essential for preventing bottlenecks during intensive model training.
+
+With this API, you can easily access complex internal observation states directly from the emulator's RAM without needing to rely on heavier computer vision techniques or screen captures. [Learn more](https://github.com/blayyyyyk/py-desmume-mkds)
 
 **Installation**
 ```bash
@@ -220,7 +222,7 @@ while not window.has_quit():
 ## Working With Gymnasium
 For those who are curious to start training their own RL agents in MarioKart DS, we have a standalone gymnasium environment. This environment abstracts the emulator mechanics into a standard RL problem, providing a structured observation space, discrete action space, and easily modifiable reward functions (such as optimizing for raceProgress).
 
-The MarioKartDS-v0 environment handles the complexities of emulator synchronization and exposes essential spatial control parameters. By utilizing raycasting mechanics (ray_max_dist, ray_count), the environment gives the agent a simulated LiDAR-like view of the track to gauge distances to walls and hazards, bridging the gap between emulator internals and autonomous driving logic.
+The MarioKartDS-v0 environment handles the complexities of emulator synchronization and exposes essential spatial control parameters. By utilizing raycasting mechanics (ray_max_dist, ray_count), the environment gives the agent a simulated LiDAR-like view of the track to gauge distances to walls and hazards, bridging the gap between emulator internals and autonomous driving logic. [Learn more](https://github.com/blayyyyyk/gym-mkds)
 
 **Installation**
 ```bash
