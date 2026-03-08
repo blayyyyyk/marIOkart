@@ -4,14 +4,16 @@
 **Table of Contents**
 1. [Installation Guide](#installation-guide)
 2. [Usage Guide](#usage-guide)
-- 2.1 [Dataset Collection](#dataset-collection)
-    - 2.1.1 [Recording .dsm](#recording-dsm)
-    - 2.1.2 [Recording .sav](#recording-sav)
-- 2.2 [Training the Model](#training-the-model)
-    - 2.2.1 [Supervised Learning](#supervised-learning)
-    - 2.2.2 [Reinforcement Learning (experimental)](#reinforcement-learning)
-- 2.3 [Evaluating the Model](#evaluating-the-model)
-- 2.4 [Debugging Tools](#debugging-tools)
+    1. [Dataset Collection](#dataset-collection)  
+        1. [Recording .dsm](#recording-dsm)
+        2. [Recording .sav](#recording-sav)
+    2. [Training the Model](#training-the-model)
+        1. [Supervised Learning](#supervised-learning)
+        2. [Reinforcement Learning (experimental)](#reinforcement-learning)
+    3. [Evaluating the Model](#evaluating-the-model)
+    4. [Debugging Tools](#debugging-tools)
+3. [Working With Gymnasium](#working-with-gymnasium)
+4. [Working With the MarioKart DS Memory API](#working-with-the-mariokart-ds-memory-api)
 
 ## Installation Guide
 
@@ -178,3 +180,8 @@ options:
   --device DEVICE  PyTorch device name (ex. 'cpu', 'mps', 'cuda')
   --verbose, -v    Enable verbose console logging for debugging
 ```
+
+## Working With Gymnasium
+> Details coming soon
+## Working With the MarioKart DS Memory API
+> Details coming soon
