@@ -218,7 +218,9 @@ while not window.has_quit():
 ```
 
 ## Working With Gymnasium
-For those who are curious to start training their own RL agents in MarioKart DS, we have a standalone gymnasium environment.  
+For those who are curious to start training their own RL agents in MarioKart DS, we have a standalone gymnasium environment. This environment abstracts the emulator mechanics into a standard RL problem, providing a structured observation space, discrete action space, and easily modifiable reward functions (such as optimizing for raceProgress).
+
+The MarioKartDS-v0 environment handles the complexities of emulator synchronization and exposes essential spatial control parameters. By utilizing raycasting mechanics (ray_max_dist, ray_count), the environment gives the agent a simulated LiDAR-like view of the track to gauge distances to walls and hazards, bridging the gap between emulator internals and autonomous driving logic.
 
 **Installation**
 ```bash
