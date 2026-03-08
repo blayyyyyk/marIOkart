@@ -15,7 +15,7 @@ from gymnasium.wrappers.vector import NumpyToTorch
 from gymnasium.vector import AsyncVectorEnv
 from src.utils import collect_dsm
 from src.models import registry
-from config import *
+from src.config import *
 import torch
 from src.scripts.util import general_parser, window_parser
 

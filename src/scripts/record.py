@@ -13,7 +13,7 @@ from gym_mkds.wrappers import (
 )
 from gymnasium.vector import AsyncVectorEnv
 
-from config import *
+from src.config import *
 from src.scripts.util import general_parser, window_parser
 from src.train import DatasetWrapper
 from src.utils.functional import sub_process_func

@@ -14,7 +14,7 @@ from gym_mkds.wrappers import (
 )
 from gymnasium.vector import AsyncVectorEnv
 
-from config import *
+from src.config import *
 from src.models import registry
 from src.utils import collect_dsm
 
