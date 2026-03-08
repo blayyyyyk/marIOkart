@@ -12,8 +12,8 @@
         2. [Reinforcement Learning (experimental)](#reinforcement-learning)
     3. [Evaluating the Model](#evaluating-the-model)
     4. [Debugging Tools](#debugging-tools)
-3. [Working With Gymnasium](#working-with-gymnasium)
-4. [Working With the MarioKart DS Memory API](#working-with-the-mariokart-ds-memory-api)
+3. [Working With the MarioKart DS Memory API](#working-with-the-mariokart-ds-memory-api)
+4. [Working With Gymnasium](#working-with-gymnasium)
 
 ## Installation Guide
 
@@ -182,6 +182,7 @@ options:
 ```
 ## Working With the MarioKart DS Memory API
 Under the hood, we use a popular library called `py-desmume`. It is a python library for interfacing with the DeSmuME C API. We forked the python project and integrated custom functionality for accessing game attributes from memory. This enables not only *100x* performance improvements in memory reads, but also enables users to access memory attributes in an intuitive and object-oriented fashion.
+
 **Installation**
 ```bash
 pip install py-desmume-mkds
