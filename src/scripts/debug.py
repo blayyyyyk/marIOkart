@@ -70,7 +70,8 @@ def debug(args):
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
             window.update()
-            if not np.any(info["movie_playing"]) and args.mode == "movie":
+            if not args.mode == "movie": continue
+            if not np.any(info["movie_playing"]):
                 window.on_destroy()
 
     except KeyboardInterrupt:
@@ -86,9 +87,10 @@ debug_parser.add_argument(
     help="debugging mode for debug tool. available modes (movie, play)"
 )
 debug_parser.add_argument(
-    "movie-source",
+    "--movie-source",
     help="the file(s) or director(ies) containing movie replays to source menu controls during evaluation (accepted files: .dsm)",
-    nargs="+"
+    nargs="+",
+    type=Path
 )
 debug_parser.set_defaults(func=debug)
 
