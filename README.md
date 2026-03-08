@@ -218,4 +218,58 @@ while not window.has_quit():
 ```
 
 ## Working With Gymnasium
-> Details coming soon
+For those who are curious to start training their own RL agents in MarioKart DS, we have a standalone gymnasium environment.  
+
+**Installation**
+```bash
+pip install gym-mkds
+```
+
+**Example Usage**
+```python
+import gymnasium
+
+env = gymnasium.make(
+    "gym_mkds/MarioKartDS-v0",
+    rom_path="pathtorom",
+    ray_max_dist=3000,
+    ray_count=20,
+)
+```
+
+**Example Usage: Simple Human Input With Visual Overlays**
+```python
+import gymnasium
+from functools import partial
+from gym_mkds.wrappers import (
+    EnvWindow,
+    OverlayWrapper, 
+    HumanInputWrapper, 
+    compose_overlays, 
+    collision_overlay, 
+    sensor_overlay
+)
+
+env = gymnasium.make(
+    "gym_mkds/MarioKartDS-v0",
+    rom_path="pathtorom",
+    ray_max_dist=3000,
+    ray_count=20,
+)
+
+# make a composite overlay of different visuals
+overlay_func = partial(compose_overlays, funcs=[collision_overlay, sensor_overlay])
+env = OverlayWrapper(env, func=overlay_func)
+
+# add a keyboard listener
+env = HumanInputWrapper(env)
+
+# create a gtk window to display the game
+window = EnvWindow(env)
+obs, info = env.reset()
+
+# game loop
+while window.is_alive:
+    obs, reward, terminated, truncated, info = env.step(0)
+    window.update()
+```
