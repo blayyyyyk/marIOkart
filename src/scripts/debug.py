@@ -9,6 +9,7 @@ from gym_mkds.wrappers import (
     HumanInputWrapper,
     MoviePlaybackWrapper,
     OverlayWrapper,
+    EnvWindow,
     VecEnvWindow,
     compose_overlays,
 )
@@ -56,11 +57,14 @@ def debug(args):
 
         return env
 
-    env = AsyncVectorEnv(
-        [(lambda m=m: create_env(m)) for m in movie_paths]
-    )
-
-    window = VecEnvWindow(env)
+    if len(movie_paths) > 1:
+        env = AsyncVectorEnv(
+            [(lambda m=m: create_env(m)) for m in movie_paths]
+        )
+        window = VecEnvWindow(env)
+    else:
+        env = create_env(None)
+        window = EnvWindow(env)
 
     obs, info = env.reset()
 
@@ -84,6 +88,7 @@ def debug(args):
 debug_parser = ArgumentParser(add_help=False)
 debug_parser.add_argument(
     "mode",
+    choices=["movie", "play"],
     help="debugging mode for debug tool. available modes (movie, play)"
 )
 debug_parser.add_argument(
