@@ -1,319 +1,183 @@
-# MarI/O Kart - Mario Kart DS ML + Overlays
+# MarI/O Kart
 
-> **Train AI, render overlays, and read real game state from DeSmuME.**  
-> A batteries-included toolkit for **Mario Kart DS** research and tooling: memory I/O, geometry/projection, collision & map parsers, and an extensible overlay system — with optional Torch-powered acceleration.
+## Training an AI model to perform advanced speedrunner inputs of the popular racing title Mario Kart DS
 
----
+# Table of Contents
 
-## Documentation
-Docs and research articles can be found:
-[https://gg-blake.github.io/marIOkart/](https://blayyyyyk.github.io/marIOkart)
+1. [Installation Guide](#installation-guide)
+2. [Usage Guide](#usage-guide)
 
----
+- 2.1 [Dataset Collection]()
+    - 2.1.1 [Recording .dsm]()
+    - 2.1.2 [Recording .sav]()
+- 2.2 [Training the Model]()
+    - 2.2.1 [Supervised Learning]()
+    - 2.2.2 [Reinforcement Learning (experimental)]()
+- 2.3 [Evaluating the Model]()
+- 2.4 [Debugging Tools]()
 
-## Quick Demo
+## Installation Guide
 
-##### Figure: Realtime overlay rendering using PyCairo + GTK (AI demo training in progress)
-https://github.com/user-attachments/assets/ba1a553b-9bb7-4717-985b-65efe388cb1a
+1. Clone the repository
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Installation](#installation)
-- [Project Layout](#project-layout)
-- [Quickstart](#quickstart)
-  - [Run the emulator with overlays](#run-the-emulator-with-overlays)
-  - [Add your own overlay](#add-your-own-overlay)
-  - [Use the standalone `mkds` parser](#use-the-standalone-mkds-parser)
-- [Architecture](#architecture)
-- [Docs](#docs)
-- [Controls](#controls)
-- [Performance Notes](#performance-notes)
-- [FAQ](#faq)
-- [Legal](#legal)
-- [License](#license)
-
----
-
-## Overview
-
-This repo brings together **three pillars**:
-
-1. **Memory + Geometry utilities** — Read live MKDS game state from the **DeSmuME** emulator (position, camera, objects, checkpoints) and project world points to **screen space (256×192)** using a reconstructed model–view + perspective pipeline.
-2. **Overlay system** — A queue-based, thread-safe drawing stack (Cairo/GTK) with a library of overlays for collision, checkpoints, objects, and camera targets — designed to be **extensible**.
-3. **Parsers** — Clean readers for **KCL** (collision) and **NKM** (course map) formats; also available as an installable standalone lib `mkds` on PyPI.
-
-> The long-term goal: **train agents** to drive in MKDS, using the overlay + geometry for interpretability and debugging.
-
----
-
-## Features
-
-- **DeSmuME integration (py-desmume)**: Read objects, player state, camera FOV/aspect/pose, clock, checkpoints.
-- **Projection utilities**: Rebuild model–view and perspective matrices; project `(N,3)` world points → `(N,4)` screen points `[x, y, clip_z, depth_norm]`.
-- **KCL reader**: Positions, normals, prisms, octree search; reconstruct triangle vertices.
-- **NKM reader**: Objects, paths, checkpoints, cameras, respawns, etc.
-- **Overlay framework**: Composable draw ops (`draw_points`, `draw_lines`, `draw_triangles`, `draw_paragraph`) enqueued from worker threads; Cairo renders on GTK draw.
-- **Torch extensions (optional)**: Tensorized KCL/NKM variants for fast geometry and filtering (`is_wall`, `is_floor`, offroad masks, batched raycasts).
-- **Training hooks**: Example scaffolding (work-in-progress) for agent training and fitness evaluation.
-
----
-
-## Installation
-Python ≥ 3.11 required, virtual environment is recommended 
-### 1. Clone the repo
-```bash
-git clone https://github.com/gg-blake/marIOkart
-cd marIOkart
+```
+git clone https://github.com/blayyyyyk/marIOkart.git
 ```
 
-### 2. Install System Dependencies
-**Linux / MacOS (Apple Silicon)**
+2. Install the dependencies
+    > [!TIP]
+    > A virtual environment is recommended for installation
+
 ```
-chmod +x ./install.sh
-./install.sh
-```
-
-> This installation script is a work in progress. If you are having trouble installing, please [message me on Discord](https://discord.com/users/410111287872323594).
-
-**Windows**
-> Windows is currently untested for this project, but you can try with installation guide [here](https://pygobject.gnome.org/getting_started.html).
-
-### 3. Install Other Python Dependencies
-```bash
 pip install -r requirements.txt
 ```
 
-### 4. If using HOMEBREW, make sure that you have these environment variables set
-```bash
-export DYLD_LIBRARY_PATH="$(brew --prefix atk)/lib:$(brew --prefix gtk+3)/lib:$(brew --prefix glib)/lib:$(brew --prefix pango)/lib:$(brew --prefix gdk-pixbuf)/lib:$DYLD_LIBRARY_PATH"
-export GI_TYPELIB_PATH="$(brew --prefix atk)/lib/girepository-1.0:$(brew --prefix gtk+3)/lib/girepository-1.0:$(brew --prefix gobject-introspection)/lib/girepository-1.0:$GI_TYPELIB_PATH"
-```
+## Usage Guide
 
-Platform-specific install commands vary; use your package manager (Homebrew, apt, pacman, etc.).
-
-> The **parsers** are separately available as [`mkds`](https://pypi.org/project/mkds/):
->
-> ```bash
-> pip install mkds
-> ```
-
-This guide is a work in-progress, if you are having trouble with setup it to work on your machine, [message me on Discord](https://discord.com/users/410111287872323594), we'll get it fixed.
-
----
-
-## Project Layout
-
-```
-.
-├── mkds_c/                # Ongoing work to make functional python bindings from mkds header files
-│ 
-├── mkds/                  # Standalone KCL/NKM parsing library (PyPI: mkds)
-│   └── mkds/                  # Standalone KCL/NKM parsing library (PyPI: mkds)
-│       ├── kcl.py
-│       ├── nkm.py
-│       └── utils.py
-├── src/
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── memory.py      # Emulator memory reads + camera & projection
-│   │   ├── model.py       # Geometry helpers (rays, intersections, sampling)
-│   │   └── train.py
-│   ├── main.py            # GTK runner wiring emulator + overlays     
-│   ├── misc/
-│   │   └── courses.json
-│   ├── mkds_extensions/
-│   │   ├── kcl_torch.py   # Torch KCL (triangles, nearest queries)
-│   │   └── nkm_torch.py   # Torch NKM (tensorized checkpoints)
-│   ├── utils/
-│   │   └── vector.py
-│   └── visualization/
-│       ├── draw.py        # Draw queue & Cairo primitives
-│       └── overlay.py     # Built-in overlays (collision, checkpoints, etc.)
-├── tests/                 # Various test scripts for experimentation
-├── courses/               # Extracted course assets (KCL/NKM per course)               
-└── README.md
-```
-
----
-
-## Quickstart
-
-### Run the emulator with overlays
+All tools for this projects can be run with the following command.
 
 ```bash
-python main.py
+cd [name of repo directory]
+python src/main.py
 ```
 
-- The GTK window shows the live emulator frame with overlays composited on top.
-- Tweak the overlay list in `main.py`:
+### Dataset Collection
 
-```python
-from utils.overlay import (
-    collision_overlay,
-    checkpoint_overlay_1, checkpoint_overlay_2,
-    player_overlay, raycasting_overlay, camera_overlay,
-    stats_overlay,
-)
+For our supervised learning training pipeline, we required labelled training examples of speedrunner data. Right now, we train models to predict speedrunner inputs given a set of observation data.
 
-run_emulator(
-    generate_trainer,  # or a simple generator
-    [
-        collision_overlay,
-        checkpoint_overlay_1,
-        checkpoint_overlay_2,
-        # player_overlay,
-        # camera_overlay,
-        # raycasting_overlay,
-        # stats_overlay,
-    ],
-)
-```
+**Movie Replays**  
+Our training environment uses an Nintendo DS emulator called DeSmuME. Using DeSmuME's built-in movie replay feature, we can load a series of controller inputs into the start of the game, and the emulator will replay the game in real-time using frame-by-frame prerecorded inputs. During this replay, our script will collect and precompute our observation data to save to a file. Our model then must predict the player's controller input given this observation data.
 
-### Add your own overlay
+#### Recording `.dsm`
 
-An overlay is just a function: read → project → enqueue draws.
-
-```python
-# utils/my_overlay.py
-import numpy as np
-import torch
-from utils.draw import draw_points
-from utils.memory import read_position, project_to_screen, z_clip_mask
-
-def my_overlay(emu, device=None):
-    pos = read_position(emu, device=device).unsqueeze(0)      # (1,3)
-    sp  = project_to_screen(emu, pos, device=device)          # (1,4) [x,y,clip_z,depth_norm]
-    mask = z_clip_mask(sp)
-    sp = sp[mask]
-    if sp.shape[0] == 0:
-        return
-    pts = torch.cat([sp[:, :2], sp[:, 3, None]], dim=-1).cpu().numpy()
-    draw_points(pts, colors=np.array([0.2, 0.8, 0.6]), radius_scale=6.0)
-```
-
-Then include `my_overlay` in the overlay list.
-
-### Use the standalone `mkds` parser
+`record.py` To record a dataset using a desmume compatible movie file.
 
 ```bash
-pip install mkds
+usage: record.py [-h] [--dest DEST] [--num-proc NUM_PROC] [--process] [--scale SCALE] [--device DEVICE] [--verbose] source [source ...]
+
+positional arguments:
+  source                Movie files (.dsm) or Game saves (.sav) to collect observation datasets from. Can either be individual files, a list of files, or a directory of
+                        acceptable files.
+
+options:
+  -h, --help            show this help message and exit
+  --dest DEST, -o DEST  Where to output the datasets to
+  --num-proc NUM_PROC   maximum number of subprocesses to spawn
+  --process             when flag is enabled, will make a call to process() before collecting datasets
+  --scale SCALE         specify the scale of the gtk window
+  --device DEVICE       PyTorch device name (ex. 'cpu', 'mps', 'cuda')
+  --verbose, -v         Enable verbose console logging for debugging
 ```
 
-```python
-from mkds.nkm import NKM
-from mkds.kcl import KCL
+#### Recording `.sav`
 
-nkm = NKM.from_file("courses/figure8/course_map.nkm")
-print("Lap count:", nkm._STAG.amt_of_laps)
+`.sav` files are MarioKartDS-specific save files for the game. From save files, you can extract what are called "ghost inputs" from time trial races which essentially play the same role as `.dsm` files however ghost inputs are internal to the game. To record training datasets from `.sav` files, you must first extract all ghost inputs and convert to `.dsm` files with `process.py`  
+`process.py` - Extract all `.dsm` files from a `.sav` file.
 
-kcl = KCL.from_file("courses/figure8/course_collision.kcl")
-print("Prisms:", len(kcl.prisms))
+```bash
+usage: process.py [-h] [--device DEVICE] [--verbose] source [source ...]
+
+positional arguments:
+  source           Game saves (.sav) to extract ghost inputs from. Can either be individual files, a list of files, or a directory of acceptable files.
+
+options:
+  -h, --help       show this help message and exit
+  --device DEVICE  PyTorch device name (ex. 'cpu', 'mps', 'cuda')
+  --verbose, -v    Enable verbose console logging for debugging
 ```
 
----
+### Training the Model
 
-## Architecture
+We are experimenting with all types of learning methods. we are currently working on both supervised learning using speedrunner data and reinforcement learning which does not directly uses speedrunner data.
 
-```text
-               ┌───────────────────────────┐
-               │      DeSmuME (Core)       │
-               │  emu.cycle(), RAM, I/O    │
-               └─────────────┬─────────────┘
-                             │
-memory.py (read_*  project_to|_screen, z_clip_mask, model-view)
-                             │
-               ┌─────────────┴─────────────┐
-               │                           │
-               │overlay.py(compute,enqueue)│
-               │                           │
-               │  mkds/(KCL/NKM parsers)   │
-               │                           │
-               └─────────────┬─────────────┘
-                             │
-       draw.py (thread-safe queue of Cairo closures)
-                             │
-        GTK draw event (main.py → consume_draw_stack)
-                             │
-            Composited overlay surface → window
+#### Supervised Learning
+
+`train.py` - Runs the training pipeline on a specified model using supervised.
+
+```bash
+usage: train.py [-h] [--model-name MODEL_NAME] [--course-name COURSE_NAME] [--epochs EPOCHS] [--lr LR] [--batch-size BATCH_SIZE] [--split-ratio SPLIT_RATIO]
+                [--seq-len SEQ_LEN] [--device DEVICE] [--verbose]
+                source [source ...]
+
+positional arguments:
+  source                List of training data sources to use
+
+options:
+  -h, --help            show this help message and exit
+  --model-name MODEL_NAME
+                        The name of the model to record a checkpoint of after training
+  --course-name COURSE_NAME, -c COURSE_NAME
+  --device DEVICE       PyTorch device name (ex. 'cpu', 'mps', 'cuda')
+  --verbose, -v         Enable verbose console logging for debugging
+
+Training Hyperparameters:
+  --epochs EPOCHS, -e EPOCHS
+                        Number of training epochs.
+  --lr LR               Learning rate
+  --batch-size BATCH_SIZE
+                        Batch size
+  --split-ratio SPLIT_RATIO
+                        Ratio of training data to split into train and test sets
+  --seq-len SEQ_LEN     Size of the sequence length of the training samples
 ```
 
-- **Threading:** Overlays run in a worker thread and enqueue closures; the GTK thread executes them with a `cairo.Context`.
-- **Projection:** Camera FOV/aspect + pose are read from memory to rebuild the perspective pipeline; screen origin is **top-left** (256×192).
-- **KCL/NKM:** Binary readers expose structured data; Torch variants add vectorized geometry & filtering.
+#### Reinforcement Learning
 
----
+> [!CAUTION]
+> This training pipeline is currently under development
+> `train_rl.py`
 
-## Docs
+```bash
+usage: train_rl.py [-h] [--epochs EPOCHS]
+                   [--course {f8c,yf,ccb,lm,dh,ds,wp,sr,dkp,ttc,mc,af,ws,pg,bc,rr,rmc1,rmmf,rpc,rlc1,rdp1,rfs,rbc2,rbp,rkb2,rcm,rlc2,rmb,rci2,rbb,rsg,ryc}] [--device DEVICE] [--verbose] [--scale SCALE]
+                   movie_source [movie_source ...] {ppo,dqn,a2c}
 
-Full, in-repo documentation (recommended to place under `docs/`):
+positional arguments:
+  movie_source          movie files to perform menu naviagtion before training
+  {ppo,dqn,a2c}         training algorithm
 
-- **Emulator I/O & Geometry Utilities** — API reference & examples  
-  `READING_FILES.md`
-- **Standalone Parsers (`mkds`)** — NKM & KCL readers (installable)  
-  `READING_MEMORY.md`
-- **Overlay System** — Draw queue design & built-in overlays  
-  `OVERLAYS.md`
+options:
+  -h, --help            show this help message and exit
+  --epochs EPOCHS       number of training epochs
+  --course {f8c,yf,ccb,lm,dh,ds,wp,sr,dkp,ttc,mc,af,ws,pg,bc,rr,rmc1,rmmf,rpc,rlc1,rdp1,rfs,rbc2,rbp,rkb2,rcm,rlc2,rmb,rci2,rbb,rsg,ryc}
+  --device DEVICE       PyTorch device name (ex. 'cpu', 'mps', 'cuda')
+  --verbose, -v         Enable verbose console logging for debugging
+  --scale SCALE         specify the scale of the gtk window
+```
 
-> These were generated from our discussion. If you want, regenerate them with your preferred doc tool (Sphinx, MkDocs, pdoc) or keep them as-is.
+### Evaluating the Model
 
----
+`eval.py` - Runs a model with inference only in a gym-based game environment with display. window. Requires `.dsm` files to control the initial menu navigation.
 
-## Controls
+```bash
+usage: eval.py [-h] [--scale SCALE] [--device DEVICE] [--verbose] model_name movie_source [movie_source ...]
 
-Default keyboard mapping (via `pynput` → `py-desmume`):
+positional arguments:
+  model_name       name of model to evaluate
+  movie_source     the file(s) or director(ies) containing movie replays to source menu controls during evaluation (accepted files: .dsm)
 
-| Key         | DS Button                |
-|---          |---                       |
-| W/A/S/D     | D-Pad Up/Left/Down/Right |
-| Z / X       | B / A                    |
-| U / I       | X / Y                    |
-| Q / E       | L / R                    |
-| Space       | Start                    |
-| Arrow keys  | D-Pad                    |
+options:
+  -h, --help       show this help message and exit
+  --scale SCALE    specify the scale of the gtk window
+  --device DEVICE  PyTorch device name (ex. 'cpu', 'mps', 'cuda')
+  --verbose, -v    Enable verbose console logging for debugging
+```
 
----
+### Debugging Tools
 
-## Performance Notes
+The program also supports for user provided input in the game environment. This is useful if you're testing custom visual overlays for displaying in-game data.
+`debug.py` - Debug mode for human-user input or movie replays (`.dsm`)
 
-- **Batch everything**: project arrays of points at once; avoid per-point projection.
-- **Cull early**: use `z_clip_mask` before NumPy conversion.
-- **Minimize host↔device hops**: keep tensors on device for math; convert to CPU right before draw.
-- **Overlay surface cache**: the GTK draw path reuses the last overlay frame if no new draw ops were enqueued.
-- **No anti-aliasing**: nearest-neighbor and `ANTIALIAS_NONE` preserve DS aesthetics and cost less.
+```bash
+usage: debug.py [-h] [--scale SCALE] [--device DEVICE] [--verbose] mode movie-source [movie-source ...]
 
----
+positional arguments:
+  mode             debugging mode for debug tool. available modes (movie, play)
+  movie-source     the file(s) or director(ies) containing movie replays to source menu controls during evaluation (accepted files: .dsm)
 
-## FAQ
-
-**Q: Where do the memory addresses live?**  
-A: In `utils/memory.py` (e.g., racer ptr `0x0217ACF8`, camera `0x0217AA4C`, etc.). The utilities hide fixed-point conversions and provide typed readers.
-
-**Q: How do I filter walls vs floors?**  
-A: Use KCL prism attributes. Torch variant exposes `kcl.prisms.is_wall` / `is_floor` masks.
-
-**Q: Why are screen Y coordinates flipped?**  
-A: DS origin is top-left; projection maps NDC accordingly with `(1 - y_ndc)` for Y.
-
-**Q: Can I use this without Torch?**  
-A: Yes. The I/O + parsers work without Torch; Torch is used for vectorized geometry and speed-ups.
-
-**Q: Training status?**  
-A: Scaffolding exists (`utils/train.py` + hooks). Model training demos are **in progress**.
-
----
-
-## Legal
-
-- You must **own the MKDS ROM** you use. This repo does **not** include game data or ROMs.
-- DeSmuME and py-desmume are external projects; follow their licenses.
-
----
-
-## License
-
-See the repository’s `LICENSE` file for terms.
-
+options:
+  -h, --help       show this help message and exit
+  --scale SCALE    specify the scale of the gtk window
+  --device DEVICE  PyTorch device name (ex. 'cpu', 'mps', 'cuda')
+  --verbose, -v    Enable verbose console logging for debugging
+```
