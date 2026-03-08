@@ -3,18 +3,16 @@
 ## Training an AI model to perform advanced speedrunner inputs of the popular racing title Mario Kart DS
 
 # Table of Contents
-
 1. [Installation Guide](#installation-guide)
 2. [Usage Guide](#usage-guide)
-
-- 2.1 [Dataset Collection]()
-    - 2.1.1 [Recording .dsm]()
-    - 2.1.2 [Recording .sav]()
-- 2.2 [Training the Model]()
-    - 2.2.1 [Supervised Learning]()
-    - 2.2.2 [Reinforcement Learning (experimental)]()
-- 2.3 [Evaluating the Model]()
-- 2.4 [Debugging Tools]()
+- 2.1 [Dataset Collection](#dataset-collection)
+    - 2.1.1 [Recording .dsm](#recording-dsm)
+    - 2.1.2 [Recording .sav](#recording-sav)
+- 2.2 [Training the Model](#training-the-model)
+    - 2.2.1 [Supervised Learning](#supervised-learning)
+    - 2.2.2 [Reinforcement Learning (experimental)](#reinforcement-learning)
+- 2.3 [Evaluating the Model](#evaluating-the-model)
+- 2.4 [Debugging Tools](#debugging-tools)
 
 ## Installation Guide
 
