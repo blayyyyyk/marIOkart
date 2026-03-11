@@ -1,11 +1,15 @@
 from pathlib import Path
-from gym_mkds.wrappers import sensor_overlay, collision_overlay
+from gym_mkds.wrappers import RaySweep, CollisionPrisms, TrackBoundary
 from stable_baselines3 import PPO, DQN, A2C
 
 # Default paths for folders and files #
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ROM_PATH = ROOT_DIR / "private" / "mariokart_ds.nds"
-OVERLAYS = [sensor_overlay, collision_overlay]
+OVERLAYS = [
+    TrackBoundary,
+    # RaySweep, 
+    # CollisionPrisms,
+]
 DATASET_PATH = ROOT_DIR / "data"
 RAW_DATASET_PATH = DATASET_PATH / "raw"  # this is where .dsm input recordings are held
 INTERIM_DATASET_PATH = (

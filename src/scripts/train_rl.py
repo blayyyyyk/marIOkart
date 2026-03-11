@@ -36,16 +36,12 @@ class WindowUpdateCallback(BaseCallback):
 
 
 def create_env(id: int, m: Optional[Path]):
-    composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
-
-
     env = gymnasium.make(
         id="gym_mkds/MarioKartDS-v0",
         rom_path=str(ROM_PATH),
         ray_max_dist=RAY_MAX_DIST,
         ray_count=RAY_COUNT,
     )
-
 
     func = lambda env: not env.get_wrapper_attr('emu').memory.race_ready
     if m:
@@ -54,7 +50,7 @@ def create_env(id: int, m: Optional[Path]):
     else:
         env = SaveStateWrapper(env, load_slot_id=id)
 
-    env = OverlayWrapper(env, func=composed_overlays)
+    env = compose_overlays(env, *OVERLAYS)
     env = FrameStackObservation(env, stack_size=SEQ_LEN)
     return env
 

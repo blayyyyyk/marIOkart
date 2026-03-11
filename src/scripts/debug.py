@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
 from typing import Optional
+from desmume.emulator_mkds import MarioKart
 from src.scripts.util import general_parser, window_parser
 import gymnasium
 import numpy as np
@@ -10,11 +11,11 @@ from gym_mkds.wrappers import (
     MoviePlaybackWrapper,
     OverlayWrapper,
     EnvWindow,
+    SaveStateWrapper,
     VecEnvWindow,
     compose_overlays,
 )
 from gymnasium.vector import AsyncVectorEnv
-
 from src.config import *
 from src.models import registry
 from src.utils import collect_dsm
@@ -42,6 +43,11 @@ def debug(args):
             ray_max_dist=RAY_MAX_DIST,
             ray_count=RAY_COUNT,
         )
+        
+        # enable savestate
+        if args.savestate is not None:
+            env = SaveStateWrapper(env, save_slot_id=args.savestate)
+        
         # enable movie playback
         if m:
             env = MoviePlaybackWrapper(
@@ -49,7 +55,7 @@ def debug(args):
             )
 
         # enable visual overlay
-        env = OverlayWrapper(env, func=composed_overlays)
+        env = compose_overlays(env, *OVERLAYS)
 
         # enable dataset recording
         if args.mode == "play":
@@ -61,10 +67,10 @@ def debug(args):
         env = AsyncVectorEnv(
             [(lambda m=m: create_env(m)) for m in movie_paths]
         )
-        window = VecEnvWindow(env)
+        window = VecEnvWindow(env, args.scale)
     else:
         env = create_env(None)
-        window = EnvWindow(env)
+        window = EnvWindow(env, args.scale)
 
     obs, info = env.reset()
 
@@ -74,6 +80,10 @@ def debug(args):
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
             window.update()
+            if not isinstance(env, AsyncVectorEnv):
+                emu: MarioKart = env.get_wrapper_attr('emu')
+                if emu.memory.race_ready:
+                    emu.memory.driver.position.add_(500.0)
             if not args.mode == "movie": continue
             if not np.any(info["movie_playing"]):
                 window.on_destroy()
@@ -97,6 +107,7 @@ debug_parser.add_argument(
     nargs="+",
     type=Path
 )
+debug_parser.add_argument("--savestate", "-s", help="Load and save a temporary save state. Press 'o' for saving a state to slot id _ and press 'l' to load a state from slot id _.]", type=int)
 debug_parser.set_defaults(func=debug)
 
 def main():

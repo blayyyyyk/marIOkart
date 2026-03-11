@@ -24,9 +24,6 @@ def create_env(m: Path, o: Path):
     movie_prefix = m.name.split(".")[0]
     out_path = o / movie_prefix
 
-    # combine several overlays (optional)
-    composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
-
     # build environment
     env = gymnasium.make(
         id="gym_mkds/MarioKartDS-v0",
@@ -39,7 +36,7 @@ def create_env(m: Path, o: Path):
         env, path=str(m)
     )
     # enable visual overlay
-    env = OverlayWrapper(env, func=composed_overlays)
+    env = compose_overlays(env, *OVERLAYS)
     # enable dataset recording
     env = DatasetWrapper(env, str(out_path))
 

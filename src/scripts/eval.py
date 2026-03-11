@@ -25,7 +25,6 @@ def eval_supervised(args):
         movie_paths |= set(collect_dsm(s))
 
     def create_env(m: Path):
-        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
         count = 0
 
         def stop_func(emu):
@@ -42,7 +41,7 @@ def eval_supervised(args):
             ray_count=RAY_COUNT,
         )
         env = MoviePlaybackWrapper(env, path=str(m))
-        env = OverlayWrapper(env, func=composed_overlays)
+        env = compose_overlays(env, *OVERLAYS)
         env = FrameStackObservation(env, stack_size=SEQ_LEN)
         return env
 

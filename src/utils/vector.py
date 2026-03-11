@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 import math
 import numpy as np
-from typing import Union
+from typing import Union, cast
 #from utils.emulator import SCREEN_WIDTH, SCREEN_HEIGHT
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
@@ -545,7 +545,7 @@ def generate_plane_vectors(
     center_idx, side_idx = plane_indices
     
     # Shape: (B, 3)
-    vec_center = rotation_matrix[:, :, center_idx] 
+    vec_center = rotation_matrix[:, :, center_idx]
     vec_side   = rotation_matrix[:, :, side_idx]
     
     # 3. Generate Angles
