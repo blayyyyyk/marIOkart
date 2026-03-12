@@ -7,8 +7,8 @@ import gymnasium
 import numpy as np
 from gym_mkds.wrappers import (
     MoviePlaybackWrapper,
-    OverlayWrapper,
     VecEnvWindow,
+    ControllerDisplay,
     compose_overlays,
 )
 from gymnasium.vector import AsyncVectorEnv
@@ -19,14 +19,15 @@ from src.train import DatasetWrapper
 from src.utils.functional import sub_process_func
 from src.utils import Suppress
 
+
 def create_env(m: Path, o: Path):
     # specify save path for dataset assets
     movie_prefix = m.name.split(".")[0]
-    out_path = o / movie_prefix
+    out_path = o / Path(movie_prefix)
 
     # build environment
     env = gymnasium.make(
-        id="gym_mkds/MarioKartDS-v0",
+        id="gym_mkds/MarioKartDS-base-v1",
         rom_path=str(ROM_PATH),
         ray_max_dist=RAY_MAX_DIST,
         ray_count=RAY_COUNT,
@@ -39,6 +40,8 @@ def create_env(m: Path, o: Path):
     env = compose_overlays(env, *OVERLAYS)
     # enable dataset recording
     env = DatasetWrapper(env, str(out_path))
+
+    env = ControllerDisplay(env)
 
     return env
 
@@ -63,7 +66,10 @@ def loop(env: AsyncVectorEnv):
 
 def record(args):
     # load paths of backup dsm files
-    movie_paths = list(PROCESSED_BAD_DATASET_PATH.rglob("*.dsm"))
+    movie_paths = []
+    for s in args.source:
+        movie_paths = [*movie_paths, *s.rglob("*.dsm")]
+        
     movie_count = len(movie_paths)
     out_paths = batched([args.dest] * movie_count, args.num_proc)
     movie_paths = batched(movie_paths, args.num_proc)

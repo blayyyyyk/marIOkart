@@ -1,5 +1,5 @@
 from pathlib import Path
-from gym_mkds.wrappers import RaySweep, CollisionPrisms, TrackBoundary
+from gym_mkds.wrappers import SweepingRayOverlay, CollisionPrisms, TrackBoundary
 from stable_baselines3 import PPO, DQN, A2C
 
 # Default paths for folders and files #
@@ -7,6 +7,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 ROM_PATH = ROOT_DIR / "private" / "mariokart_ds.nds"
 OVERLAYS = [
     TrackBoundary,
+    SweepingRayOverlay,
     # RaySweep, 
     # CollisionPrisms,
 ]

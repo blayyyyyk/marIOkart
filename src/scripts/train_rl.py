@@ -7,8 +7,8 @@ from typing import Optional
 import gymnasium
 import numpy as np
 from gym_mkds.wrappers import (
+    ControllerDisplay,
     MoviePlaybackWrapper,
-    OverlayWrapper,
     SaveStateWrapper,
     VecEnvWindow,
     compose_overlays,
@@ -37,10 +37,8 @@ class WindowUpdateCallback(BaseCallback):
 
 def create_env(id: int, m: Optional[Path]):
     env = gymnasium.make(
-        id="gym_mkds/MarioKartDS-v0",
-        rom_path=str(ROM_PATH),
-        ray_max_dist=RAY_MAX_DIST,
-        ray_count=RAY_COUNT,
+        id="gym_mkds/MarioKartDS-base-v1",
+        rom_path=str(ROM_PATH)
     )
 
     func = lambda env: not env.get_wrapper_attr('emu').memory.race_ready
@@ -51,6 +49,7 @@ def create_env(id: int, m: Optional[Path]):
         env = SaveStateWrapper(env, load_slot_id=id)
 
     env = compose_overlays(env, *OVERLAYS)
+    env = ControllerDisplay(env)
     env = FrameStackObservation(env, stack_size=SEQ_LEN)
     return env
 
@@ -100,19 +99,19 @@ def train_rl(args):
     for s in args.movie_source:
         movie_paths |= set(collect_dsm(s, course_name=args.course))
 
-    with Suppress():
-        # use movie files to navigate menus
-        movie_paths = list(movie_paths)
-        save_state_ids = list(range(len(movie_paths)))
-        replay_menu_inputs = sub_process_func(loop_movie, create_env)
-        replay_menu_inputs(save_state_ids, movie_paths)
+    
+    # use movie files to navigate menus
+    movie_paths = list(movie_paths)
+    save_state_ids = list(range(len(movie_paths)))
+    replay_menu_inputs = sub_process_func(loop_movie, create_env)
+    replay_menu_inputs(save_state_ids, movie_paths)
 
-        # begin training at savestate where race is starting
-        print(mp.get_start_method(allow_none=True))
-        bound_train = partial(loop_train, args=args)
-        train_model = sub_process_func(bound_train, create_env, vec_class=SubprocVecEnv)
-        none_paths = [None] * len(movie_paths)
-        train_model(save_state_ids, none_paths)
+    # begin training at savestate where race is starting
+    print(mp.get_start_method(allow_none=True))
+    bound_train = partial(loop_train, args=args)
+    train_model = sub_process_func(bound_train, create_env, vec_class=SubprocVecEnv)
+    none_paths = [None] * len(movie_paths)
+    train_model(save_state_ids, none_paths)
 
 
 train_rl_parser = ArgumentParser(add_help=False)

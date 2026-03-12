@@ -7,7 +7,6 @@ import gymnasium
 import numpy as np
 from gym_mkds.wrappers import (
     MoviePlaybackWrapper,
-    OverlayWrapper,
     VecEnvWindow,
     compose_overlays,
 )
@@ -35,12 +34,10 @@ def eval_supervised(args):
             return count < 500
 
         env = gymnasium.make(
-            id="gym_mkds/MarioKartDS-v0",
-            rom_path=str(ROM_PATH),
-            ray_max_dist=RAY_MAX_DIST,
-            ray_count=RAY_COUNT,
+            id="gym_mkds/MarioKartDS-base-v1",
+            rom_path=str(ROM_PATH)
         )
-        env = MoviePlaybackWrapper(env, path=str(m))
+        env = MoviePlaybackWrapper(env, path=str(m), func=stop_func)
         env = compose_overlays(env, *OVERLAYS)
         env = FrameStackObservation(env, stack_size=SEQ_LEN)
         return env

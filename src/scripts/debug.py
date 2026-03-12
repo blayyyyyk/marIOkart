@@ -7,9 +7,9 @@ from src.scripts.util import general_parser, window_parser
 import gymnasium
 import numpy as np
 from gym_mkds.wrappers import (
-    HumanInputWrapper,
+    HumanInput,
     MoviePlaybackWrapper,
-    OverlayWrapper,
+    ControllerDisplay,
     EnvWindow,
     SaveStateWrapper,
     VecEnvWindow,
@@ -33,15 +33,10 @@ def debug(args):
         raise ValueError(f"Invalid debug mode provided: {args.mode}")
 
     def create_env(m: Optional[Path]):
-        # combine several overlays (optional)
-        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
-
         # build environment
         env = gymnasium.make(
-            id="gym_mkds/MarioKartDS-v0",
-            rom_path=str(ROM_PATH),
-            ray_max_dist=RAY_MAX_DIST,
-            ray_count=RAY_COUNT,
+            id="gym_mkds/MarioKartDS-base-v1",
+            rom_path=str(ROM_PATH)
         )
         
         # enable savestate
@@ -59,7 +54,7 @@ def debug(args):
 
         # enable dataset recording
         if args.mode == "play":
-            env = HumanInputWrapper(env)
+            env = HumanInput(env)
 
         return env
 
@@ -70,6 +65,7 @@ def debug(args):
         window = VecEnvWindow(env, args.scale)
     else:
         env = create_env(None)
+        env = ControllerDisplay(env)
         window = EnvWindow(env, args.scale)
 
     obs, info = env.reset()
