@@ -1,4 +1,3 @@
-import multiprocessing as mp
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
@@ -6,14 +5,7 @@ from typing import Optional
 
 import gymnasium
 import numpy as np
-from gym_mkds.wrappers import (
-    ControllerDisplay,
-    MoviePlaybackWrapper,
-    SaveStateWrapper,
-    VecEnvWindow,
-    compose_overlays,
-)
-from gymnasium.vector import AsyncVectorEnv
+from gym_mkds.wrappers import GtkVecWindow, MoviePlaybackWrapper, SaveStateWrapper
 from gymnasium.wrappers import FrameStackObservation
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -36,11 +28,7 @@ class WindowUpdateCallback(BaseCallback):
 
 
 def create_env(id: int, m: Optional[Path]):
-    env = gymnasium.make(
-        id="gym_mkds/MarioKartDS-base-v1",
-        rom_path=str(ROM_PATH)
-    )
-
+    env = gymnasium.make("gym_mkds/MarioKartDS-human-v1")
     func = lambda env: not env.get_wrapper_attr('emu').memory.race_ready
     if m:
         env = SaveStateWrapper(env, save_slot_id=id)
@@ -48,33 +36,30 @@ def create_env(id: int, m: Optional[Path]):
     else:
         env = SaveStateWrapper(env, load_slot_id=id)
 
-    env = compose_overlays(env, *OVERLAYS)
-    env = ControllerDisplay(env)
     env = FrameStackObservation(env, stack_size=SEQ_LEN)
     return env
 
-def loop_movie(env: AsyncVectorEnv):
-    window = VecEnvWindow(env)
-
+def loop_movie(env: GtkVecWindow):
     obs, info = env.reset()
+    assert env.window is not None
 
     try:
         print("Starting environment loop. Press Ctrl+C in terminal to exit.")
-        while window.is_alive:
+        while env.window.is_alive:
             actions = [0] * env.num_envs
             obs, reward, terminated, truncated, info = env.step(actions)
-            window.update()
 
             if not np.any(info["movie_playing"]):
-                window.on_destroy()
+                env.window.on_destroy()
 
     except KeyboardInterrupt:
         print("Loop interrupted by user.")
     finally:
-        window.close()
+        env.window.close()
 
-def loop_train(env: AsyncVectorEnv, args):
-    window = VecEnvWindow(env)
+def loop_train(env: GtkVecWindow, args):
+    obs, info = env.reset()
+    assert env.window is not None
 
     # Apply Torch conversions if your SB3 setup requires it
     # env = NumpyToTorch(env, device=args.device)
@@ -83,7 +68,7 @@ def loop_train(env: AsyncVectorEnv, args):
     algo_kwargs = ALGO_KWARGS.get(args.algo, {})
 
     model = algo_class("MultiInputPolicy", env, verbose=int(args.verbose), **algo_kwargs)
-    callback = WindowUpdateCallback(window)
+    callback = WindowUpdateCallback(env.window)
 
     try:
         print("Starting RL training. Press Ctrl+C to exit.")
@@ -92,14 +77,14 @@ def loop_train(env: AsyncVectorEnv, args):
     except KeyboardInterrupt:
         print("Training interrupted by user.")
     finally:
-        window.close()
+        env.window.destroy()
 
 def train_rl(args):
     movie_paths = set([])
     for s in args.movie_source:
         movie_paths |= set(collect_dsm(s, course_name=args.course))
 
-    
+
     # use movie files to navigate menus
     movie_paths = list(movie_paths)
     save_state_ids = list(range(len(movie_paths)))
@@ -107,7 +92,6 @@ def train_rl(args):
     replay_menu_inputs(save_state_ids, movie_paths)
 
     # begin training at savestate where race is starting
-    print(mp.get_start_method(allow_none=True))
     bound_train = partial(loop_train, args=args)
     train_model = sub_process_func(bound_train, create_env, vec_class=SubprocVecEnv)
     none_paths = [None] * len(movie_paths)

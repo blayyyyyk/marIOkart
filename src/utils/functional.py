@@ -1,5 +1,6 @@
 import multiprocessing
 from typing import Callable
+from gym_mkds.wrappers import GtkVecWindow
 from gymnasium.vector import AsyncVectorEnv
 from gymnasium import Env
 from itertools import batched
@@ -21,6 +22,7 @@ def _async_env_worker(func: Callable, create_env_fn: Callable, vec_class: Callab
         env = vec_class(env_fns)
     
     try:
+        env = GtkVecWindow(env)
         func(env)
     finally:
         # Guarantee cleanup if the underlying 'func' loops indefinitely or crashes

@@ -6,70 +6,51 @@ from pathlib import Path
 import gymnasium
 import numpy as np
 from gym_mkds.wrappers import (
-    MoviePlaybackWrapper,
-    VecEnvWindow,
     ControllerDisplay,
+    GtkVecWindow,
+    MoviePlaybackWrapper,
     compose_overlays,
 )
 from gymnasium.vector import AsyncVectorEnv
 
 from src.config import *
+from src.environments import DatasetWrapper
 from src.scripts.util import general_parser, window_parser
-from src.train import DatasetWrapper
-from src.utils.functional import sub_process_func
 from src.utils import Suppress
+from src.utils.functional import sub_process_func
 
 
 def create_env(m: Path, o: Path):
-    # specify save path for dataset assets
     movie_prefix = m.name.split(".")[0]
     out_path = o / Path(movie_prefix)
-
-    # build environment
-    env = gymnasium.make(
-        id="gym_mkds/MarioKartDS-base-v1",
-        rom_path=str(ROM_PATH),
-        ray_max_dist=RAY_MAX_DIST,
-        ray_count=RAY_COUNT,
-    )
-    # enable movie playback
-    env = MoviePlaybackWrapper(
-        env, path=str(m)
-    )
-    # enable visual overlay
-    env = compose_overlays(env, *OVERLAYS)
-    # enable dataset recording
+    env = gymnasium.make("gym_mkds/MarioKartDS-human-v1")
+    env = MoviePlaybackWrapper(env, path=str(m))
     env = DatasetWrapper(env, str(out_path))
-
-    env = ControllerDisplay(env)
-
     return env
 
-def loop(env: AsyncVectorEnv):
-    window = VecEnvWindow(env)
-
+def loop(env: GtkVecWindow):
     obs, info = env.reset()
+    assert env.window is not None
 
     try:
         print("Starting environment loop. Press Ctrl+C in terminal to exit.")
-        while window.is_alive:
+        while env.window.is_alive:
             actions = [0] * env.num_envs
             obs, reward, terminated, truncated, info = env.step(actions)
-            window.update()
             if not np.any(info["movie_playing"]):
-                window.on_destroy()
+                env.window.destroy()
 
     except KeyboardInterrupt:
         print("Loop interrupted by user.")
     finally:
-        window.close()
+        env.window.destroy()
 
 def record(args):
     # load paths of backup dsm files
     movie_paths = []
     for s in args.source:
         movie_paths = [*movie_paths, *s.rglob("*.dsm")]
-        
+
     movie_count = len(movie_paths)
     out_paths = batched([args.dest] * movie_count, args.num_proc)
     movie_paths = batched(movie_paths, args.num_proc)

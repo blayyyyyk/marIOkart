@@ -29,6 +29,8 @@ PROCESSED_BAD_DATASET_PATH.mkdir(parents=True, exist_ok=True)
 # Default environment params #
 RAY_MAX_DIST = 3000  # caps the farthest a ray can extend. prevents rays that don't intersect the map from saturating the model input
 RAY_COUNT = 20  # number of rays extending from the kart's position, outward, along the positive half of the kart's local xz-plane
+N_KEYS = 11
+RAY_COLOR_MAP = "viridis"
 
 # Default training params #
 BATCH_SIZE = (
@@ -36,7 +38,7 @@ BATCH_SIZE = (
 )
 SEQ_LEN = 256  # amount of context to give to the model for decision-making
 EMBED_SIZE = 128  # number of embedding dims for the keymask embeddings
-EMBED_COUNT = 2048  # number of possible 11-bit keymask
+EMBED_COUNT = 2**N_KEYS # number of possible 11-bit keymask
 NUM_FEATURES = (
     RAY_COUNT + EMBED_SIZE
 )  # number of dims of the feature vector fed into the model. part of this will always be the keymask embed

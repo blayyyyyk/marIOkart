@@ -1,14 +1,8 @@
-import shutil
 import gymnasium as gym
 from gymnasium.wrappers.utils import RunningMeanStd
-import cairo, torch, os
+import os
 import numpy as np
-from typing import Any, cast, Callable, TypedDict, Optional
-from gymnasium.wrappers import NormalizeObservation
 import json
-import pynput
-from desmume.controls import Keys, keymask
-from src.config import *
 
 
 class DatasetWrapper(gym.Wrapper):
