@@ -45,15 +45,17 @@ def debug(args):
 
         return env
 
-    if len(movie_paths) > 1:
+    if args.mode == "movie":
         env = AsyncVectorEnv(
             [(lambda m=m: create_env(m)) for m in movie_paths]
         )
         env = GtkVecWindow(env, args.scale)
-    else:
+    elif args.mode == "play":
         env = create_env(None)
         env = GtkWindow(env, args.scale)
-
+    else:
+        raise ValueError(f"Invalid debug mode provided: {args.mode}")
+    
     obs, info = env.reset()
     assert env.window is not None
 

@@ -18,11 +18,11 @@ def _async_env_worker(func: Callable, create_env_fn: Callable, vec_class: Callab
         env = vec_class(env_fns, start_method='spawn') # sb3
     elif vec_class.__name__ == "AsyncVectorEnv":
         env = vec_class(env_fns, context='spawn') # gymnasium
+        env = GtkVecWindow(env)
     else:
         env = vec_class(env_fns)
     
     try:
-        env = GtkVecWindow(env)
         func(env)
     finally:
         # Guarantee cleanup if the underlying 'func' loops indefinitely or crashes

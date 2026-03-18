@@ -29,7 +29,7 @@ PROCESSED_BAD_DATASET_PATH.mkdir(parents=True, exist_ok=True)
 # Default environment params #
 RAY_MAX_DIST = 3000  # caps the farthest a ray can extend. prevents rays that don't intersect the map from saturating the model input
 RAY_COUNT = 20  # number of rays extending from the kart's position, outward, along the positive half of the kart's local xz-plane
-N_KEYS = 11
+N_KEYS = 12
 RAY_COLOR_MAP = "viridis"
 
 # Default training params #

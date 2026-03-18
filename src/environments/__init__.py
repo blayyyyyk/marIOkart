@@ -1,5 +1,5 @@
 from gymnasium.envs.registration import WrapperSpec, register
-from gym_mkds.wrappers import SweepingRay, SweepingRayOverlay, ProgressReward, RaceStats, ControllerObservation, ControllerAction, ControllerDisplay, TrackBoundary
+from gym_mkds.wrappers import Checkpoint, CheckpointOverlay, SweepingRay, SweepingRayOverlay, ProgressReward, RaceStats, ControllerObservation, ControllerAction, ControllerDisplay, TrackBoundary
 from src.environments.dataset_wrapper import DatasetWrapper
 from src.config import *
 
@@ -14,8 +14,9 @@ register(
         ControllerAction.wrapper_spec(n_keys=N_KEYS),
         TrackBoundary.wrapper_spec(),
         SweepingRayOverlay.wrapper_spec(color_map=RAY_COLOR_MAP),
-        ControllerDisplay.wrapper_spec(n_physical_keys=N_KEYS)
+        ControllerDisplay.wrapper_spec(n_physical_keys=N_KEYS),
+        Checkpoint.wrapper_spec(),
+        CheckpointOverlay.wrapper_spec(),
     ),
     kwargs={"rom_path": str(ROM_PATH)}
 )
-

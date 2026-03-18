@@ -3,13 +3,15 @@ from functools import partial
 from pathlib import Path
 from typing import Optional
 
-import gymnasium
+from gym_mkds.wrappers.window import VecEnvWindow
+import gymnasium as gym
 import numpy as np
 from gym_mkds.wrappers import GtkVecWindow, MoviePlaybackWrapper, SaveStateWrapper
 from gymnasium.wrappers import FrameStackObservation
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
+from desmume.emulator_mkds import MarioKart
 from src.config import *
 from src.scripts.util import general_parser, window_parser
 from src.utils import Suppress, collect_dsm
@@ -27,75 +29,44 @@ class WindowUpdateCallback(BaseCallback):
         return self.window.is_alive
 
 
-def create_env(id: int, m: Optional[Path]):
-    env = gymnasium.make("gym_mkds/MarioKartDS-human-v1")
-    func = lambda env: not env.get_wrapper_attr('emu').memory.race_ready
-    if m:
-        env = SaveStateWrapper(env, save_slot_id=id)
-        env = MoviePlaybackWrapper(env, path=str(m), func=func)
-    else:
-        env = SaveStateWrapper(env, load_slot_id=id)
-
-    env = FrameStackObservation(env, stack_size=SEQ_LEN)
+def create_env(m: Optional[Path]):
+    count = 0
+    def delay(env: gym.Env):
+        nonlocal count
+        emu: MarioKart = env.get_wrapper_attr('emu')
+        if emu.memory.race_ready:
+            count += 1
+        
+        return count < 800
+    
+    env = gym.make("gym_mkds/MarioKartDS-human-v1")
+    env = MoviePlaybackWrapper(env, path=str(m), func=delay)
+    env = FrameStackObservation(env, stack_size=SEQ_LEN, padding_type="zero")
     return env
-
-def loop_movie(env: GtkVecWindow):
-    obs, info = env.reset()
-    assert env.window is not None
-
-    try:
-        print("Starting environment loop. Press Ctrl+C in terminal to exit.")
-        while env.window.is_alive:
-            actions = [0] * env.num_envs
-            obs, reward, terminated, truncated, info = env.step(actions)
-
-            if not np.any(info["movie_playing"]):
-                env.window.on_destroy()
-
-    except KeyboardInterrupt:
-        print("Loop interrupted by user.")
-    finally:
-        env.window.close()
-
-def loop_train(env: GtkVecWindow, args):
-    obs, info = env.reset()
-    assert env.window is not None
-
-    # Apply Torch conversions if your SB3 setup requires it
-    # env = NumpyToTorch(env, device=args.device)
-
-    algo_class = ALGO_MAP[args.algo]
-    algo_kwargs = ALGO_KWARGS.get(args.algo, {})
-
-    model = algo_class("MultiInputPolicy", env, verbose=int(args.verbose), **algo_kwargs)
-    callback = WindowUpdateCallback(env.window)
-
-    try:
-        print("Starting RL training. Press Ctrl+C to exit.")
-        # total_timesteps should be passed via args
-        model.learn(total_timesteps=args.epochs, callback=callback)
-    except KeyboardInterrupt:
-        print("Training interrupted by user.")
-    finally:
-        env.window.destroy()
 
 def train_rl(args):
     movie_paths = set([])
     for s in args.movie_source:
         movie_paths |= set(collect_dsm(s, course_name=args.course))
 
+    algo_class = ALGO_MAP[args.algo]
+    algo_kwargs = ALGO_KWARGS.get(args.algo, {})
+    
+    vec_env = SubprocVecEnv([lambda m=m: create_env(m) for m in movie_paths])
+    window = VecEnvWindow(vec_env)
 
-    # use movie files to navigate menus
-    movie_paths = list(movie_paths)
-    save_state_ids = list(range(len(movie_paths)))
-    replay_menu_inputs = sub_process_func(loop_movie, create_env)
-    replay_menu_inputs(save_state_ids, movie_paths)
-
-    # begin training at savestate where race is starting
-    bound_train = partial(loop_train, args=args)
-    train_model = sub_process_func(bound_train, create_env, vec_class=SubprocVecEnv)
-    none_paths = [None] * len(movie_paths)
-    train_model(save_state_ids, none_paths)
+    model = algo_class("MultiInputPolicy", vec_env, verbose=int(args.verbose), **algo_kwargs)
+    callback = WindowUpdateCallback(window)
+    try:
+        print("Starting RL training. Press Ctrl+C to exit.")
+        # total_timesteps should be passed via args
+        if callback is not None:
+            model.learn(total_timesteps=args.epochs, callback=callback)
+    except KeyboardInterrupt:
+        print("Training interrupted by user.")
+    finally:
+        window.on_destroy()
+    
 
 
 train_rl_parser = ArgumentParser(add_help=False)
