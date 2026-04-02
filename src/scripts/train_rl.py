@@ -1,28 +1,65 @@
-import multiprocessing as mp
+from src.environments.boundary_wrapper import BoundaryAngle
 from argparse import ArgumentParser
-from functools import partial
 from pathlib import Path
 from typing import Optional
 
-import gymnasium
+from gym_mkds.wrappers.controller import ControllerRemap
+import gymnasium as gym
 import numpy as np
-from gym_mkds.wrappers import (
-    MoviePlaybackWrapper,
-    OverlayWrapper,
-    SaveStateWrapper,
-    VecEnvWindow,
-    compose_overlays,
-)
-from gymnasium.vector import AsyncVectorEnv
-from gymnasium.wrappers import FrameStackObservation
+from desmume.emulator_mkds import MarioKart
+from gym_mkds.wrappers import MoviePlaybackWrapper, RewardDisplayWrapper
+from gym_mkds.wrappers.window import VecEnvWindow
+from gymnasium.wrappers import FrameStackObservation, Autoreset
+from gymnasium.wrappers.utils import RunningMeanStd
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+
 
 from src.config import *
 from src.scripts.util import general_parser, window_parser
 from src.utils import Suppress, collect_dsm
-from src.utils.functional import sub_process_func
 from src.utils.recording.extract_ghost import COURSE_ABBREVIATIONS
+from src.environments import CheckpointReward
+
+
+class NormalizeDictObservation(gym.ObservationWrapper):
+    def __init__(self, env: gym.Env, key: str, epsilon: float = 1e-8):
+        super().__init__(env)
+        self.key = key
+        self.epsilon = epsilon
+        
+        # Get the original subspace for the target key
+        target_space = self.observation_space.spaces[self.key]
+        
+        # Initialize Gymnasium's internal running stats tracker
+        self.obs_rms = RunningMeanStd(shape=target_space.shape)
+        
+        # Update the bounds of the specific key to [-inf, inf]
+        new_spaces = dict(self.observation_space.spaces)
+        new_spaces[self.key] = gym.spaces.Box(
+            low=-np.inf, 
+            high=np.inf, 
+            shape=target_space.shape, 
+            dtype=np.float32
+        )
+        self.observation_space = gym.spaces.Dict(new_spaces)
+
+    def observation(self, observation):
+        obs_array = observation[self.key]
+        
+        # Update the running mean and variance
+        self.obs_rms.update(obs_array)
+        
+        # Normalize the array
+        normalized_array = (obs_array - self.obs_rms.mean) / np.sqrt(self.obs_rms.var + self.epsilon)
+        
+        # Return a shallow copy of the dict with the updated key
+        new_obs = observation.copy()
+        new_obs[self.key] = normalized_array
+        
+        return new_obs
+        
 
 
 class WindowUpdateCallback(BaseCallback):
@@ -35,84 +72,58 @@ class WindowUpdateCallback(BaseCallback):
         return self.window.is_alive
 
 
-def create_env(id: int, m: Optional[Path]):
-    env = gymnasium.make(
-        id="gym_mkds/MarioKartDS-v0",
-        rom_path=str(ROM_PATH),
-        ray_max_dist=RAY_MAX_DIST,
-        ray_count=RAY_COUNT,
-    )
+SPARSE_KEYMAP = {
+    0: 17,
+    1: 33,
+    2: 1
+}
 
-    func = lambda env: not env.get_wrapper_attr('emu').memory.race_ready
-    if m:
-        env = SaveStateWrapper(env, save_slot_id=id)
-        env = MoviePlaybackWrapper(env, path=str(m), func=func)
-    else:
-        env = SaveStateWrapper(env, load_slot_id=id)
+def create_env(m: Optional[Path]):
+    count = 0
+    def delay(env: gym.Env):
+        nonlocal count
+        emu: MarioKart = env.get_wrapper_attr('emu')
+        if emu.memory.race_ready:
+            count += 1
 
-    env = compose_overlays(env, *OVERLAYS)
-    env = FrameStackObservation(env, stack_size=SEQ_LEN)
+        return count < 800
+
+    env = gym.make("gym_mkds/MarioKartDS-human-v1")
+    env = NormalizeDictObservation(env, key="wall_distances")
+    env = Autoreset(env)
+    env = MoviePlaybackWrapper(env, path=str(m), func=delay)
+    
+    env = ControllerRemap(env, keymap=SPARSE_KEYMAP)
+    env = BoundaryAngle(env)
+    env = CheckpointReward(env)
+    # env = RewardDisplayWrapper(env)
+    # env = FrameStackObservation(env, stack_size=SEQ_LEN, padding_type="zero")
     return env
 
-def loop_movie(env: AsyncVectorEnv):
-    window = VecEnvWindow(env)
-
-    obs, info = env.reset()
-
-    try:
-        print("Starting environment loop. Press Ctrl+C in terminal to exit.")
-        while window.is_alive:
-            actions = [0] * env.num_envs
-            obs, reward, terminated, truncated, info = env.step(actions)
-            window.update()
-
-            if not np.any(info["movie_playing"]):
-                window.on_destroy()
-
-    except KeyboardInterrupt:
-        print("Loop interrupted by user.")
-    finally:
-        window.close()
-
-def loop_train(env: AsyncVectorEnv, args):
-    window = VecEnvWindow(env)
-
-    # Apply Torch conversions if your SB3 setup requires it
-    # env = NumpyToTorch(env, device=args.device)
-
-    algo_class = ALGO_MAP[args.algo]
-    algo_kwargs = ALGO_KWARGS.get(args.algo, {})
-
-    model = algo_class("MultiInputPolicy", env, verbose=int(args.verbose), **algo_kwargs)
-    callback = WindowUpdateCallback(window)
-
-    try:
-        print("Starting RL training. Press Ctrl+C to exit.")
-        # total_timesteps should be passed via args
-        model.learn(total_timesteps=args.epochs, callback=callback)
-    except KeyboardInterrupt:
-        print("Training interrupted by user.")
-    finally:
-        window.close()
 
 def train_rl(args):
     movie_paths = set([])
     for s in args.movie_source:
         movie_paths |= set(collect_dsm(s, course_name=args.course))
 
-    with Suppress():
-        # use movie files to navigate menus
-        movie_paths = list(movie_paths)
-        save_state_ids = list(range(len(movie_paths)))
-        replay_menu_inputs = sub_process_func(loop_movie, create_env)
-        replay_menu_inputs(save_state_ids, movie_paths)
+    algo_class: OnPolicyAlgorithm = ALGO_MAP[args.algo]
+    algo_kwargs = ALGO_KWARGS.get(args.algo, {})
 
-        # begin training at savestate where race is starting
-        print(mp.get_start_method(allow_none=True))
-        bound_train = partial(loop_train, args=args)
-        train_model = sub_process_func(bound_train, create_env, vec_class=SubprocVecEnv)
-        none_paths = [None] * len(movie_paths)
-        train_model(save_state_ids, none_paths)
+    vec_env = SubprocVecEnv([lambda m=m: create_env(m) for m in movie_paths])
+    window = VecEnvWindow(vec_env)
+
+    model = algo_class("MultiInputPolicy", vec_env, verbose=int(args.verbose), **algo_kwargs)
+    callback = WindowUpdateCallback(window)
+    try:
+        print("Starting RL training. Press Ctrl+C to exit.")
+        # total_timesteps should be passed via args
+        if callback is not None:
+            model.learn(total_timesteps=args.epochs, callback=callback)
+    except KeyboardInterrupt:
+        print("Training interrupted by user.")
+    finally:
+        window.on_destroy()
+
 
 
 train_rl_parser = ArgumentParser(add_help=False)

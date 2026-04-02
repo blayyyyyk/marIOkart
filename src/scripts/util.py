@@ -4,7 +4,7 @@ import torch
 
 # Window Options Parsing #
 window_parser = ArgumentParser(add_help=False)
-window_parser.add_argument("--scale", help="specify the scale of the gtk window", type=float)
+window_parser.add_argument("--scale", help="specify the scale of the gtk window", type=float, default=1.0)
 
 # General Options Parsing #
 general_parser = ArgumentParser(add_help=False)

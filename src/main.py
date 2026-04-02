@@ -8,26 +8,21 @@ from src.scripts.train_rl import train_rl_parser
 from src.scripts.util import general_parser, window_parser
 
 
-def main():
-    parser = ArgumentParser(
-        prog="main.py",
-        description="Main entry point for the Mario Kart DS ML visualization application.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("record", parents=[record_parser, general_parser, window_parser])
-    subparsers.add_parser("train", parents=[train_parser, general_parser])
-    subparsers.add_parser("train_rl", parents=[train_rl_parser, general_parser, window_parser])
-    subparsers.add_parser("eval", parents=[eval_parser, general_parser, window_parser])
-    subparsers.add_parser("process", parents=[process_parser, general_parser])
-    subparsers.add_parser("debug", parents=[debug_parser, general_parser, window_parser])
+parser = ArgumentParser(
+    prog="main.py",
+    description="Main entry point for the Mario Kart DS ML visualization application.",
+)
+subparsers = parser.add_subparsers(dest="command")
+subparsers.add_parser("record", parents=[record_parser, general_parser, window_parser])
+subparsers.add_parser("train", parents=[train_parser, general_parser])
+subparsers.add_parser("train_rl", parents=[train_rl_parser, general_parser, window_parser])
+subparsers.add_parser("eval", parents=[eval_parser, general_parser, window_parser])
+subparsers.add_parser("process", parents=[process_parser, general_parser])
+subparsers.add_parser("debug", parents=[debug_parser, general_parser, window_parser])
 
-    # parse arguments
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help() # print help if no/invalid mode specified
-
-
-if __name__ == "__main__":
-    main()
+# parse arguments
+args = parser.parse_args()
+if hasattr(args, "func"):
+    args.func(args)
+else:
+    parser.print_help() # print help if no/invalid mode specified

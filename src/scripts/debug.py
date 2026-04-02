@@ -1,23 +1,29 @@
+from src.environments.reward_wrapper import RewardInfo, CumulativeRewardInfo
+from src.environments.boundary_wrapper import BoundaryAngle
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
 from typing import Optional
-from desmume.emulator_mkds import MarioKart
-from src.scripts.util import general_parser, window_parser
+
 import gymnasium
+from gymnasium.wrappers import Autoreset
 import numpy as np
 from gym_mkds.wrappers import (
-    HumanInputWrapper,
+    GtkWindow,
+    GtkVecWindow,
+    HumanInput,
     MoviePlaybackWrapper,
-    OverlayWrapper,
-    EnvWindow,
-    SaveStateWrapper,
-    VecEnvWindow,
-    compose_overlays,
+    RewardDisplayWrapper,
+    SaveStateWrapper
 )
 from gymnasium.vector import AsyncVectorEnv
+from desmume.emulator_mkds import MarioKart
+from src.environments import CheckpointReward
+
+import src.environments
 from src.config import *
 from src.models import registry
+from src.scripts.util import general_parser, window_parser
 from src.utils import collect_dsm
 
 
@@ -32,66 +38,53 @@ def debug(args):
     else:
         raise ValueError(f"Invalid debug mode provided: {args.mode}")
 
-    def create_env(m: Optional[Path]):
-        # combine several overlays (optional)
-        composed_overlays = partial(compose_overlays, funcs=OVERLAYS)
-
-        # build environment
-        env = gymnasium.make(
-            id="gym_mkds/MarioKartDS-v0",
-            rom_path=str(ROM_PATH),
-            ray_max_dist=RAY_MAX_DIST,
-            ray_count=RAY_COUNT,
-        )
-        
-        # enable savestate
+    def create_env(movie: Optional[Path]):
+        env = gymnasium.make("gym_mkds/MarioKartDS-human-v1")
         if args.savestate is not None:
             env = SaveStateWrapper(env, save_slot_id=args.savestate)
-        
-        # enable movie playback
-        if m:
-            env = MoviePlaybackWrapper(
-                env, path=str(m)
-            )
 
-        # enable visual overlay
-        env = compose_overlays(env, *OVERLAYS)
+        if movie is not None:
+            env = MoviePlaybackWrapper(env, path=str(movie))
 
-        # enable dataset recording
         if args.mode == "play":
-            env = HumanInputWrapper(env)
+            env = HumanInput(env)
 
         return env
 
-    if len(movie_paths) > 1:
+    if args.mode == "movie":
         env = AsyncVectorEnv(
             [(lambda m=m: create_env(m)) for m in movie_paths]
         )
-        window = VecEnvWindow(env, args.scale)
-    else:
+        env = GtkVecWindow(env, args.scale)
+    elif args.mode == "play":
         env = create_env(None)
-        window = EnvWindow(env, args.scale)
-
+        env = CheckpointReward(env)
+        env = Autoreset(env)
+        env = TrackBoundary(env)
+        env = BoundaryAngle(env)
+        #env = RewardInfo(env)
+        #env = RewardDisplayWrapper(env)
+        #env = CumulativeRewardInfo(env)
+        env = GtkWindow(env, args.scale)
+    else:
+        raise ValueError(f"Invalid debug mode provided: {args.mode}")
+    
     obs, info = env.reset()
+    assert env.window is not None
 
     try:
         print("Starting environment loop. Press Ctrl+C in terminal to exit.")
-        while window.is_alive:
+        while env.window.is_alive:
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
-            window.update()
-            if not isinstance(env, AsyncVectorEnv):
-                emu: MarioKart = env.get_wrapper_attr('emu')
-                if emu.memory.race_ready:
-                    emu.memory.driver.position.add_(500.0)
+            
             if not args.mode == "movie": continue
             if not np.any(info["movie_playing"]):
-                window.on_destroy()
+                env.close()
 
     except KeyboardInterrupt:
         print("Loop interrupted by user.")
     finally:
-        window.close()
         env.close()
 
 # Debug Mode Parsing #
@@ -107,6 +100,7 @@ debug_parser.add_argument(
     nargs="+",
     type=Path
 )
+debug_parser.
 debug_parser.add_argument("--savestate", "-s", help="Load and save a temporary save state. Press 'o' for saving a state to slot id _ and press 'l' to load a state from slot id _.]", type=int)
 debug_parser.set_defaults(func=debug)
 

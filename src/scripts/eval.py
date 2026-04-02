@@ -1,23 +1,20 @@
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
-from gymnasium.wrappers import FrameStackObservation
 
 import gymnasium
 import numpy as np
-from gym_mkds.wrappers import (
-    MoviePlaybackWrapper,
-    OverlayWrapper,
-    VecEnvWindow,
-    compose_overlays,
-)
-from gymnasium.wrappers.vector import NumpyToTorch
-from gymnasium.vector import AsyncVectorEnv
-from src.utils import collect_dsm
-from src.models import registry
-from src.config import *
 import torch
+from gym_mkds.wrappers import MoviePlaybackWrapper, GtkVecWindow
+from gymnasium.vector import AsyncVectorEnv
+from gymnasium.wrappers import FrameStackObservation
+from gymnasium.wrappers.vector import NumpyToTorch
+
+from src.config import *
+from src.models import registry
 from src.scripts.util import general_parser, window_parser
+from src.utils import collect_dsm
+
 
 def eval_supervised(args):
     movie_paths = set([])
@@ -34,14 +31,8 @@ def eval_supervised(args):
 
             return count < 500
 
-        env = gymnasium.make(
-            id="gym_mkds/MarioKartDS-v0",
-            rom_path=str(ROM_PATH),
-            ray_max_dist=RAY_MAX_DIST,
-            ray_count=RAY_COUNT,
-        )
-        env = MoviePlaybackWrapper(env, path=str(m))
-        env = compose_overlays(env, *OVERLAYS)
+        env = gymnasium.make("gym_mkds/MarioKartDS-human-v1")
+        env = MoviePlaybackWrapper(env, path=str(m), func=stop_func)
         env = FrameStackObservation(env, stack_size=SEQ_LEN)
         return env
 
@@ -56,12 +47,13 @@ def eval_supervised(args):
     # Initialize the parallel environments
     env = AsyncVectorEnv([(lambda m=m: create_env(m)) for m in movie_paths])
     env = NumpyToTorch(env, device=args.device)
-    window = VecEnvWindow(env)  # attach vectorized GTK window
+    env = GtkVecWindow(env)  # attach vectorized GTK window
     obs, _ = env.reset()
+    assert env.window is not None
 
     try:
         print("Starting environment loop. Press Ctrl+C in terminal to exit.")
-        while window.is_alive:
+        while env.window.is_alive:
             with torch.no_grad():
                 tensor_obs = {}
                 for key, val in obs.items():
@@ -84,13 +76,12 @@ def eval_supervised(args):
 
             # Step the environments forward with the generated actions
             obs, reward, terminated, truncated, info = env.step(actions)
-            window.update()
 
     except KeyboardInterrupt:
         print("Loop interrupted by user.")
     finally:
         env.close()
-        
+
 # Evaluation Mode Parsing #
 eval_parser = ArgumentParser(add_help=False)
 eval_parser.add_argument(
