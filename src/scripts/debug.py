@@ -1,18 +1,24 @@
+from src.environments.reward_wrapper import RewardInfo, CumulativeRewardInfo
+from src.environments.boundary_wrapper import BoundaryAngle
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
 from typing import Optional
 
 import gymnasium
+from gymnasium.wrappers import Autoreset
 import numpy as np
 from gym_mkds.wrappers import (
     GtkWindow,
     GtkVecWindow,
     HumanInput,
     MoviePlaybackWrapper,
+    RewardDisplayWrapper,
     SaveStateWrapper
 )
 from gymnasium.vector import AsyncVectorEnv
+from desmume.emulator_mkds import MarioKart
+from src.environments import CheckpointReward
 
 import src.environments
 from src.config import *
@@ -52,6 +58,13 @@ def debug(args):
         env = GtkVecWindow(env, args.scale)
     elif args.mode == "play":
         env = create_env(None)
+        env = CheckpointReward(env)
+        env = Autoreset(env)
+        env = TrackBoundary(env)
+        env = BoundaryAngle(env)
+        #env = RewardInfo(env)
+        #env = RewardDisplayWrapper(env)
+        #env = CumulativeRewardInfo(env)
         env = GtkWindow(env, args.scale)
     else:
         raise ValueError(f"Invalid debug mode provided: {args.mode}")
@@ -64,6 +77,7 @@ def debug(args):
         while env.window.is_alive:
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
+            
             if not args.mode == "movie": continue
             if not np.any(info["movie_playing"]):
                 env.close()
@@ -86,6 +100,7 @@ debug_parser.add_argument(
     nargs="+",
     type=Path
 )
+debug_parser.
 debug_parser.add_argument("--savestate", "-s", help="Load and save a temporary save state. Press 'o' for saving a state to slot id _ and press 'l' to load a state from slot id _.]", type=int)
 debug_parser.set_defaults(func=debug)
 
