@@ -1,11 +1,11 @@
 from argparse import ArgumentParser
-from src.scripts.record import record_parser
-from src.scripts.debug import debug_parser
-from src.scripts.train import train_parser
-from src.scripts.eval import eval_parser
-from src.scripts.process import process_parser
-from src.scripts.train_rl import train_rl_parser
-from src.scripts.util import general_parser, window_parser
+from .scripts.record import record_parser
+from .scripts.debug import debug_parser
+from .scripts.train import train_parser
+from .scripts.eval import eval_parser
+from .scripts.process import process_parser
+from .scripts.train_rl import train_rl_parser
+from .scripts.util import general_parser, window_parser
 
 
 parser = ArgumentParser(

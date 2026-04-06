@@ -1,5 +1,5 @@
 from torch.optim.optimizer import Optimizer
-from src.models.model_impl import Model
+from ..models.model_impl import Model
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch

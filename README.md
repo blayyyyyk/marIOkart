@@ -27,10 +27,12 @@ git clone https://github.com/blayyyyyk/marIOkart.git
 
 2. Install the dependencies
 > [!TIP]
-> A virtual environment is recommended for installation
+> [uv]("https://docs.astral.sh/uv/getting-started/installation/") package manager is highly recommended for it's ease of use. But you can still install dependencies with `pip install -r requirements.txt`
 
 ```
-pip install -r requirements.txt
+cd marIOkart
+uv sync
+source .venv/bin/activate
 ```
 
 ## Usage Guide

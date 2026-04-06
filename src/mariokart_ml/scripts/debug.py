@@ -1,30 +1,29 @@
-from src.environments.reward_wrapper import RewardInfo, CumulativeRewardInfo
-from src.environments.boundary_wrapper import BoundaryAngle
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
 from typing import Optional
 
 import gymnasium
-from gymnasium.wrappers import Autoreset
 import numpy as np
+from desmume.emulator_mkds import MarioKart
 from gym_mkds.wrappers import (
-    GtkWindow,
     GtkVecWindow,
+    GtkWindow,
     HumanInput,
     MoviePlaybackWrapper,
     RewardDisplayWrapper,
-    SaveStateWrapper
+    SaveStateWrapper,
 )
 from gymnasium.vector import AsyncVectorEnv
-from desmume.emulator_mkds import MarioKart
-from src.environments import CheckpointReward
+from gymnasium.wrappers import Autoreset
 
-import src.environments
-from src.config import *
-from src.models import registry
-from src.scripts.util import general_parser, window_parser
-from src.utils import collect_dsm
+from ..config import *
+from ..environments import CheckpointReward
+from ..environments.boundary_wrapper import BoundaryAngle
+from ..environments.reward_wrapper import CumulativeRewardInfo, RewardInfo
+from ..models import registry
+from ..utils import collect_dsm
+from .util import general_parser, window_parser
 
 
 def debug(args):
@@ -38,8 +37,8 @@ def debug(args):
     else:
         raise ValueError(f"Invalid debug mode provided: {args.mode}")
 
-    def create_env(movie: Optional[Path]):
-        env = gymnasium.make("gym_mkds/MarioKartDS-human-v1")
+    def create_env(env_name: str, movie: Optional[Path]):
+        env = gymnasium.make(env_name)
         if args.savestate is not None:
             env = SaveStateWrapper(env, save_slot_id=args.savestate)
 
@@ -53,22 +52,22 @@ def debug(args):
 
     if args.mode == "movie":
         env = AsyncVectorEnv(
-            [(lambda m=m: create_env(m)) for m in movie_paths]
+            [(lambda e=args.env_name, m=m: create_env(e, m)) for m in movie_paths]
         )
         env = GtkVecWindow(env, args.scale)
     elif args.mode == "play":
-        env = create_env(None)
-        env = CheckpointReward(env)
-        env = Autoreset(env)
-        env = TrackBoundary(env)
-        env = BoundaryAngle(env)
-        #env = RewardInfo(env)
-        #env = RewardDisplayWrapper(env)
-        #env = CumulativeRewardInfo(env)
+        env = create_env(args.env_name, None)
+        # env = CheckpointReward(env)
+        # env = Autoreset(env)
+        # env = TrackBoundary(env)
+        # env = BoundaryAngle(env)
+        # env = RewardInfo(env)
+        # env = RewardDisplayWrapper(env)
+        # env = CumulativeRewardInfo(env)
         env = GtkWindow(env, args.scale)
     else:
         raise ValueError(f"Invalid debug mode provided: {args.mode}")
-    
+
     obs, info = env.reset()
     assert env.window is not None
 
@@ -77,7 +76,7 @@ def debug(args):
         while env.window.is_alive:
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
-            
+
             if not args.mode == "movie": continue
             if not np.any(info["movie_playing"]):
                 env.close()
@@ -100,9 +99,8 @@ debug_parser.add_argument(
     nargs="+",
     type=Path
 )
-debug_parser.
 debug_parser.add_argument("--savestate", "-s", help="Load and save a temporary save state. Press 'o' for saving a state to slot id _ and press 'l' to load a state from slot id _.]", type=int)
-debug_parser.set_defaults(func=debug)
+debug_parser.set_defaults(func=debug, env="gym_mkds/MarioKartDS-human-v1")
 
 def main():
     # parse arguments

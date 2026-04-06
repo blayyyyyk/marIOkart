@@ -13,11 +13,11 @@ from gym_mkds.wrappers import (
 )
 from gymnasium.vector import AsyncVectorEnv
 
-from src.config import *
-from src.environments import DatasetWrapper
-from src.scripts.util import general_parser, window_parser
-from src.utils import Suppress
-from src.utils.functional import sub_process_func
+from ..config import *
+from ..environments import DatasetWrapper
+from .util import general_parser, window_parser
+from ..utils import Suppress
+from ..utils.functional import sub_process_func
 
 
 def create_env(m: Path, o: Path):

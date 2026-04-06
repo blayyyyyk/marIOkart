@@ -1,8 +1,10 @@
-from argparse import ArgumentParser
-from src.utils import sav_to_dsm
-from src.config import *
 import shutil
-from src.scripts.util import general_parser, window_parser
+from argparse import ArgumentParser
+
+from ..config import *
+from ..utils import sav_to_dsm
+from .util import general_parser, window_parser
+
 
 def process(args):
     # convert any sav files
@@ -20,7 +22,7 @@ def process(args):
         print(
             f"movie files successfully processed and copied to {PROCESSED_BAD_DATASET_PATH}"
         )
-        
+
 # Process Mode Parsing #
 process_parser = ArgumentParser(add_help=False)
 process_parser.add_argument(

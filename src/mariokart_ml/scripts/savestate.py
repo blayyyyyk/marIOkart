@@ -1,20 +1,17 @@
+import gymnasium as gym
+import numpy as np
+from desmume.emulator_mkds import MarioKart
 from gym_mkds.wrappers import GtkWindow, HumanInput
 from gym_mkds.wrappers.window import EnvWindow
 from gymnasium.wrappers import FrameStackObservation, ReshapeObservation
 
-from desmume.emulator_mkds import MarioKart
-import gymnasium as gym
-import src.environments
-import numpy as np
-
-
+from ..environments import *
 
 padding_config = {
     'wall_distances': (20,),        # Always pad to shape (10, 3)
     'checkpoint_angle': (1,)  # Always pad to shape (5, 2)
 }
 
-# 3. Apply the padder FIRST
 
 
 def main():
@@ -24,7 +21,7 @@ def main():
     env = GtkWindow(env, scale=2)
     obs, info = env.reset()
     print(obs)
-    
+
     saved = False
     assert env.window is not None
     while env.window.is_alive:
@@ -34,6 +31,6 @@ def main():
         if emu.memory.race_ready and not saved:
             emu.savestate.save_file(f"Course_{emu.memory.stag_data.courseId}.dst")
             saved = True
-    
+
 if __name__ == "__main__":
     main()

@@ -1,11 +1,23 @@
-from src.environments.advanced_observations import AdvancedObservations
+from gym_mkds.wrappers import (
+    CheckpointOverlay,
+    ControllerAction,
+    ControllerDisplay,
+    ControllerObservation,
+    ProgressReward,
+    RaceStats,
+    RewardDisplayWrapper,
+    SweepingRay,
+    SweepingRayOverlay,
+    TrackBoundary,
+)
 from gymnasium.envs.registration import WrapperSpec, register
-from gym_mkds.wrappers import CheckpointOverlay, SweepingRay, SweepingRayOverlay, ProgressReward, RaceStats, ControllerObservation, ControllerAction, ControllerDisplay, TrackBoundary, RewardDisplayWrapper
-from src.environments.dataset_wrapper import DatasetWrapper
-from src.environments.reward_wrapper import CheckpointReward
-from src.environments.checkpoint_wrapper import Checkpoint
-from src.environments.boundary_wrapper import BoundaryAngle
-from src.config import *
+
+from ..config import *
+from ..environments.advanced_observations import AdvancedObservations
+from ..environments.boundary_wrapper import BoundaryAngle
+from ..environments.checkpoint_wrapper import Checkpoint
+from ..environments.dataset_wrapper import DatasetWrapper
+from ..environments.reward_wrapper import CheckpointReward
 
 register(
     id="gym_mkds/MarioKartDS-human-v1",
@@ -25,7 +37,7 @@ register(
 )
 
 register(
-    id="gym_mkds/MarioKartDS-advanced-v1",
+    id="gym_mkds/MarioKartDS-train-v1",
     entry_point="gym_mkds.envs:MarioKartCoreEnv",
     additional_wrappers=(
         ControllerAction.wrapper_spec(n_keys=N_KEYS),

@@ -1,16 +1,24 @@
 [project]
-name = "src"
+name = "mariokart_ml"
 version = "0.1.6"
 description = "project files"
+dependencies = [
+    "array-api-compat>=1.14.0",
+    "gym-mkds>=0.2.2",
+    "gymnasium",
+    "matplotlib>=3.10.8",
+    "py-desmume-mkds",
+    "pycairo>=1.29.0",
+    "pygobject==3.50.0",
+    "pynput>=1.8.1",
+    "stable-baselines3>=2.8.0",
+    "torch>=2.11.0",
+    "trimesh>=4.11.3",
+]
 
 [build-system]
 build-backend = "flit_core.buildapi"
 requires = ["flit_core >=3.2,<4"]
 
-[tool.setuptools]
-# Keep the existing src mapping, but also search root
-package-dir = {"" = "src"}
-
 [tool.setuptools.packages.find]
 where = ["src", "."] # search in both src/ and root
-include = ["core*", "utils*", "gym*", "models*", "train*", "mkdslib*"]

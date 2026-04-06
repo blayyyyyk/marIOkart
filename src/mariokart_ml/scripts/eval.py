@@ -5,15 +5,15 @@ from pathlib import Path
 import gymnasium
 import numpy as np
 import torch
-from gym_mkds.wrappers import MoviePlaybackWrapper, GtkVecWindow
+from gym_mkds.wrappers import GtkVecWindow, MoviePlaybackWrapper
 from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import FrameStackObservation
 from gymnasium.wrappers.vector import NumpyToTorch
 
-from src.config import *
-from src.models import registry
-from src.scripts.util import general_parser, window_parser
-from src.utils import collect_dsm
+from ..config import *
+from ..models import registry
+from ..utils import collect_dsm
+from .util import general_parser, window_parser
 
 
 def eval_supervised(args):

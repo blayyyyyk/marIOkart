@@ -4,7 +4,7 @@ import torch
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.models.model_impl import Model
+from .model_impl import Model
 
 class MarioKartCNN(Model):
     def __init__(self, num_features, embed_size, embed_count, out_channels=64, 

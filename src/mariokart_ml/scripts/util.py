@@ -1,6 +1,18 @@
 from argparse import ArgumentParser
-from src.config import *
+
+import gymnasium as gym
 import torch
+
+from ..config import *
+
+
+available_envs = []
+
+for env_id, spec in gym.envs.registry.items():
+    if not isinstance(spec.entry_point, str): continue
+    if spec.entry_point.startswith('gymnasium.envs'): continue
+    available_envs.append(f" {env_id}")
+
 
 # Window Options Parsing #
 window_parser = ArgumentParser(add_help=False)
@@ -19,4 +31,8 @@ general_parser.add_argument(
     "-v",
     help="Enable verbose console logging for debugging",
     action="store_true",
+)
+general_parser.add_argument(
+    "--env",
+    choices=available_envs
 )

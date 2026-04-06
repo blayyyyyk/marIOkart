@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from src.models.model_impl import Model
+from .model_impl import Model
 import torch.nn.functional as F
 
 # lstm model for mariokart ds

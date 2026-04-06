@@ -2,12 +2,12 @@ from argparse import ArgumentParser
 
 import torch.optim as optim
 
-from src.config import *
-from src.models import registry
-from src.models.registry import CheckpointState
-from src.train import prepare_data, train_loop
-from src.utils import collect_dat
-from src.scripts.util import general_parser, window_parser
+from ..config import *
+from ..models import registry
+from ..models.registry import CheckpointState
+from ..train import prepare_data, train_loop
+from ..utils import collect_dat
+from .util import general_parser, window_parser
 
 
 

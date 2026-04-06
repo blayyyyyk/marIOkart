@@ -1,7 +1,7 @@
 import torch.nn as nn
-from src.models.conv import MarioKartCNN
-from src.models.lstm import MarioKartLSTM
-from src.models.model_impl import Model
+from .conv import MarioKartCNN
+from .lstm import MarioKartLSTM
+from .model_impl import Model
 from typing import Callable, Concatenate, ParamSpec, TypeVar, TypedDict, Optional
 import torch
 from pathlib import Path

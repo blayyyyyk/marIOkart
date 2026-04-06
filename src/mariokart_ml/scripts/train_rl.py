@@ -1,26 +1,25 @@
-from src.environments.boundary_wrapper import BoundaryAngle
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Optional
 
-from gym_mkds.wrappers.controller import ControllerRemap
 import gymnasium as gym
 import numpy as np
 from desmume.emulator_mkds import MarioKart
 from gym_mkds.wrappers import MoviePlaybackWrapper, RewardDisplayWrapper
+from gym_mkds.wrappers.controller import ControllerRemap
 from gym_mkds.wrappers.window import VecEnvWindow
-from gymnasium.wrappers import FrameStackObservation, Autoreset
+from gymnasium.wrappers import Autoreset, FrameStackObservation
 from gymnasium.wrappers.utils import RunningMeanStd
 from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
-
-from src.config import *
-from src.scripts.util import general_parser, window_parser
-from src.utils import Suppress, collect_dsm
-from src.utils.recording.extract_ghost import COURSE_ABBREVIATIONS
-from src.environments import CheckpointReward
+from ..config import *
+from ..environments import CheckpointReward
+from ..environments.boundary_wrapper import BoundaryAngle
+from ..utils import Suppress, collect_dsm
+from ..utils.recording.extract_ghost import COURSE_ABBREVIATIONS
+from .util import general_parser, window_parser
 
 
 class NormalizeDictObservation(gym.ObservationWrapper):
@@ -28,38 +27,38 @@ class NormalizeDictObservation(gym.ObservationWrapper):
         super().__init__(env)
         self.key = key
         self.epsilon = epsilon
-        
+
         # Get the original subspace for the target key
         target_space = self.observation_space.spaces[self.key]
-        
+
         # Initialize Gymnasium's internal running stats tracker
         self.obs_rms = RunningMeanStd(shape=target_space.shape)
-        
+
         # Update the bounds of the specific key to [-inf, inf]
         new_spaces = dict(self.observation_space.spaces)
         new_spaces[self.key] = gym.spaces.Box(
-            low=-np.inf, 
-            high=np.inf, 
-            shape=target_space.shape, 
+            low=-np.inf,
+            high=np.inf,
+            shape=target_space.shape,
             dtype=np.float32
         )
         self.observation_space = gym.spaces.Dict(new_spaces)
 
     def observation(self, observation):
         obs_array = observation[self.key]
-        
+
         # Update the running mean and variance
         self.obs_rms.update(obs_array)
-        
+
         # Normalize the array
         normalized_array = (obs_array - self.obs_rms.mean) / np.sqrt(self.obs_rms.var + self.epsilon)
-        
+
         # Return a shallow copy of the dict with the updated key
         new_obs = observation.copy()
         new_obs[self.key] = normalized_array
-        
+
         return new_obs
-        
+
 
 
 class WindowUpdateCallback(BaseCallback):
@@ -78,7 +77,7 @@ SPARSE_KEYMAP = {
     2: 1
 }
 
-def create_env(m: Optional[Path]):
+def create_env(r: str, m: Optional[Path]):
     count = 0
     def delay(env: gym.Env):
         nonlocal count
@@ -88,11 +87,11 @@ def create_env(m: Optional[Path]):
 
         return count < 800
 
-    env = gym.make("gym_mkds/MarioKartDS-human-v1")
+    env = gym.make(r)
     env = NormalizeDictObservation(env, key="wall_distances")
     env = Autoreset(env)
     env = MoviePlaybackWrapper(env, path=str(m), func=delay)
-    
+
     env = ControllerRemap(env, keymap=SPARSE_KEYMAP)
     env = BoundaryAngle(env)
     env = CheckpointReward(env)
@@ -109,7 +108,7 @@ def train_rl(args):
     algo_class: OnPolicyAlgorithm = ALGO_MAP[args.algo]
     algo_kwargs = ALGO_KWARGS.get(args.algo, {})
 
-    vec_env = SubprocVecEnv([lambda m=m: create_env(m) for m in movie_paths])
+    vec_env = SubprocVecEnv([lambda r=args.env_name, m=m: create_env(r, m) for m in movie_paths])
     window = VecEnvWindow(vec_env)
 
     model = algo_class("MultiInputPolicy", vec_env, verbose=int(args.verbose), **algo_kwargs)
@@ -131,6 +130,7 @@ train_rl_parser.add_argument("movie_source", nargs="+", type=Path, help="movie f
 train_rl_parser.add_argument("algo", choices=ALGO_MAP.keys(), help="training algorithm")
 train_rl_parser.add_argument("--epochs", type=int, help="number of training epochs", default=EPOCHS)
 train_rl_parser.add_argument("--course", choices=list(map(str.lower, COURSE_ABBREVIATIONS)), type=str)
+train_rl_parser.add_argument("--env-name", type=str, default="gym_mkds/MarioKartDS-human-v1")
 train_rl_parser.set_defaults(func=train_rl)
 
 def main():
