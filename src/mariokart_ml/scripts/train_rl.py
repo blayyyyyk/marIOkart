@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Optional
 
+import torch
 import gymnasium as gym
 import numpy as np
 from desmume.emulator_mkds import MarioKart
@@ -19,7 +20,6 @@ from ..environments import CheckpointReward
 from ..environments.boundary_wrapper import BoundaryAngle
 from ..utils import Suppress, collect_dsm
 from ..utils.recording.extract_ghost import COURSE_ABBREVIATIONS
-from .util import general_parser, window_parser
 
 
 class NormalizeDictObservation(gym.ObservationWrapper):
@@ -100,49 +100,51 @@ def create_env(r: str, m: Optional[Path]):
     return env
 
 
-def train_rl(args):
+def train_rl(
+    movie_source: list[Path],
+    algo: str,
+    env_name: str,
+    epochs: int,
+    device: torch.device,
+    scale: int,
+    course: Optional[str] = None,
+    verbose: bool = False
+):
     movie_paths = set([])
-    for s in args.movie_source:
-        movie_paths |= set(collect_dsm(s, course_name=args.course))
+    for s in movie_source:
+        movie_paths |= set(collect_dsm(s, course_name=course))
 
-    algo_class: OnPolicyAlgorithm = ALGO_MAP[args.algo]
-    algo_kwargs = ALGO_KWARGS.get(args.algo, {})
+    algo_class = ALGO_MAP[algo]
+    algo_kwargs = ALGO_KWARGS.get(algo, {})
 
-    vec_env = SubprocVecEnv([lambda r=args.env_name, m=m: create_env(r, m) for m in movie_paths])
-    window = VecEnvWindow(vec_env)
+    vec_env = SubprocVecEnv([lambda r=env_name, m=m: create_env(r, m) for m in movie_paths])
+    window = VecEnvWindow(vec_env, scale)
 
-    model = algo_class("MultiInputPolicy", vec_env, verbose=int(args.verbose), **algo_kwargs)
+    model = algo_class("MultiInputPolicy", vec_env, verbose=int(verbose), **algo_kwargs)
     callback = WindowUpdateCallback(window)
     try:
         print("Starting RL training. Press Ctrl+C to exit.")
         # total_timesteps should be passed via args
         if callback is not None:
-            model.learn(total_timesteps=args.epochs, callback=callback)
+            model.learn(total_timesteps=epochs, callback=callback)
     except KeyboardInterrupt:
         print("Training interrupted by user.")
     finally:
         window.on_destroy()
 
 
-
 train_rl_parser = ArgumentParser(add_help=False)
-train_rl_parser.add_argument("movie_source", nargs="+", type=Path, help="movie files to perform menu naviagtion before training")
-train_rl_parser.add_argument("algo", choices=ALGO_MAP.keys(), help="training algorithm")
+train_rl_parser.add_argument("course", choices=list(map(str.lower, COURSE_ABBREVIATIONS)), type=str)
+train_rl_parser.add_argument("--movie_source", nargs="+", type=Path, help="movie files to perform menu naviagtion before training", default=[PROCESSED_GOOD_DATASET_PATH])
+train_rl_parser.add_argument("--algo", choices=ALGO_MAP.keys(), help="training algorithm", default="ppo")
 train_rl_parser.add_argument("--epochs", type=int, help="number of training epochs", default=EPOCHS)
-train_rl_parser.add_argument("--course", choices=list(map(str.lower, COURSE_ABBREVIATIONS)), type=str)
-train_rl_parser.add_argument("--env-name", type=str, default="gym_mkds/MarioKartDS-human-v1")
-train_rl_parser.set_defaults(func=train_rl)
+train_rl_parser.set_defaults(func=train_rl, env_name="gym_mkds/MarioKartDS-human-v1")
 
-def main():
-    # parse arguments
-    import os
-    prog = os.path.basename(__file__)
-    parser = ArgumentParser(prog=prog, parents=[train_rl_parser, general_parser, window_parser])
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help() # print help if no/invalid mode specified
 
 if __name__ == "__main__":
-    main()
+    import os
+
+    from .util import general_parser, script_main, window_parser
+
+    prog = os.path.basename(__file__)
+    parser = script_main(prog, [train_rl_parser, general_parser, window_parser])

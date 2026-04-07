@@ -6,6 +6,17 @@ import torch
 from ..config import *
 
 
+def script_main(prog, parents: list[ArgumentParser]):
+    # parse arguments
+    parser = ArgumentParser(prog=prog, parents=parents)
+    args = parser.parse_args()
+    if hasattr(args, "func"):
+        args_list = vars(args)
+        args_list.pop('func')
+        args.func(**args_list)
+    else:
+        parser.print_help() # print help if no/invalid mode specified
+
 available_envs = []
 
 for env_id, spec in gym.envs.registry.items():
@@ -33,6 +44,7 @@ general_parser.add_argument(
     action="store_true",
 )
 general_parser.add_argument(
-    "--env",
-    choices=available_envs
+    "--env-name",
+    choices=available_envs,
+    default="gym_mkds/MarioKartDS-human-v1"
 )

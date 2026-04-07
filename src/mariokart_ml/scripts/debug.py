@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import gymnasium
 import numpy as np
@@ -23,40 +23,45 @@ from ..environments.boundary_wrapper import BoundaryAngle
 from ..environments.reward_wrapper import CumulativeRewardInfo, RewardInfo
 from ..models import registry
 from ..utils import collect_dsm
-from .util import general_parser, window_parser
 
 
-def debug(args):
-    if args.mode == "movie":
-        assert args.movie_source or len(args.movie_source), "movie source is required for movie-debugging-mode"
+def debug(
+    mode: Literal["movie", "play"],
+    movie_source: list[Path],
+    savestate: Optional[int],
+    scale: int,
+    env_name: str,
+):
+    if mode == "movie":
+        assert movie_source or len(movie_source), "movie source is required for movie-debugging-mode"
         movie_paths = set([])
-        for s in args.movie_source:
+        for s in movie_source:
             movie_paths |= set(collect_dsm(s))
-    elif args.mode == "play":
+    elif mode == "play":
         movie_paths = [None]
     else:
         raise ValueError(f"Invalid debug mode provided: {args.mode}")
 
-    def create_env(env_name: str, movie: Optional[Path]):
+    def create_env(movie: Optional[Path]):
         env = gymnasium.make(env_name)
-        if args.savestate is not None:
-            env = SaveStateWrapper(env, save_slot_id=args.savestate)
+        if savestate is not None:
+            env = SaveStateWrapper(env, save_slot_id=savestate)
 
         if movie is not None:
             env = MoviePlaybackWrapper(env, path=str(movie))
 
-        if args.mode == "play":
+        if mode == "play":
             env = HumanInput(env)
 
         return env
 
-    if args.mode == "movie":
+    if mode == "movie":
         env = AsyncVectorEnv(
-            [(lambda e=args.env_name, m=m: create_env(e, m)) for m in movie_paths]
+            [(lambda m=m: create_env(m)) for m in movie_paths]
         )
-        env = GtkVecWindow(env, args.scale)
-    elif args.mode == "play":
-        env = create_env(args.env_name, None)
+        env = GtkVecWindow(env, scale)
+    elif mode == "play":
+        env = create_env(None)
         # env = CheckpointReward(env)
         # env = Autoreset(env)
         # env = TrackBoundary(env)
@@ -64,9 +69,9 @@ def debug(args):
         # env = RewardInfo(env)
         # env = RewardDisplayWrapper(env)
         # env = CumulativeRewardInfo(env)
-        env = GtkWindow(env, args.scale)
+        env = GtkWindow(env, scale)
     else:
-        raise ValueError(f"Invalid debug mode provided: {args.mode}")
+        raise ValueError(f"Invalid debug mode provided: {mode}")
 
     obs, info = env.reset()
     assert env.window is not None
@@ -77,7 +82,7 @@ def debug(args):
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
 
-            if not args.mode == "movie": continue
+            if not mode == "movie": continue
             if not np.any(info["movie_playing"]):
                 env.close()
 
@@ -102,16 +107,11 @@ debug_parser.add_argument(
 debug_parser.add_argument("--savestate", "-s", help="Load and save a temporary save state. Press 'o' for saving a state to slot id _ and press 'l' to load a state from slot id _.]", type=int)
 debug_parser.set_defaults(func=debug, env="gym_mkds/MarioKartDS-human-v1")
 
-def main():
-    # parse arguments
-    import os
-    prog = os.path.basename(__file__)
-    parser = ArgumentParser(prog=prog, parents=[debug_parser, window_parser, general_parser])
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help() # print help if no/invalid mode specified
 
 if __name__ == "__main__":
-    main()
+    import os
+
+    from .util import general_parser, script_main, window_parser
+
+    prog = os.path.basename(__file__)
+    script_main(prog, [debug_parser, window_parser, general_parser])

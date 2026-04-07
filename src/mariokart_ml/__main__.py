@@ -23,6 +23,9 @@ subparsers.add_parser("debug", parents=[debug_parser, general_parser, window_par
 # parse arguments
 args = parser.parse_args()
 if hasattr(args, "func"):
-    args.func(args)
+    args_list = vars(args)
+    func = args_list.pop("func")
+    args_list.pop("command")
+    func(**args_list)
 else:
     parser.print_help() # print help if no/invalid mode specified

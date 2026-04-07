@@ -15,7 +15,6 @@ from gymnasium.vector import AsyncVectorEnv
 
 from ..config import *
 from ..environments import DatasetWrapper
-from .util import general_parser, window_parser
 from ..utils import Suppress
 from ..utils.functional import sub_process_func
 
@@ -45,26 +44,31 @@ def loop(env: GtkVecWindow):
     finally:
         env.window.destroy()
 
-def record(args):
+def record(
+    source: list[Path],
+    dest: Path,
+    num_proc: int,
+    verbose: bool = False
+):
     # load paths of backup dsm files
     movie_paths = []
-    for s in args.source:
+    for s in source:
         movie_paths = [*movie_paths, *s.rglob("*.dsm")]
 
     movie_count = len(movie_paths)
-    out_paths = batched([args.dest] * movie_count, args.num_proc)
-    movie_paths = batched(movie_paths, args.num_proc)
+    out_paths = batched([dest] * movie_count, num_proc)
+    movie_paths = batched(movie_paths, num_proc)
 
     # record in batches
-    stride = args.num_proc or movie_count
+    stride = num_proc or movie_count
     _record = sub_process_func(loop, create_env)
     for mp, op in zip(movie_paths, out_paths):
         _record(list(mp), list(op))
-        if args.verbose:
+        if verbose:
             for m in mp:
                 print(f"file {m} recorded")
 
-    if args.verbose:
+    if verbose:
         print(f"{movie_count} movies saved to ")
 
 
@@ -92,16 +96,9 @@ record_parser.add_argument(
 )
 record_parser.set_defaults(func=record)
 
-def main():
-    # parse arguments
-    import os
-    prog = os.path.basename(__file__)
-    parser = ArgumentParser(prog=prog, parents=[record_parser, window_parser, general_parser])
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help() # print help if no/invalid mode specified
-
 if __name__ == "__main__":
-    main()
+    import os
+
+    from .util import general_parser, script_main, window_parser
+    prog = os.path.basename(__file__)
+    script_main(prog, [record_parser, window_parser, general_parser])

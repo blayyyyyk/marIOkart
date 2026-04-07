@@ -7,9 +7,6 @@ from ..models import registry
 from ..models.registry import CheckpointState
 from ..train import prepare_data, train_loop
 from ..utils import collect_dat
-from .util import general_parser, window_parser
-
-
 
 
 def train_supervised(args):
@@ -111,16 +108,10 @@ hyper_params_group.add_argument(
 )
 train_parser.set_defaults(func=train_supervised)
 
-def main():
-    # parse arguments
-    import os
-    prog = os.path.basename(__file__)
-    parser = ArgumentParser(prog=prog, parents=[train_parser, general_parser])
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help() # print help if no/invalid mode specified
-
 if __name__ == "__main__":
-    main()
+    import os
+
+    from .util import general_parser, script_main, window_parser
+
+    prog = os.path.basename(__file__)
+    parser = script_main(prog=prog, parents=[train_parser, general_parser])

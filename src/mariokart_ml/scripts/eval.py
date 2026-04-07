@@ -13,12 +13,15 @@ from gymnasium.wrappers.vector import NumpyToTorch
 from ..config import *
 from ..models import registry
 from ..utils import collect_dsm
-from .util import general_parser, window_parser
 
 
-def eval_supervised(args):
+def eval_supervised(
+    movie_source: list[Path],
+    model_name: str,
+    device: torch.device
+):
     movie_paths = set([])
-    for s in args.movie_source:
+    for s in movie_source:
         movie_paths |= set(collect_dsm(s))
 
     def create_env(m: Path):
@@ -37,16 +40,16 @@ def eval_supervised(args):
         return env
 
     # Load a registered model architecture
-    folder_name = CHECKPOINTS_PATH / args.model_name
+    folder_name = CHECKPOINTS_PATH / model_name
     model, mdata = registry.load(
-        args.model_name,
+        model_name,
         folder_name,
-        device=args.device
+        device=device
     )
 
     # Initialize the parallel environments
     env = AsyncVectorEnv([(lambda m=m: create_env(m)) for m in movie_paths])
-    env = NumpyToTorch(env, device=args.device)
+    env = NumpyToTorch(env, device=device)
     env = GtkVecWindow(env)  # attach vectorized GTK window
     obs, _ = env.reset()
     assert env.window is not None
@@ -57,15 +60,15 @@ def eval_supervised(args):
             with torch.no_grad():
                 tensor_obs = {}
                 for key, val in obs.items():
-                    t = val.to(args.device)
+                    t = val.to(device)
 
                     if mdata and key in mdata and "mean" in mdata[key]:
                         t = t.to(torch.float32)
                         mean = torch.tensor(
-                            mdata[key]["mean"], device=args.device, dtype=torch.float32
+                            mdata[key]["mean"], device=device, dtype=torch.float32
                         )
                         std = torch.tensor(
-                            mdata[key]["std"], device=args.device, dtype=torch.float32
+                            mdata[key]["std"], device=device, dtype=torch.float32
                         )
                         t = (t - mean) / (std + 1e-8)
 
@@ -98,16 +101,10 @@ eval_parser.add_argument(
 )
 eval_parser.set_defaults(func=eval)
 
-def main():
-    # parse arguments
-    import os
-    prog = os.path.basename(__file__)
-    parser = ArgumentParser(prog=prog, parents=[eval_parser, window_parser, general_parser])
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help() # print help if no/invalid mode specified
-
 if __name__ == "__main__":
-    main()
+    import os
+
+    from .util import general_parser, script_main, window_parser
+
+    prog = os.path.basename(__file__)
+    script_main(prog, [eval_parser, window_parser, general_parser])

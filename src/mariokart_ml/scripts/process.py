@@ -6,9 +6,9 @@ from ..utils import sav_to_dsm
 from .util import general_parser, window_parser
 
 
-def process(args):
+def process(source: Path | list[Path], verbose: bool = False):
     # convert any sav files
-    sav_to_dsm(args.source, PROCESSED_BAD_DATASET_PATH, args.verbose)
+    sav_to_dsm(source, PROCESSED_BAD_DATASET_PATH, args.verbose)
 
     # backup any dsm files
     shutil.copytree(
@@ -18,7 +18,7 @@ def process(args):
         dirs_exist_ok=True,
     )
 
-    if args.verbose:
+    if verbose:
         print(
             f"movie files successfully processed and copied to {PROCESSED_BAD_DATASET_PATH}"
         )
@@ -33,16 +33,10 @@ process_parser.add_argument(
 )
 process_parser.set_defaults(func=process)
 
-def main():
-    # parse arguments
-    import os
-    prog = os.path.basename(__file__)
-    parser = ArgumentParser(prog=prog, parents=[process_parser, general_parser])
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help() # print help if no/invalid mode specified
-
 if __name__ == "__main__":
-    main()
+    import os
+    
+    from .util import general_parser, script_main, window_parser
+    
+    prog = os.path.basename(__file__)
+    parser = script_main(prog=prog, parents=[process_parser, general_parser])
