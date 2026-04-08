@@ -24,13 +24,13 @@ from ..environments.reward_wrapper import CumulativeRewardInfo, RewardInfo
 from ..models import registry
 from ..utils import collect_dsm
 
-
 def debug(
     mode: Literal["movie", "play"],
     movie_source: list[Path],
     savestate: Optional[int],
     scale: int,
     env_name: str,
+    **kwargs
 ):
     if mode == "movie":
         assert movie_source or len(movie_source), "movie source is required for movie-debugging-mode"
