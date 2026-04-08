@@ -22,7 +22,7 @@ available_envs = []
 for env_id, spec in gym.envs.registry.items():
     if not isinstance(spec.entry_point, str): continue
     if spec.entry_point.startswith('gymnasium.envs'): continue
-    available_envs.append(f" {env_id}")
+    available_envs.append(f"{env_id}")
 
 
 # Window Options Parsing #
