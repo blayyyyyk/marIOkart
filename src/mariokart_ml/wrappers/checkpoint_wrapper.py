@@ -1,16 +1,16 @@
+import math
+from typing import Callable, Concatenate, Literal, ParamSpec
+
 import gymnasium as gym
 import numpy as np
 from desmume.emulator_mkds import MarioKart
-from typing import ParamSpec, Concatenate, Callable, Literal
-import math
-
 
 P = ParamSpec('P')
 def race_ready(func: Callable[Concatenate[MarioKart, P], float]):
     def wrapper(emu: MarioKart, *args: P.args, **kwargs: P.kwargs) -> float:
         if not emu.memory.race_ready:
             return 0.0
-            
+
         return func(emu, *args, **kwargs)
     return wrapper
 
@@ -24,12 +24,12 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
 def checkpoint_angle_unsigned(emu: MarioKart, direction_mode: Literal["movement"] | Literal["direction"] = "movement") -> float:
     """
     Computes the direction the kart is facing toward the two endpoints of the next checkpoint
-    
+
     Args:
         emu: MarioKart emulator instance
         direction_mode: "movement" or "direction" (default: "movement")
     Returns:
-        the minimum cosine similarity of the kart's two displacement vectors, the left and right endpoints of the next checkpoint 
+        the minimum cosine similarity of the kart's two displacement vectors, the left and right endpoints of the next checkpoint
     """
     cp_position = emu.memory.checkpoint_info()["current_checkpoint_pos"]
     kart_position = emu.memory.driver_position
@@ -42,14 +42,14 @@ def checkpoint_angle_unsigned(emu: MarioKart, direction_mode: Literal["movement"
         raise ValueError(f"Invalid direction_mode: {direction_mode}")
 
     angle = cosine_similarity(kart_direction, displacement)
-    
+
     return np.min(angle).item()
-    
+
 @race_ready
 def checkpoint_angle_signed(emu: MarioKart, direction_mode: Literal["movement"] | Literal["direction"] = "movement", eps: float = 1e-7) -> float:
     """
     Returns the angle the kart is facing/moving towards from the next checkpoint boundary.
-    
+
     Args:
         emu: MarioKart emulator instance
         direction_mode: "movement" or "direction" (default: "movement")
@@ -58,29 +58,29 @@ def checkpoint_angle_signed(emu: MarioKart, direction_mode: Literal["movement"] 
     """
     kart_position = emu.memory.driver_position
     checkpoint_pts = emu.memory.checkpoint_info()["next_checkpoint_pos"] # (2, 3)
-    
+
     if direction_mode == "movement":
         kart_mtx = emu.memory.driver_matrix2 # (3, 3)
     elif direction_mode == "direction":
         kart_mtx = emu.memory.driver_matrix # (3, 3)
     else:
         raise ValueError(f"Invalid direction_mode: {direction_mode}")
-    
+
     p0, p1 = checkpoint_pts[0], checkpoint_pts[1]
     d0 = kart_position - p1
     d1 = p0 - p1
     t = np.dot(d0, d1) / np.linalg.norm(d1)**2 # projection factor
     p_intersect = p1 + t * d1
-    
+
     displacement = p_intersect - kart_position
-    
+
     dist = np.linalg.norm(displacement, keepdims=True, axis=-1)
     if dist < eps:
         return 0.0
-    
+
     displacement /= dist
     checkpoint_pts_local = kart_mtx @ displacement.T # project to local space (3, 2)
-    
+
     angle = np.arctan2(checkpoint_pts_local[0], checkpoint_pts_local[2]) # (2,)
     angle = np.min(angle).item()
     return angle / math.pi
@@ -96,7 +96,7 @@ class Checkpoint(gym.ObservationWrapper):
             })
         else:
             self.observation_space = gym.spaces.Box(-1, 1, (1,), dtype=np.float32)
-        
+
 
     def observation(self, observation: dict):
         emu: MarioKart = self.get_wrapper_attr('emu')
@@ -105,7 +105,7 @@ class Checkpoint(gym.ObservationWrapper):
                 **observation,
                 "checkpoint_angle": np.array([0.0], dtype=np.float32)
             }
-            
+
         checkpoint_angle = checkpoint_angle_signed(emu, direction_mode="movement")
         return {
             **observation,

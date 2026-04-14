@@ -1,8 +1,9 @@
-import gymnasium as gym
-from gymnasium.wrappers.utils import RunningMeanStd
-import os
-import numpy as np
 import json
+import os
+
+import gymnasium as gym
+import numpy as np
+from gymnasium.wrappers.utils import RunningMeanStd
 
 
 class DatasetWrapper(gym.Wrapper):
@@ -55,7 +56,7 @@ class DatasetWrapper(gym.Wrapper):
         if "race_started" in info:
             if not info["race_started"]:
                 skip_write = True
-            
+
         # Skip if movie was finished
         if "movie_playing" in info:
             if not info["movie_playing"]:

@@ -11,13 +11,15 @@ from gym_mkds.wrappers import (
     TrackBoundary,
 )
 from gymnasium.envs.registration import WrapperSpec, register
+from gymnasium.wrappers import Autoreset
 
 from ..config import *
-from ..environments.advanced_observations import AdvancedObservations
-from ..environments.boundary_wrapper import BoundaryAngle
-from ..environments.checkpoint_wrapper import Checkpoint
-from ..environments.dataset_wrapper import DatasetWrapper
-from ..environments.reward_wrapper import CheckpointReward
+from ..wrappers.boundary_wrapper import BoundaryAngle
+from ..wrappers.checkpoint_wrapper import Checkpoint
+from ..wrappers.dataset_wrapper import DatasetWrapper
+from ..wrappers.state_sampling import SaveStateSampling
+from ..wrappers.time_trial_reward import TimeTrialReward
+from .env import TimeTrialEnv, TimeTrialObservations
 
 register(
     id="gym_mkds/MarioKartDS-human-v1",
@@ -37,11 +39,34 @@ register(
 )
 
 register(
-    id="gym_mkds/MarioKartDS-train-v1",
-    entry_point="gym_mkds.envs:MarioKartCoreEnv",
+    id="mariokart_ml/TimeTrial-human-v1",
+    entry_point="mariokart_ml.environments:TimeTrialEnv",
     additional_wrappers=(
         ControllerAction.wrapper_spec(n_keys=N_KEYS),
-        AdvancedObservations.wrapper_spec(),
+    ),
+    kwargs={"rom_path": str(ROM_PATH)}
+)
+
+register(
+    id="mariokart_ml/TimeTrial-human-v2",
+    entry_point="mariokart_ml.environments:TimeTrialEnv",
+    additional_wrappers=(
+        ControllerAction.wrapper_spec(n_keys=N_KEYS),
+        TimeTrialObservations.wrapper_spec(),
+        TimeTrialReward.wrapper_spec(),
+    ),
+    kwargs={"rom_path": str(ROM_PATH)}
+)
+
+register(
+    id="mariokart_ml/TimeTrial-v1",
+    entry_point="mariokart_ml.environments:TimeTrialEnv",
+    additional_wrappers=(
+        ControllerAction.wrapper_spec(n_keys=N_KEYS),
+        TimeTrialObservations.wrapper_spec(),
+        TimeTrialReward.wrapper_spec(),
+        SaveStateSampling.wrapper_spec(n_samples=20),
+        Autoreset.wrapper_spec()
     ),
     kwargs={"rom_path": str(ROM_PATH)}
 )

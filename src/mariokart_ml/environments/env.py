@@ -1,22 +1,39 @@
 import ctypes
 import math
-from typing import cast
+import random
+from functools import cached_property
+from typing import Any, Literal, TypedDict, cast
 
 import gymnasium as gym
 import numpy as np
-from desmume.emulator_mkds import MarioKart, get_fx
+from desmume.emulator import SCREEN_HEIGHT, SCREEN_PIXEL_SIZE, SCREEN_WIDTH
+from desmume.emulator_mkds import MarioKart, get_fx, set_fx
 from desmume.mkds.fx import FX32_SCALE_FACTOR
 from gym_mkds.wrappers.sweeping_ray import get_standing_triangle_id
+from gymnasium.utils.env_checker import check_reset_return_type
+from gymnasium.wrappers.utils import RunningMeanStd
 
-from ..environments.boundary_wrapper import project_2d
-from ..environments.checkpoint_wrapper import checkpoint_angle_signed
+from ..utils.collision import compute_collision_dists
+from ..wrappers.boundary_wrapper import project_2d
+from ..wrappers.checkpoint_wrapper import checkpoint_angle_signed
 
 ROTATION_CONST = 1 / (1 << 15)
 
-class AdvancedObservations(gym.ObservationWrapper):
-    def __init__(self, env: gym.Env[gym.spaces.Dict, gym.spaces.Discrete]):
-        super().__init__(env)
-        self.observation_space = gym.spaces.Dict({
+GAME_SAVE_SLOT = 0 # will bring the kart back to the start of the game menu
+RACE_SAVE_SLOT = 1 # will bring the kart back to the start of the race
+FRAME_SAVE_SLOT = 2 # will bring the kart back to a checkpoint in the race
+
+
+class ResetOptions(TypedDict):
+    reset_type: Literal['respawn', 'savestate', 'menu', 'custom'] | int
+
+class TimeTrialEnv(gym.Env[dict[str, Any], int]):
+    emu: MarioKart
+
+    def __init__(self, rom_path: str):
+        super().__init__()
+
+        self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
             "pos_x": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
             "pos_y": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
             "pos_z": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
@@ -27,7 +44,142 @@ class AdvancedObservations(gym.ObservationWrapper):
             "surf_norm_x": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
             "surf_norm_y": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
             "surf_norm_z": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
+        })
 
+        self.action_space = gym.spaces.Discrete(2048, dtype=np.uint32)
+
+        self.metadata = {
+            "render_modes": ["rgb_array"],
+            "render_fps": 30
+        }
+
+        self.render_mode = "rgb_array"
+
+        # stores emulator instance
+        self.emu = MarioKart()
+        self.emu.open(rom_path)
+        self.emu.volume_set(0)
+
+        # clear out any leftover save slots, replace with main menu
+        self.emu.savestate.save(RACE_SAVE_SLOT)
+        self.emu.savestate.save(FRAME_SAVE_SLOT)
+
+        # stores position of kart at time when race starts
+        self.race_started = False
+        self._starting_position = np.array([2000, -2000, 2000], dtype=np.float32)
+
+    def _get_obs(self) -> dict:
+        assert isinstance(self.observation_space, gym.spaces.Dict)
+        if not self.race_started:
+            return {k: 0.0 for k in self.observation_space.keys()}
+
+        observation = {}
+
+        # kart position
+        position = self.emu.memory.driver_position
+        position_norm = position / np.linalg.norm(position)
+        observation["pos_x"] = position_norm[0]
+        observation["pos_y"] = position_norm[1]
+        observation["pos_z"] = position_norm[2]
+
+        # kart velocity
+        velocity = self.emu.memory.driver_velocity
+        velocity_norm = velocity / np.linalg.norm(velocity)
+        observation["vel_x"] = velocity_norm[0]
+        observation["vel_y"] = velocity_norm[1]
+        observation["vel_z"] = velocity_norm[2]
+        observation["vertical_velocity"] = float(self.emu.memory.driver.velocityY.y)
+
+        # kart up vector / surface normal vector
+        surface_normal = get_fx(self.emu.memory.driver.upDir, shape=(3,))
+        observation["surf_norm_x"] = surface_normal[0]
+        observation["surf_norm_y"] = surface_normal[1]
+        observation["surf_norm_z"] = surface_normal[2]
+
+        return observation
+
+    def _get_info(self):
+        if self.race_started:
+            progress = float(self.emu.memory.race_status.driverStatus[0].raceProgress)
+        else:
+            progress = 0.0
+
+        return {
+            "race_started": self._race_active(),
+            "race_progress": progress
+        }
+
+    def _race_active(self):
+        _f = 0
+        try:
+            _f = self.emu.memory.race_state.frameCounter - self.emu.memory.race_state.frameCounter2
+        except:
+            return False
+
+        return _f == 1
+
+    def step(self, action):
+        self.emu.cycle()
+        if self._race_active() and not self.race_started:
+            self.race_started = True
+            self.emu.savestate.save(RACE_SAVE_SLOT)
+            self.emu.savestate.save(FRAME_SAVE_SLOT)
+        elif not self._race_active() and self.race_started:
+            self.race_started = False
+
+        obs = self._get_obs()
+        info = self._get_info()
+        terminated = info['race_progress'] >= 1.0
+        truncated = False
+        reward = 0.0
+
+        return obs, reward, terminated, truncated, info
+
+    def render(self):
+        mem = self.emu.display_buffer_as_rgbx()
+        top = mem[: SCREEN_PIXEL_SIZE * 4]
+        bottom = mem[SCREEN_PIXEL_SIZE * 4 :]
+
+        arr_t = np.ndarray(shape=(SCREEN_HEIGHT, SCREEN_WIDTH, 4), dtype=np.uint8, buffer=top)
+        arr_b = np.ndarray(shape=(SCREEN_HEIGHT, SCREEN_WIDTH, 4), dtype=np.uint8, buffer=bottom)
+
+        arr = np.concatenate([arr_t, arr_b], axis=0)
+
+        return arr[:, :, :3]
+
+
+    def reset(self, *, seed=None, options={ "reset_type": 'savestate' }):
+        """Gymnasium requires a reset method to restart the environment."""
+        super().reset(seed=seed)
+
+        obs = self._get_obs()
+        info = self._get_info()
+
+        reset_type = options.get("reset_type", 'savestate')
+
+        if self._race_active() and reset_type == 'respawn':
+            set_fx(self.emu.memory.driver.position, (3,), self._starting_position)
+        elif self._race_active() and reset_type == 'savestate':
+            self.emu.savestate.load(FRAME_SAVE_SLOT)
+        elif reset_type == 'menu':
+            pass
+            #self.emu.savestate.load(GAME_SAVE_SLOT)
+        elif isinstance(reset_type, int):
+            self.emu.savestate.load(reset_type)
+
+        return obs, info
+
+    def close(self):
+        self.emu.close()
+        super().close()
+
+
+class TimeTrialObservations(gym.ObservationWrapper):
+    def __init__(self, env: gym.Env[gym.spaces.Dict, gym.spaces.Discrete]):
+        super().__init__(env)
+
+        assert isinstance(env.observation_space, gym.spaces.Dict)
+        self.observation_space = gym.spaces.Dict({
             "speed_frac": gym.spaces.Box(low=0,    high=1.3, shape=(1,), dtype=np.float32),
             "speed_max_frac": gym.spaces.Box(low=0,  high=1,  shape=(1,), dtype=np.float32),
             "speed_rescaled": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
@@ -48,6 +200,7 @@ class AdvancedObservations(gym.ObservationWrapper):
             "drift_right_count": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
             "drift_boost_active": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
             "drift_timeout": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
+
             "is_collision": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
             "centerline_dist": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
             "surf_friction": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
@@ -58,7 +211,7 @@ class AdvancedObservations(gym.ObservationWrapper):
             # "horizon_mid":      gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
             # "horizon_long":     gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
             # "obsppm" :             gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-        })
+        } | env.observation_space.spaces)
 
     def _centerline_dist(self):
         emu: MarioKart = cast(MarioKart, self.get_wrapper_attr('emu'))
@@ -76,32 +229,6 @@ class AdvancedObservations(gym.ObservationWrapper):
         centerline_dist = np.linalg.norm(centerline_intersect - kart_position)
         return centerline_dist
 
-    def _get_basic_obs(self, emu: MarioKart):
-        observation = {}
-
-        # kart position
-        position = emu.memory.driver_position
-        position_norm = position / np.linalg.norm(position)
-        observation["pos_x"] = position_norm[0]
-        observation["pos_y"] = position_norm[1]
-        observation["pos_z"] = position_norm[2]
-
-        # kart velocity
-        velocity = emu.memory.driver_velocity
-        velocity_norm = velocity / np.linalg.norm(velocity)
-        observation["vel_x"] = velocity_norm[0]
-        observation["vel_y"] = velocity_norm[1]
-        observation["vel_z"] = velocity_norm[2]
-        observation["vertical_velocity"] = float(emu.memory.driver.velocityY.y)
-
-        # kart up vector / surface normal vector
-        surface_normal = get_fx(emu.memory.driver.upDir, shape=(3,))
-        observation["surf_norm_x"] = surface_normal[0]
-        observation["surf_norm_y"] = surface_normal[1]
-        observation["surf_norm_z"] = surface_normal[2]
-
-        return observation
-
     def _get_speed_obs(self, emu: MarioKart):
         observation = {}
 
@@ -115,7 +242,7 @@ class AdvancedObservations(gym.ObservationWrapper):
         # special speed
         observation["speed_offroad"] = float(emu.memory.driver.speedMultiplier)
         observation["speed_effect"] = float(emu.memory.driver.field394) * FX32_SCALE_FACTOR # this is a discovered field!
-        observation["speed_midair"] = float(emu.memory.driver.field3F8) * FX32_SCALE_FACTOR # this is a discovered field!
+        observation["speed_midair"] = float(emu.memory.driver.field3F8) * FX32_SCALE_FACTOR # this is a discovered field! # was: air_speed
 
         return observation
 
@@ -126,18 +253,18 @@ class AdvancedObservations(gym.ObservationWrapper):
         observation["angle_drift"] = emu.memory.driver.driftRotY * ROTATION_CONST
         observation["angle_pitch"] = emu.memory.driver.xRot * ROTATION_CONST
         observation["angle_checkpoint"] = checkpoint_angle_signed(emu, direction_mode="movement")
-        observation["angle_inertia"] = np.arctan2(emu.memory.driver_direction, emu.memory.driver_velocity)[0].item() / math.pi
+        observation["angle_inertia"] = np.arctan2(emu.memory.driver_direction, emu.memory.driver_velocity)[0].item() / math.pi # was: heading_rate
 
         return observation
 
     def _get_drift_obs(self, emu: MarioKart):
         observation = {}
 
-        observation["drift_left_count"] = emu.memory.driver.driftLeftCount
-        observation["drift_right_count"] = emu.memory.driver.driftRightCount
-        observation["drift_timeout"] = emu.memory.driver.driftLeftRightTimeout
+        observation["drift_left_count"] = emu.memory.driver.driftLeftCount # was: mt_left
+        observation["drift_right_count"] = emu.memory.driver.driftRightCount # was: mt_right
+        observation["drift_timeout"] = emu.memory.driver.driftLeftRightTimeout # was: mttime
         observation["drift_direction"] = float(emu.memory.driver.leftRightDir)
-        observation["drift_boost_active"] = 1.0 if emu.memory.driver.driftBoostCounter > 0 else -1.0
+        observation["drift_boost_active"] = 1.0 if emu.memory.driver.driftBoostCounter > 0 else -1.0 # was: slip_angle
         observation["drift_progress"] = (observation["drift_left_count"] + observation["drift_right_count"]) / 4
 
         return observation
@@ -168,7 +295,7 @@ class AdvancedObservations(gym.ObservationWrapper):
             assert isinstance(self.observation_space, gym.spaces.Dict), "wrong observation space type"
             return { k: 0.0 for k in self.observation_space.keys() }
 
-        observation |= self._get_basic_obs(emu)
+        observation |= self._get_speed_obs(emu)
         observation |= self._get_angle_obs(emu)
         observation |= self._get_drift_obs(emu)
         observation |= self._get_track_obs(emu)

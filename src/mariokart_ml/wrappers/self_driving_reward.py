@@ -3,10 +3,10 @@ import numpy as np
 from desmume.emulator_mkds import MarioKart
 from gym_mkds.wrappers.sweeping_ray import math
 
-from ..environments.checkpoint_wrapper import checkpoint_angle_signed
+from .checkpoint_wrapper import checkpoint_angle_signed
 
 
-class CheckpointReward(gym.RewardWrapper):
+class SelfDrivingReward(gym.RewardWrapper):
     def __init__(self, env: gym.Env):
         super().__init__(env)
         self.prev_angle = 0.0

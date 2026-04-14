@@ -507,13 +507,13 @@ import torch
 def generate_plane_vectors(
     n_rays: int,
     sweep_angle_deg: float,
-    rotation_matrix: torch.Tensor,
-    origin: torch.Tensor,
-    plane_indices: tuple[int, int] = (2, 0) # Default: Forward (Z) to Right (X)
+    rotation_matrix: np.ndarray,
+    origin: np.ndarray,
+    plane_indices: tuple[int, int] = (2, 0),  # Default: Forward (Z) to Right (X)
 ):
     """
     Generates a fan of rays using a rotation matrix to define the orientation.
-    
+
     Args:
         n_rays: Number of rays to generate.
         sweep_angle_deg: Total field of view (e.g., 120 means +/- 60 deg).
@@ -525,60 +525,59 @@ def generate_plane_vectors(
         plane_indices: Tuple (center_idx, side_idx) defining the sweep plane.
                        - (2, 0) = Horizontal Sweep (Forward -> Right)
                        - (2, 1) = Vertical Sweep (Forward -> Up)
-        
+
     Returns:
         origins: (N, 3) or (B, N, 3)
         directions: (N, 3) or (B, N, 3) Normalized
     """
     # 1. Handle Batching
     # If input is unbatched (3,3), unsqueeze to (1,3,3) for uniform logic
-    is_batched = rotation_matrix.dim() == 3
+    is_batched = rotation_matrix.ndim == 3
     if not is_batched:
-        rotation_matrix = rotation_matrix.unsqueeze(0)
-        origin = origin.unsqueeze(0)
-        
+        rotation_matrix = rotation_matrix[None, ...]
+        origin = origin[None, ...]
+
     B = rotation_matrix.shape[0]
-    device = rotation_matrix.device
-    
+
     # 2. Extract Basis Vectors from Matrix Columns
     # R[:, :, i] grabs the i-th column (the i-th basis vector)
     center_idx, side_idx = plane_indices
-    
+
     # Shape: (B, 3)
     vec_center = rotation_matrix[:, :, center_idx]
-    vec_side   = rotation_matrix[:, :, side_idx]
-    
+    vec_side = rotation_matrix[:, :, side_idx]
+
     # 3. Generate Angles
     half_sweep = sweep_angle_deg / 2.0
-    angles = torch.linspace(-half_sweep, half_sweep, n_rays, device=device)
-    rads = torch.deg2rad(angles)
-    
+    angles = np.linspace(-half_sweep, half_sweep, n_rays)
+    rads = np.deg2rad(angles)
+
     # 4. Reshape for Broadcasting
     # We want: (B, 1, 3) * (1, N, 1) -> (B, N, 3)
-    
+
     # Basis vectors: (B, 1, 3)
-    vec_center = vec_center.unsqueeze(1)
-    vec_side   = vec_side.unsqueeze(1)
-    
+    vec_center = vec_center[:, None, ...]
+    vec_side = vec_side[:, None, ...]
+
     # Trig values: (1, N, 1)
-    cos_t = torch.cos(rads).view(1, n_rays, 1)
-    sin_t = torch.sin(rads).view(1, n_rays, 1)
-    
+    cos_t = np.cos(rads).reshape(1, n_rays, 1)
+    sin_t = np.sin(rads).reshape(1, n_rays, 1)
+
     # 5. Linear Combination (The Sweep)
     # v = Center * cos(t) + Side * sin(t)
     directions = (vec_center * cos_t) + (vec_side * sin_t)
-    
+
     # Normalize (just in case floating point drift occurred)
-    directions = directions / (torch.norm(directions, dim=-1, keepdim=True) + 1e-8)
-    
+    directions = directions / (np.linalg.norm(directions, axis=-1, keepdims=True) + 1e-8)
+
     # 6. Expand Origins
     # Origin (B, 3) -> (B, N, 3)
-    origins = origin.unsqueeze(1).expand(-1, n_rays, -1)
-    
+    origins = origin[:, None, ...].repeat(n_rays, axis=1)
+
     # 7. Remove batch dim if input was single
     if not is_batched:
         return origins.squeeze(0), directions.squeeze(0)
-        
+
     return origins, directions
     
 def ray_triangle_intersection(
@@ -640,3 +639,99 @@ def ray_triangle_intersection(
 
     return torch.where(is_hit, result, nan_tensor)
     
+
+def project_to_plane(points: np.ndarray, normal: np.ndarray, plane_point: Optional[np.ndarray] = None):
+    """
+    Projects an (N, 3) array of points onto a plane.
+
+    Args:
+        points: np.ndarray of shape (N, 3).
+        normal: np.ndarray of shape (3,) representing the plane's normal vector.
+        plane_point: np.ndarray of shape (3,) for a point on the plane. Defaults to origin.
+
+    Returns:
+        projected_3d: (N, 3) array of the points flattened onto the plane.
+        local_2d: (N, 2) array of the points in the plane's local coordinate system.
+    """
+    if plane_point is None:
+        plane_point = np.zeros(3)
+
+    # normalize
+    n_hat = normal / np.linalg.norm(normal)
+    v = points - plane_point # compute delta
+    dists = np.dot(v, n_hat)
+    projected_3d = points - (dists[:, np.newaxis] * n_hat)
+    axis_idx = np.argmin(np.abs(n_hat))
+    arbitrary_vec = np.zeros(3)
+    arbitrary_vec[axis_idx] = 1.0
+
+    # create orthoganol basis
+    u_vec = np.cross(n_hat, arbitrary_vec)
+    u_vec /= np.linalg.norm(u_vec)
+    v_vec = np.cross(n_hat, u_vec) # this is assumed orthoganol...
+    
+    # project onto plane, uv coords
+    vectors_on_plane = projected_3d - plane_point
+    u_coords = np.dot(vectors_on_plane, u_vec)
+    v_coords = np.dot(vectors_on_plane, v_vec)
+    local_2d = np.column_stack((u_coords, v_coords))
+    return local_2d
+    
+    
+def raycast_2d(segments: np.ndarray, ray_origins: np.ndarray, ray_dirs: np.ndarray) -> np.ndarray:
+    """
+    Casts N rays against M line segments and returns the minimum t distance for each ray.
+
+    Args:
+        segments: (M, 2, 2) array of line segments [Endpoint_A, Endpoint_B].
+        ray_origins: (N, 2) or (2,) array of ray start points.
+        ray_dirs: (N, 2) array of ray direction vectors.
+
+    Returns:
+        min_t: (N,) array of distances to the closest segment. Misses are marked as np.inf.
+    """
+    # split segment endpoints
+    A = segments[:, 0, :] # (M, 2)
+    B = segments[:, 1, :]
+    S = B - A
+
+    # conform ray shapes
+    ray_dirs = np.atleast_2d(ray_dirs)
+    ray_origins = np.atleast_2d(ray_origins)
+    if len(ray_origins) == 1 and len(ray_dirs) > 1:
+        ray_origins = np.broadcast_to(ray_origins, ray_dirs.shape)
+
+    P = ray_origins
+    R = ray_dirs
+    P_exp = P[:, np.newaxis, :] # (N, 1, 2)
+    R_exp = R[:, np.newaxis, :] # (N, 1, 2)
+    A_exp = A[np.newaxis, :, :] # (1, M, 2)
+    S_exp = S[np.newaxis, :, :] # (1, M, 2)
+
+    delta = A_exp - P_exp # (N, M, 2)
+    def cross_2d(v, w):
+        return v[..., 0] * w[..., 1] - v[..., 1] * w[..., 0]
+
+    den = cross_2d(R_exp, S_exp)     # (N, M)
+    num_t = cross_2d(delta, S_exp)   # (N, M)
+    num_u = cross_2d(delta, R_exp)   # (N, M)
+
+    # solve for t and u (we only need t tho)
+    old_settings = np.seterr(divide='ignore', invalid='ignore') # ignore stupid error
+    t = num_t / den
+    u = num_u / den
+    np.seterr(**old_settings)
+
+    # intersection rules
+    epsilon = 1e-8
+    valid_hits = (np.abs(den) > epsilon) & (t >= 0) & (u >= 0) & (u <= 1)
+
+    # invalid hit mask
+    t_valid = np.where(valid_hits, t, np.inf)
+
+    # return minimum distance ray
+    if t_valid.size == 0:
+        return np.full_like(ray_origins[:, 0], np.inf)
+    
+    min_t = np.min(t_valid, axis=1)  # (N,)
+    return min_t

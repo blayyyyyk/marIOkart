@@ -16,8 +16,8 @@ from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from ..config import *
-from ..environments import CheckpointReward
-from ..environments.boundary_wrapper import BoundaryAngle
+from ..wrappers.self_driving_reward import SelfDrivingReward
+from ..wrappers.boundary_wrapper import BoundaryAngle
 from ..utils import Suppress, collect_dsm
 from ..utils.recording.extract_ghost import COURSE_ABBREVIATIONS
 
@@ -93,8 +93,6 @@ def create_env(r: str, m: Optional[Path]):
     env = MoviePlaybackWrapper(env, path=str(m), func=delay)
 
     env = ControllerRemap(env, keymap=SPARSE_KEYMAP)
-    env = BoundaryAngle(env)
-    env = CheckpointReward(env)
     # env = RewardDisplayWrapper(env)
     # env = FrameStackObservation(env, stack_size=SEQ_LEN, padding_type="zero")
     return env

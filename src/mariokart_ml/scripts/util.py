@@ -4,6 +4,7 @@ import gymnasium as gym
 import torch
 
 from ..config import *
+from ..environments import *
 
 
 def script_main(prog, parents: list[ArgumentParser]):

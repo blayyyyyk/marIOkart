@@ -8,7 +8,7 @@ from .util import general_parser, window_parser
 
 def process(source: Path | list[Path], verbose: bool = False):
     # convert any sav files
-    sav_to_dsm(source, PROCESSED_BAD_DATASET_PATH, args.verbose)
+    sav_to_dsm(source, PROCESSED_BAD_DATASET_PATH, verbose)
 
     # backup any dsm files
     shutil.copytree(
