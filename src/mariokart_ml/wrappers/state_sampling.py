@@ -10,6 +10,7 @@ class SaveStateSampling(gym.Wrapper):
     def __init__(self, env: gym.Env, n_samples: int | list[float], reuse_slots: bool = False):
         super().__init__(env)
 
+        self.reset_trigger = self.get_wrapper_attr('reset_trigger')
 
         if isinstance(n_samples, int):
             self.sample_times = np.linspace(0, 1, n_samples)
@@ -20,8 +21,6 @@ class SaveStateSampling(gym.Wrapper):
         self._prev_min_dist = 1.0
 
         self.create_states = not reuse_slots
-
-        emu = cast(MarioKart, self.get_wrapper_attr('emu'))
 
     def reset(self, *, seed=None, options=None):
         if len(self.saved_slots) == 0:
@@ -37,7 +36,13 @@ class SaveStateSampling(gym.Wrapper):
         if not race_started:
             return
 
-        progress = float(emu.memory.race_status.driverStatus[0].lapProgress)
+        if self.reset_trigger == "race_progress":
+            progress = float(emu.memory.race_status.driverStatus[0].raceProgress)
+        elif self.reset_trigger == "lap_progress":
+            progress = float(emu.memory.race_status.driverStatus[0].lapProgress)
+        else:
+            raise ValueError(f"Invalid reset trigger provided: {self.reset_trigger}")
+
         dist = np.abs(progress - self.sample_times)
         current_id = int(dist.argmin().item()) # including offset of GAME_SAVE_SLOT and RACE_SAVE_SLOT
 
@@ -47,8 +52,6 @@ class SaveStateSampling(gym.Wrapper):
 
         if len(self.saved_slots) == self.sample_times.shape[0]:
             self.create_states = False
-            if emu.movie.is_playing():
-                emu.movie.stop()
 
     def step(self, action):
         obs, reward, done, truncated, info = super().step(action)
