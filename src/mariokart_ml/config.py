@@ -1,6 +1,8 @@
 from pathlib import Path
 from stable_baselines3 import PPO, DQN, A2C
-from typing import Literal
+from stable_baselines3.common.base_class import BaseAlgorithm
+
+from typing import Literal, Any
 
 # Default paths for folders and files #
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -55,13 +57,13 @@ NUM_PROC = 9
 
 MIN_PROGRESS_FOR_GOOD_DATASET = 0.9
 
-ALGO_MAP = {
+ALGO_MAP: dict[str, type[BaseAlgorithm]] = {
     "ppo": PPO,
     "dqn": DQN,
     "a2c": A2C
 }
 
-ALGO_KWARGS = {
+ALGO_KWARGS: dict[str, dict[str, Any]] = {
     "ppo": {"n_steps": 2048, "learning_rate": 3e-4},
     "dqn": {"buffer_size": 10000, "learning_rate": 1e-3},
 }

@@ -1,3 +1,4 @@
+from mariokart_ml.utils.vector import get_available_devices
 from gymnasium.vector import AsyncVectorEnv
 from mariokart_ml.wrappers.window_wrapper import WindowWrapper, VecWindowWrapper
 from gym_mkds.wrappers.window import GtkWindow
@@ -14,9 +15,15 @@ from gym_mkds.wrappers.window_overlay import ControllerDisplay
 from gym_mkds.wrappers.controller import SPARSE_KEYMAP, ControllerRemap, ControllerObservation
 from ..wrappers import MovieWrapper
 from functools import partial
+from warnings import warn
 
 
-
+def check_device_cpu(args):
+    if not hasattr(args, "device"):
+        return
+        
+    if getattr(args, 'device') == 'cpu':
+        warn("CPU device detected, training model performance may be impacted. Consider selecting another device with the `--device` flag.")
         
 
 def script_main(prog, parents: list[ArgumentParser]):
@@ -26,6 +33,7 @@ def script_main(prog, parents: list[ArgumentParser]):
     if hasattr(args, "func"):
         args_list = vars(args)
         args_list.pop('func')
+        check_device_cpu(args)
         args.func(**args_list)
     else:
         parser.print_help() # print help if no/invalid mode specified
@@ -38,6 +46,8 @@ for env_id, spec in gym.envs.registry.items():
     available_envs.append(f"{env_id}")
 
 
+
+
 # Window Options Parsing #
 window_parser = ArgumentParser(add_help=False)
 window_parser.add_argument("--scale", help="specify the scale of the gtk window", type=float, default=1.0)
@@ -46,7 +56,8 @@ window_parser.add_argument("--scale", help="specify the scale of the gtk window"
 general_parser = ArgumentParser(add_help=False)
 general_parser.add_argument(
     "--device",
-    help="PyTorch device name (ex. 'cpu', 'mps', 'cuda')",
+    help=f"Pytorch compute device (Available devices: {get_available_devices()}, Default device: {DEFAULT_DEVICE_NAME})",
+    choices=get_available_devices(),
     type=torch.device,
     default=torch.device(DEFAULT_DEVICE_NAME),
 )

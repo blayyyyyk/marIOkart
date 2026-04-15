@@ -8,24 +8,22 @@ from typing import Union, cast
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 256, 192
 
-def get_mps_device() -> torch.device:
-    # Check that MPS is available
-    if not torch.backends.mps.is_available():
-        if not torch.backends.mps.is_built():
-            print(
-                "MPS not available because the current PyTorch install was not "
-                "built with MPS enabled."
-            )
-        else:
-            print(
-                "MPS not available because the current MacOS version is not 12.3+ "
-                "and/or you do not have an MPS-enabled device on this machine."
-            )
 
-        exit()
-
-    device = torch.device("mps")
-    return device
+def get_available_devices() -> list[str]:
+    devices = ['cpu']
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            devices.append(f"cuda:{i}")
+    
+    if torch.backends.mps.is_available():
+        devices.append("mps")
+        
+    # NOTE: project is untested on this device type
+    if torch.xpu.is_available():
+        for i in range(torch.xpu.device_count()):
+            devices.append(f"xpu:{i}")
+    
+    return devices
 
 
 def _determinant_2d(x0, y0, x1, y1):

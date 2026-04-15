@@ -1,64 +1,19 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union, cast
 
-import torch
-import gymnasium as gym
-import numpy as np
-from desmume.emulator_mkds import MarioKart
-from gym_mkds.wrappers import MoviePlaybackWrapper, RewardDisplayWrapper
-from gym_mkds.wrappers.controller import ControllerRemap
-from gym_mkds.wrappers.window import VecEnvWindow
-from gymnasium.wrappers import Autoreset, FrameStackObservation
-from gymnasium.wrappers.utils import RunningMeanStd
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+from stable_baselines3.common.type_aliases import GymEnv
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from torch import device
 
-from ..config import *
-from ..wrappers.self_driving_reward import SelfDrivingReward
-from ..wrappers.boundary_wrapper import BoundaryAngle
-from ..utils import Suppress, collect_dsm
-from ..utils.recording.extract_ghost import COURSE_ABBREVIATIONS
+from mariokart_ml.wrappers.window_wrapper import VecWindowWrapper, WindowWrapper
 
-
-class NormalizeDictObservation(gym.ObservationWrapper):
-    def __init__(self, env: gym.Env, key: str, epsilon: float = 1e-8):
-        super().__init__(env)
-        self.key = key
-        self.epsilon = epsilon
-
-        # Get the original subspace for the target key
-        target_space = self.observation_space.spaces[self.key]
-
-        # Initialize Gymnasium's internal running stats tracker
-        self.obs_rms = RunningMeanStd(shape=target_space.shape)
-
-        # Update the bounds of the specific key to [-inf, inf]
-        new_spaces = dict(self.observation_space.spaces)
-        new_spaces[self.key] = gym.spaces.Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=target_space.shape,
-            dtype=np.float32
-        )
-        self.observation_space = gym.spaces.Dict(new_spaces)
-
-    def observation(self, observation):
-        obs_array = observation[self.key]
-
-        # Update the running mean and variance
-        self.obs_rms.update(obs_array)
-
-        # Normalize the array
-        normalized_array = (obs_array - self.obs_rms.mean) / np.sqrt(self.obs_rms.var + self.epsilon)
-
-        # Return a shallow copy of the dict with the updated key
-        new_obs = observation.copy()
-        new_obs[self.key] = normalized_array
-
-        return new_obs
-
+from ..config import ALGO_KWARGS, ALGO_MAP, EPOCHS, PROCESSED_GOOD_DATASET_PATH
+from ..environments import EnvManager
+from ..utils import collect_dsm
+from ..utils.sav_to_dsm import COURSE_ABBREVIATIONS
 
 
 class WindowUpdateCallback(BaseCallback):
@@ -77,49 +32,42 @@ SPARSE_KEYMAP = {
     2: 1
 }
 
-def create_env(r: str, m: Optional[Path]):
-    count = 0
-    def delay(env: gym.Env):
-        nonlocal count
-        emu: MarioKart = env.get_wrapper_attr('emu')
-        if emu.memory.race_ready:
-            count += 1
-
-        return count < 800
-
-    env = gym.make(r)
-    env = NormalizeDictObservation(env, key="wall_distances")
-    env = Autoreset(env)
-    env = MoviePlaybackWrapper(env, path=str(m), func=delay)
-
-    env = ControllerRemap(env, keymap=SPARSE_KEYMAP)
-    # env = RewardDisplayWrapper(env)
-    # env = FrameStackObservation(env, stack_size=SEQ_LEN, padding_type="zero")
-    return env
-
-
 def train_rl(
-    movie_source: list[Path],
-    algo: str,
     env_name: str,
+    movie_source: list[Path],
+    algorithm: str,
     epochs: int,
-    device: torch.device,
+    device: device,
     scale: int,
+    num_procs: int,
     course: Optional[str] = None,
-    verbose: bool = False
+    verbose: bool = False,
+    window: bool = False,
 ):
     movie_paths = set([])
     for s in movie_source:
         movie_paths |= set(collect_dsm(s, course_name=course))
 
-    algo_class = ALGO_MAP[algo]
-    algo_kwargs = ALGO_KWARGS.get(algo, {})
+    algo_class = ALGO_MAP[algorithm]
+    algo_kwargs = ALGO_KWARGS.get(algorithm, {})
 
-    vec_env = SubprocVecEnv([lambda r=env_name, m=m: create_env(r, m) for m in movie_paths])
-    window = VecEnvWindow(vec_env, scale)
+    movie_paths = list(movie_paths)
+    movie_paths *= num_procs
+    mgr = EnvManager(env_name, "train", autoreset=True)
 
-    model = algo_class("MultiInputPolicy", vec_env, verbose=int(verbose), **algo_kwargs)
-    callback = WindowUpdateCallback(window)
+    callback = None
+    env: GymEnv
+    if window:
+        env = cast(GymEnv, mgr.make_windowed(movie_paths, scale=scale, vec_class=SubprocVecEnv))
+        assert hasattr(env, 'window')
+        assert env.window is not None
+        callback = WindowUpdateCallback(env.window)
+    else:
+        env = cast(GymEnv, mgr.make(movie_paths, vec_class=SubprocVecEnv))
+
+    assert env is not None
+    model = algo_class("MultiInputPolicy", env=env, verbose=int(verbose), **algo_kwargs)
+
     try:
         print("Starting RL training. Press Ctrl+C to exit.")
         # total_timesteps should be passed via args
@@ -127,15 +75,24 @@ def train_rl(
     except KeyboardInterrupt:
         print("Training interrupted by user.")
     finally:
-        window.on_destroy()
+        if isinstance(env, (WindowWrapper, VecWindowWrapper)):
+            assert env.window is not None
+            env.window.destroy()
 
 
 train_rl_parser = ArgumentParser(add_help=False)
-train_rl_parser.add_argument("course", choices=list(map(str.lower, COURSE_ABBREVIATIONS)), type=str)
+train_rl_parser.add_argument("--course", choices=list(map(str.lower, COURSE_ABBREVIATIONS)), type=str, default="f8c")
 train_rl_parser.add_argument("--movie_source", nargs="+", type=Path, help="movie files to perform menu naviagtion before training", default=[PROCESSED_GOOD_DATASET_PATH])
-train_rl_parser.add_argument("--algo", choices=ALGO_MAP.keys(), help="training algorithm", default="ppo")
+train_rl_parser.add_argument("--algorithm", choices=ALGO_MAP.keys(), help="training algorithm", default="ppo")
 train_rl_parser.add_argument("--epochs", type=int, help="number of training epochs", default=EPOCHS)
-train_rl_parser.set_defaults(func=train_rl, env_name="gym_mkds/MarioKartDS-human-v1")
+train_rl_parser.add_argument("--window", "-w", action="store_true", help="display a window showing the agent's environment")
+train_rl_parser.add_argument(
+    "--num-procs",
+    help="Specify the number of processes to debug an emulator on. NOTE: play mode does not support multiple processes",
+    type=int,
+    default=1
+)
+train_rl_parser.set_defaults(func=train_rl, env_name="gym_mkds/MarioKartDS-v1")
 
 
 if __name__ == "__main__":

@@ -1,3 +1,6 @@
+from abc import ABC
+from stable_baselines3.common.type_aliases import GymEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 from typing import Any, TypeVar, Union, cast
 
 import cairo
@@ -9,7 +12,7 @@ from desmume.emulator import SCREEN_HEIGHT, SCREEN_HEIGHT_BOTH, SCREEN_WIDTH
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GLib, Gtk
+from gi.repository import Gdk, GLib, Gtk # type: ignore
 
 
 def tile_images(images: np.ndarray) -> np.ndarray:
@@ -30,7 +33,7 @@ def tile_images(images: np.ndarray) -> np.ndarray:
     )
     return out
 
-ENV_T = TypeVar('ENV_T', bound=Union[gym.Env, gym.vector.VectorEnv])
+ENV_T = TypeVar('ENV_T', bound=Union[VecEnv, gym.Env])
 
 class WindowBase[ENV_T](Gtk.Window):
     def __init__(self, env: ENV_T, scale: float = 1.0):
@@ -68,7 +71,7 @@ class WindowBase[ENV_T](Gtk.Window):
         while Gtk.events_pending():
             Gtk.main_iteration()
 
-    def on_draw(self, widget: Gtk.Widget, ctx: cairo.Context) -> bool:
+    def on_draw(self, widget: Gtk.Widget, ctx: cairo.Context):
         ...
 
 class Window(WindowBase[gym.Env]):
@@ -97,8 +100,9 @@ class Window(WindowBase[gym.Env]):
 
         return True
 
-class VecWindow(WindowBase[gym.vector.VectorEnv]):
-    def __init__(self, vec_env: gym.vector.AsyncVectorEnv | Any, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None):
+
+class VecWindow(WindowBase[VecEnv]):
+    def __init__(self, vec_env: VecEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None):
         super(VecWindow, self).__init__(env=vec_env, scale=scale)
         # Default colors if none provided (R, G, B normalized 0-1)
         self.colors = colors or [
@@ -199,9 +203,12 @@ class WindowWrapper(gym.Wrapper):
         return obs, reward, terminated, truncated, info
         
 
+
 class VecWindowWrapper(gym.vector.VectorWrapper):
-    def __init__(self, env: AsyncVectorEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None):
-        super().__init__(env)
+    env: VecEnv
+    
+    def __init__(self, env: VecEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None):
+        super().__init__(cast(AsyncVectorEnv, env))
         self.window = None
         self.scale = scale
         self.colors = colors
