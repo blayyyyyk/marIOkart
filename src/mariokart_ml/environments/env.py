@@ -30,7 +30,7 @@ class ResetOptions(TypedDict):
 class TimeTrialEnv(gym.Env[dict[str, Any], int]):
     emu: MarioKart
 
-    def __init__(self, rom_path: str):
+    def __init__(self, rom_path: str, reset_trigger: Literal['race_progress', 'lap_progress']="race_progress"):
         super().__init__()
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
@@ -63,6 +63,8 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         # clear out any leftover save slots, replace with main menu
         self.emu.savestate.save(RACE_SAVE_SLOT)
         self.emu.savestate.save(FRAME_SAVE_SLOT)
+
+        self.reset_trigger = reset_trigger
 
         # stores position of kart at time when race starts
         self.race_started = False
@@ -100,13 +102,16 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
     def _get_info(self):
         if self.race_started:
-            progress = float(self.emu.memory.race_status.driverStatus[0].raceProgress)
+            race_progress = float(self.emu.memory.race_status.driverStatus[0].raceProgress)
+            lap_progress = float(self.emu.memory.race_status.driverStatus[0].lapProgress)
         else:
-            progress = 0.0
+            race_progress = 0.0
+            lap_progress = 0.0
 
         return {
             "race_started": self._race_active(),
-            "race_progress": progress
+            "race_progress": race_progress,
+            "lap_progress": lap_progress,
         }
 
     def _race_active(self):
@@ -129,8 +134,8 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
         obs = self._get_obs()
         info = self._get_info()
-        terminated = info['race_progress'] >= 1.0
-        truncated = False
+        terminated = info[self.reset_trigger] >= 0.99 and info['race_progress'] >= 0.1
+        truncated = info[self.reset_trigger] >= 0.99 and info['race_progress'] >= 0.1
         reward = 0.0
 
         return obs, reward, terminated, truncated, info
@@ -155,7 +160,10 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         obs = self._get_obs()
         info = self._get_info()
 
-        reset_type = options.get("reset_type", 'savestate')
+        if options is not None:
+            reset_type = options.get("reset_type", 'savestate')
+        else:
+            reset_type = 'savestate'
 
         if self._race_active() and reset_type == 'respawn':
             set_fx(self.emu.memory.driver.position, (3,), self._starting_position)
@@ -166,6 +174,9 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
             #self.emu.savestate.load(GAME_SAVE_SLOT)
         elif isinstance(reset_type, int):
             self.emu.savestate.load(reset_type)
+            
+        if self.emu.movie.is_playing():
+            self.emu.movie.stop()
 
         return obs, info
 

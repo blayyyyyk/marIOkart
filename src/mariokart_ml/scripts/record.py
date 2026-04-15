@@ -61,9 +61,9 @@ def record(
 
     # record in batches
     stride = num_proc or movie_count
-    _record = sub_process_func(loop, create_env)
+    record_batch = sub_process_func(loop, create_env)
     for mp, op in zip(movie_paths, out_paths):
-        _record(list(mp), list(op))
+        record_batch(list(mp), list(op))
         if verbose:
             for m in mp:
                 print(f"file {m} recorded")

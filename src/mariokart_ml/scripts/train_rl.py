@@ -123,8 +123,7 @@ def train_rl(
     try:
         print("Starting RL training. Press Ctrl+C to exit.")
         # total_timesteps should be passed via args
-        if callback is not None:
-            model.learn(total_timesteps=epochs, callback=callback)
+        model.learn(total_timesteps=epochs, callback=callback)
     except KeyboardInterrupt:
         print("Training interrupted by user.")
     finally:

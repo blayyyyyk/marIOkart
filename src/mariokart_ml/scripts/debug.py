@@ -1,89 +1,89 @@
-from gym_mkds.wrappers.controller import ControllerObservation
+from mariokart_ml.scripts.record import create_env
+import time
 from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
 import gymnasium
 import numpy as np
 from desmume.emulator_mkds import MarioKart
 from gym_mkds.wrappers import (
+    ControllerDisplay,
     GtkVecWindow,
     GtkWindow,
     HumanInput,
-    MoviePlaybackWrapper,
     RewardDisplayWrapper,
     SaveStateWrapper,
-    ControllerDisplay,
+)
+from gym_mkds.wrappers.controller import (
+    SPARSE_KEYMAP,
+    ControllerObservation,
+    ControllerRemap,
 )
 from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import Autoreset
-import time
+
+from ..environments import EnvManager
 
 from ..config import *
-from ..wrappers.self_driving_reward import SelfDrivingReward, CumulativeRewardInfo, RewardInfo
-from ..wrappers.boundary_wrapper import BoundaryAngle
 from ..models import registry
 from ..utils import collect_dsm
+from ..wrappers import MovieWrapper
+from ..wrappers.boundary_wrapper import BoundaryAngle
+from ..wrappers.self_driving_reward import (
+    CumulativeRewardInfo,
+    RewardInfo,
+    SelfDrivingReward,
+)
+from ..wrappers.window_wrapper import VecWindowWrapper, WindowWrapper
 
 def debug(
     play: Optional[bool],
     movie: Optional[list[Path]],
+    menu: Optional[list[Path]],
     scale: int,
     env_name: str,
     show_keys: bool,
+    show_boundary: bool,
+    show_rays: bool,
+    autoreset: bool,
+    num_procs: int,
     **kwargs
 ):
-    mode = "play" if play else "movie"
-    
-    if mode == "movie":
+    # argument value protection
+    sources: list[Path] = []
+    if play:
+        mode = "play"
+    elif movie:
+        mode = "movie"
         assert movie and len(movie), "movie source is required for movie-debugging-mode"
+        sources = movie
+    elif menu:
+        mode = "menu"
+        assert menu and len(menu) == 1, "menu source is required for menu-debugging-mode"
+        sources = menu
+    else:
+        raise ValueError(f"Invalid debug mode provided")
+        
+
+    # set movie paths
+    if mode in ('menu', 'movie'):
         movie_paths = set([])
-        for s in movie:
+        for s in sources:
             movie_paths |= set(collect_dsm(s))
     elif mode == "play":
         movie_paths = [None]
     else:
-        raise ValueError(f"Invalid debug mode provided: {args.mode}")
-
-    def create_env(movie: Optional[Path]):
-        env = gymnasium.make(env_name)
-
-        if movie is not None:
-            env = MoviePlaybackWrapper(env, path=str(movie))
-
-        if mode == "play":
-            env = HumanInput(env)
-            
-        if show_keys:
-            env = ControllerObservation(env, n_keys=N_KEYS)
-            env = ControllerDisplay(env, n_physical_keys=N_KEYS)
-
-        return env
-
-    if mode == "movie" and len(movie_paths) > 1:
-        env = AsyncVectorEnv(
-            [(lambda m=m: create_env(m)) for m in movie_paths]
-        )
-        env = GtkVecWindow(env, scale)
-    elif mode == "play":
-        env = create_env(None)
-        # env = CheckpointReward(env)
-        # env = Autoreset(env)
-        # env = TrackBoundary(env)
-        # env = BoundaryAngle(env)
-        # env = RewardInfo(env)
-        # env = RewardDisplayWrapper(env)
-        # env = CumulativeRewardInfo(env)
-        env = GtkWindow(env, scale)
-    elif mode == 'movie' and len(movie_paths) == 1:
-        env = create_env(movie_paths.pop())
-        env = GtkWindow(env, scale)
-    else:
-        raise ValueError(f"Invalid debug mode provided: {mode}")
-
+        raise ValueError(f"Invalid debug mode provided")
     
-
+    assert mode != 'play' if num_procs > 1 else True, "play mode does not support multiple processes"
+    
+    movie_paths: list[Optional[Path]] = list(movie_paths)
+    movie_paths *= num_procs
+    
+    mgr = EnvManager(env_name, mode, autoreset)
+    env = mgr.make_windowed(movie_paths, scale, show_keys, show_boundary, show_rays)
     obs, info = env.reset()
     assert env.window is not None
 
@@ -92,11 +92,6 @@ def debug(
         while env.window.is_alive:
             actions = [0] * len(movie_paths)
             obs, reward, terminated, truncated, info = env.step(actions)
-            
-            
-            if not mode == "movie": continue
-            if not np.any(info["movie_playing"]):
-                env.close()
 
     except KeyboardInterrupt:
         print("Loop interrupted by user.")
@@ -117,10 +112,37 @@ mode_group.add_argument(
     nargs="+",
     type=Path
 )
+mode_group.add_argument(
+    "--menu",
+    help="the movie replay exclusively for menuing. will enable keyboard input once race has started. NOTE: you can only provide one file (accepted files: .dsm)",
+    nargs="+",
+    type=Path
+)
 debug_parser.add_argument(
     "--show-keys",
     help="Display DS controller overlay",
     action="store_true"
+)
+debug_parser.add_argument(
+    "--show-boundary",
+    help="Display DS controller overlay",
+    action="store_true"
+)
+debug_parser.add_argument(
+    "--show-rays",
+    help="Display DS controller overlay",
+    action="store_true"
+)
+debug_parser.add_argument(
+    "--autoreset",
+    help="Reset the environment when the kart completes the race",
+    action="store_true"
+)
+debug_parser.add_argument(
+    "--num-procs",
+    help="Specify the number of processes to debug an emulator on. NOTE: play mode does not support multiple processes",
+    type=int,
+    default=1
 )
 debug_parser.set_defaults(func=debug, env_name="mariokart_ml/MarioKartDS-v2")
 

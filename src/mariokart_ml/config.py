@@ -1,16 +1,11 @@
 from pathlib import Path
-from gym_mkds.wrappers import SweepingRayOverlay, CollisionPrisms, TrackBoundary
 from stable_baselines3 import PPO, DQN, A2C
+from typing import Literal
 
 # Default paths for folders and files #
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 ROM_PATH = ROOT_DIR / "private" / "mariokart_ds.nds"
-OVERLAYS = [
-    TrackBoundary,
-    SweepingRayOverlay,
-    # RaySweep, 
-    # CollisionPrisms,
-]
+
 DATASET_PATH = ROOT_DIR / "data"
 RAW_DATASET_PATH = DATASET_PATH / "raw"  # this is where .dsm input recordings are held
 INTERIM_DATASET_PATH = (
@@ -31,6 +26,8 @@ RAY_MAX_DIST = 3000  # caps the farthest a ray can extend. prevents rays that do
 RAY_COUNT = 20  # number of rays extending from the kart's position, outward, along the positive half of the kart's local xz-plane
 N_KEYS = 12
 RAY_COLOR_MAP = "viridis"
+SAVE_STATE_SAMPLE_COUNT = 20
+ENV_RESET_TYPE: Literal["lap_progress", "race_progress"] = "race_progress"
 
 # Default training params #
 BATCH_SIZE = (
@@ -67,4 +64,11 @@ ALGO_MAP = {
 ALGO_KWARGS = {
     "ppo": {"n_steps": 2048, "learning_rate": 3e-4},
     "dqn": {"buffer_size": 10000, "learning_rate": 1e-3},
+}
+
+SPARSE_KEYMAP = {
+    0: 17,
+    1: 33,
+    2: 0,
+    3: 1
 }
