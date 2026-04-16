@@ -1,14 +1,14 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Optional, Union, cast
-
+import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.type_aliases import GymEnv
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from torch import device
 
-from mariokart_ml.wrappers.window_wrapper import VecWindowWrapper, WindowWrapper
+from mariokart_ml.wrappers.window_wrapper import VecWindowWrapper, WindowWrapper, VecWindowWrapperSB3
 
 from ..config import ALGO_KWARGS, ALGO_MAP, EPOCHS, PROCESSED_GOOD_DATASET_PATH
 from ..environments import EnvManager
@@ -34,41 +34,47 @@ SPARSE_KEYMAP = {
 
 def train_rl(
     env_name: str,
-    movie_source: list[Path],
     algorithm: str,
     epochs: int,
-    device: device,
     scale: int,
     num_procs: int,
-    course: Optional[str] = None,
     verbose: bool = False,
     window: bool = False,
+    sample_from: Optional[Path] = None,
+    **kwargs
 ):
-    movie_paths = set([])
-    for s in movie_source:
-        movie_paths |= set(collect_dsm(s, course_name=course))
-
     algo_class = ALGO_MAP[algorithm]
     algo_kwargs = ALGO_KWARGS.get(algorithm, {})
 
-    movie_paths = list(movie_paths)
-    movie_paths *= num_procs
+    movie_paths = [sample_from] * num_procs
     mgr = EnvManager(env_name, "train", autoreset=True)
 
     callback = None
-    env: GymEnv
     if window:
         env = mgr.make_windowed(movie_paths, scale=scale, vec_class=SubprocVecEnv)
         assert hasattr(env, 'window')
         
         obs = env.reset()
         assert env.window is not None
+        env.window.show_menu = True
         callback = WindowUpdateCallback(env.window)
     else:
         env = cast(GymEnv, mgr.make(movie_paths, vec_class=SubprocVecEnv))
 
     assert env is not None
     model = algo_class("MultiInputPolicy", env=env, verbose=int(verbose), **algo_kwargs)
+    while True:
+        if isinstance(env, (SubprocVecEnv, VecWindowWrapperSB3)):
+            dummy_actions = np.array([env.action_space.sample() for _ in range(env.num_envs)])
+            obs, rewards, dones, infos = env.step(dummy_actions)
+        
+        if window and hasattr(env, 'window') and env.window is not None:
+            assert isinstance(env, (WindowWrapper, VecWindowWrapperSB3))
+            env.window.update()
+            
+        all_ready = np.all(dones)
+        if all_ready:
+            break
 
     try:
         print("Starting RL training. Press Ctrl+C to exit.")
@@ -83,8 +89,7 @@ def train_rl(
 
 
 train_rl_parser = ArgumentParser(add_help=False)
-train_rl_parser.add_argument("--course", choices=list(map(str.lower, COURSE_ABBREVIATIONS)), type=str, default="f8c")
-train_rl_parser.add_argument("--movie_source", nargs="+", type=Path, help="movie files to perform menu naviagtion before training", default=[PROCESSED_GOOD_DATASET_PATH])
+train_rl_parser.add_argument("--sample-from", type=Path, help="movie file that performs menuing and single race lap to collect savestates for sampling position, if none is specified, keyboard input will be enable for the menu and first lap before training.")
 train_rl_parser.add_argument("--algorithm", choices=ALGO_MAP.keys(), help="training algorithm", default="ppo")
 train_rl_parser.add_argument("--epochs", type=int, help="number of training epochs", default=EPOCHS)
 train_rl_parser.add_argument("--window", "-w", action="store_true", help="display a window showing the agent's environment")

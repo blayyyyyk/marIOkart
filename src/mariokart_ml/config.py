@@ -29,7 +29,7 @@ RAY_COUNT = 20  # number of rays extending from the kart's position, outward, al
 N_KEYS = 12
 RAY_COLOR_MAP = "viridis"
 SAVE_STATE_SAMPLE_COUNT = 20
-ENV_RESET_TYPE: Literal["lap_progress", "race_progress"] = "race_progress"
+ENV_RESET_TYPE: Literal["lap_progress", "race_progress"] = "lap_progress"
 
 # Default training params #
 BATCH_SIZE = (

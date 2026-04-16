@@ -252,10 +252,11 @@ class TimeTrialObservations(gym.ObservationWrapper):
         observation = {}
 
         # kart speed
+        eps = 1e-8
         speed_diff = float(emu.memory.driver.maxSpeed) - float(emu.memory.driver.speed)
-        observation["speed_frac"] = float(emu.memory.driver.speed) / float(emu.memory.driver.maxSpeed)
+        observation["speed_frac"] = float(emu.memory.driver.speed) / (float(emu.memory.driver.maxSpeed) + eps)
         observation["speed_max_frac"] = float(emu.memory.driver.maxSpeedFraction)
-        observation["speed_rescaled"] = speed_diff / float(emu.memory.driver.maxSpeed) # used to be: speed_deficit
+        observation["speed_rescaled"] = speed_diff / (float(emu.memory.driver.maxSpeed) + eps) # used to be: speed_deficit
         observation["speed_turn"] = emu.memory.driver.yRotSpeed * ROTATION_CONST
 
         # special speed

@@ -79,6 +79,9 @@ class KeyboardWrapper(gym.ActionWrapper):
         except RuntimeError:
             pass
 
+        if mask == 0:
+            return action
+
         return mask
 
     def close(self):

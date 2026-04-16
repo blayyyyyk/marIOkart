@@ -32,10 +32,11 @@ class SaveStateSampling(gym.Wrapper):
     def _make_state_sample(self):
         emu = cast(MarioKart, self.get_wrapper_attr('emu'))
         race_started = self.get_wrapper_attr('race_started')
-
+        
         if not race_started:
             return
 
+        
         if self.reset_trigger == "race_progress":
             progress = float(emu.memory.race_status.driverStatus[0].raceProgress)
         elif self.reset_trigger == "lap_progress":
