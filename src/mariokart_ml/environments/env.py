@@ -24,6 +24,14 @@ RACE_SAVE_SLOT = 1 # will bring the kart back to the start of the race
 FRAME_SAVE_SLOT = 2 # will bring the kart back to a checkpoint in the race
 
 
+def fmt_obs(space: gym.spaces.Space, obs: float | np.ndarray) -> np.ndarray:
+    if isinstance(obs, np.ndarray): return obs
+    return np.array(obs, space.dtype).reshape(space.shape)
+    
+def fmt_space_dict(space: gym.spaces.Dict, obs: dict[str, float]) -> dict[str, np.ndarray]:
+    assert set(space.spaces.keys()) == set(obs.keys()), f"Expected keys {set(space.spaces.keys())}, got {set(obs.keys())}"
+    return {k: fmt_obs(s, obs[k]) for k, s in space.items()}
+
 class ResetOptions(TypedDict):
     reset_type: Literal['respawn', 'savestate', 'menu', 'custom'] | int
 
@@ -97,8 +105,8 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         observation["surf_norm_x"] = surface_normal[0]
         observation["surf_norm_y"] = surface_normal[1]
         observation["surf_norm_z"] = surface_normal[2]
-
-        return observation
+        
+        return fmt_space_dict(self.observation_space, observation)
 
     def _get_info(self):
         if self.race_started:
@@ -302,9 +310,9 @@ class TimeTrialObservations(gym.ObservationWrapper):
 
     def observation(self, observation: dict):
         emu: MarioKart = cast(MarioKart, self.get_wrapper_attr('emu'))
+        assert isinstance(self.observation_space, gym.spaces.Dict), "wrong observation space type"
         if not emu.memory.race_ready:
-            assert isinstance(self.observation_space, gym.spaces.Dict), "wrong observation space type"
-            return { k: 0.0 for k in self.observation_space.keys() }
+            return { k: fmt_obs(s, 0.0) for k, s in self.observation_space.items() }
 
         observation |= self._get_speed_obs(emu)
         observation |= self._get_angle_obs(emu)
@@ -312,4 +320,4 @@ class TimeTrialObservations(gym.ObservationWrapper):
         observation |= self._get_track_obs(emu)
         observation |= self._get_special_obs(emu)
 
-        return observation
+        return fmt_space_dict(self.observation_space, observation)

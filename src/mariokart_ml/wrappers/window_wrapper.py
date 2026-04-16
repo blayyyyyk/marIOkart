@@ -1,7 +1,8 @@
+from gym_mkds.wrappers.window import VecEnvWindow
 from abc import ABC
 from stable_baselines3.common.type_aliases import GymEnv
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
-from typing import Any, TypeVar, Union, cast
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv, VecEnvWrapper
+from typing import Any, TypeVar, Union, cast, Optional
 
 import cairo
 import gi
@@ -103,7 +104,7 @@ class Window(WindowBase[gym.Env]):
 
 class VecWindow(WindowBase[VecEnv]):
     def __init__(self, vec_env: VecEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None):
-        super(VecWindow, self).__init__(env=vec_env, scale=scale)
+        super(VecWindow, self).__init__(vec_env, scale=scale)
         # Default colors if none provided (R, G, B normalized 0-1)
         self.colors = colors or [
             (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
@@ -206,9 +207,10 @@ class WindowWrapper(gym.Wrapper):
 
 class VecWindowWrapper(gym.vector.VectorWrapper):
     env: VecEnv
+    window: Optional[VecWindow]
     
-    def __init__(self, env: VecEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None):
-        super().__init__(cast(AsyncVectorEnv, env))
+    def __init__(self, env: AsyncVectorEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None):
+        super().__init__(env)
         self.window = None
         self.scale = scale
         self.colors = colors
@@ -220,7 +222,7 @@ class VecWindowWrapper(gym.vector.VectorWrapper):
         
     def reset(self, *args, seed=None, options=None):
         obs, info = super().reset()
-        self.window = VecWindow(self.env, scale=self.scale, colors=self.colors)
+        self.window = VecWindow(self.env, scale=self.scale, colors=self.colors) if self.window is None else self.window
         return obs, info
         
     def step(self, actions):
@@ -230,3 +232,32 @@ class VecWindowWrapper(gym.vector.VectorWrapper):
             self.window.update()
         
         return obs, reward, terminated, truncated, info
+        
+class VecWindowWrapperSB3(VecEnvWrapper):
+    window: Optional[VecWindow]
+    
+    def __init__(self, venv: SubprocVecEnv, scale: float, colors: list[tuple[float, float, float]] | None = None):
+        # SB3 wrappers take 'venv' instead of 'env'
+        super().__init__(venv)
+        self.window = None
+        self.scale = scale
+        self.colors = colors
+        
+
+    def reset(self):
+        obs = self.venv.reset()
+        self.window = VecWindow(self.venv, scale=self.scale, colors=self.colors) if self.window is None else self.window
+        return obs
+
+    def step_async(self, actions):
+        self.venv.step_async(actions)
+
+    def step_wait(self):
+        obs, rewards, dones, infos = self.venv.step_wait()
+        
+        if self.window is not None:
+            self.window.update()
+        
+        return obs, rewards, dones, infos
+        
+        

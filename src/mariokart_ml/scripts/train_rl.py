@@ -58,8 +58,10 @@ def train_rl(
     callback = None
     env: GymEnv
     if window:
-        env = cast(GymEnv, mgr.make_windowed(movie_paths, scale=scale, vec_class=SubprocVecEnv))
+        env = mgr.make_windowed(movie_paths, scale=scale, vec_class=SubprocVecEnv)
         assert hasattr(env, 'window')
+        
+        obs = env.reset()
         assert env.window is not None
         callback = WindowUpdateCallback(env.window)
     else:

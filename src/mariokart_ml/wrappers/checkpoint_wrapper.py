@@ -20,7 +20,7 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     b /= np.linalg.norm(b, axis=-1, keepdims=True)
     return np.sum(a * b, axis=-1)
 
-@race_ready
+
 def checkpoint_angle_unsigned(emu: MarioKart, direction_mode: Literal["movement"] | Literal["direction"] = "movement") -> float:
     """
     Computes the direction the kart is facing toward the two endpoints of the next checkpoint
@@ -45,7 +45,6 @@ def checkpoint_angle_unsigned(emu: MarioKart, direction_mode: Literal["movement"
 
     return np.min(angle).item()
 
-@race_ready
 def checkpoint_angle_signed(emu: MarioKart, direction_mode: Literal["movement"] | Literal["direction"] = "movement", eps: float = 1e-7) -> float:
     """
     Returns the angle the kart is facing/moving towards from the next checkpoint boundary.
@@ -83,7 +82,7 @@ def checkpoint_angle_signed(emu: MarioKart, direction_mode: Literal["movement"] 
 
     angle = np.arctan2(checkpoint_pts_local[0], checkpoint_pts_local[2]) # (2,)
     angle = np.min(angle).item()
-    return angle / math.pi
+    return float(angle / math.pi)
 
 class Checkpoint(gym.ObservationWrapper):
     def __init__(self, env: gym.Env):

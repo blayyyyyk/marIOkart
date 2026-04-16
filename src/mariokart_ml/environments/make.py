@@ -1,6 +1,7 @@
+from mariokart_ml.wrappers.window_wrapper import VecWindowWrapperSB3
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, Union, cast
+from typing import Any, Callable, Literal, Optional, Union, cast, TypeAliasType, overload
 
 import gymnasium as gym
 from gymnasium.vector import AsyncVectorEnv
@@ -69,7 +70,7 @@ def _add_window(
     return OverlayWrapper(env, *overlays)
 
 
-
+WindowWrapperT = Union[VecWindowWrapper, WindowWrapper, VecWindowWrapperSB3]
 class EnvManager:
     def __init__(self, env_name: str, mode: Literal['play', 'menu', 'movie', 'train'], autoreset: bool = False, ):
         self.base_factory = partial(_make, env_name, mode, autoreset)
@@ -90,16 +91,27 @@ class EnvManager:
 
         return cast(gym.Env, factory(movies[-1]))
 
-    def make_windowed(self, movies: list[Optional[Path]], scale: int = 1, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False, vec_class: type[SubprocVecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv) -> Union[VecWindowWrapper, WindowWrapper]:
+    @overload
+    def make_windowed(self, movies: list[Optional[Path]], vec_class: type[SubprocVecEnv], scale: int = 1, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False) -> VecWindowWrapperSB3: ...
+    
+    @overload
+    def make_windowed(self, movies: list[Optional[Path]], vec_class: type[AsyncVectorEnv], scale: int = 1, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False) -> VecWindowWrapper: ...
+    
+    @overload
+    def make_windowed(self, movies: Optional[Path], vec_class: type[AsyncVectorEnv], scale: int = 1, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False) -> WindowWrapper: ...
+
+    def make_windowed(self, movies: list[Optional[Path]] | Optional[Path], scale: int = 1, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False, vec_class: type[SubprocVecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv) -> WindowWrapperT:
         windowed_factory = lambda m: _add_window(self.base_factory(m), show_keys, show_boundary, show_rays)
-        env = self.make(movies, env_modifier=windowed_factory, vec_class=vec_class)
+        _movies = movies if isinstance(movies, list) else [movies]
+        env = self.make(_movies, env_modifier=windowed_factory, vec_class=vec_class)
         return EnvManager.add_window(env, scale)
 
     @staticmethod
-    def add_window(env: Union[gym.Env, AsyncVectorEnv, SubprocVecEnv], scale: int = 1) -> Union[VecWindowWrapper, WindowWrapper]:
-        if isinstance(env, (gym.vector.AsyncVectorEnv, SubprocVecEnv)):
-            print(env)
-            return VecWindowWrapper(cast(VecEnv, env), scale)
+    def add_window(env: Union[gym.Env, AsyncVectorEnv, SubprocVecEnv], scale: int = 1) -> WindowWrapperT:
+        if isinstance(env, gym.vector.AsyncVectorEnv):
+            return VecWindowWrapper(env, scale)
+        elif isinstance(env, SubprocVecEnv):
+            return VecWindowWrapperSB3(env, scale)
         elif isinstance(env, gym.Env):
             return WindowWrapper(env, scale)
         else:
