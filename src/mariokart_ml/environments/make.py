@@ -1,4 +1,5 @@
-from functools import partial
+from mariokart_ml.utils.update_rule import RaceEndEvent, RaceStartEvent, LapEndEvent
+from functools import partial, reduce
 from pathlib import Path
 from typing import (
     Any,
@@ -23,6 +24,9 @@ from ..config import N_KEYS, RAY_COUNT, SAVE_STATE_SAMPLE_COUNT, SPARSE_KEYMAP
 from ..wrappers import *
 
 
+
+
+
 def _make(
     env_name: str,
     mode: Literal['play', 'menu', 'movie', 'train'],
@@ -31,24 +35,27 @@ def _make(
 ) -> gym.Env[dict[str, Any], int]:
     env = gym.make(env_name)
     if mode == 'movie':
-        env = MovieWrapper(env, str(movie), max_steps="race_end")
+        env = MovieWrapper(env, str(movie), disable_event=RaceEndEvent())
     elif mode == 'menu':
-        env = MovieWrapper(env, str(movie), max_steps="race_start")
-    elif mode == "train" and movie is not None:
-        env = MovieWrapper(env, str(movie), max_steps="lap_end")
-    elif mode == 'play' or mode == "train": pass
+        env = MovieWrapper(env, str(movie), disable_event=RaceStartEvent())
+    elif mode == "train":
+        if movie is None:
+            env = KeyboardWrapper(env, disable_event=LapEndEvent())
+        else:
+            env = MovieWrapper(env, str(movie), disable_event=LapEndEvent())
+    elif mode == 'play': pass
     else:
         raise ValueError(f"Invalid debug mode provided")
 
-    if mode in ('play', 'menu') or (mode == "train" and movie is None):
-        env = KeyboardWrapper(env)
+    if mode == 'play' or mode == 'menu':
+        env = KeyboardWrapper(env, disable_event=LapEndEvent())
 
     if autoreset:
         env = Autoreset(env)
 
     if mode == 'train':
-        env = SaveStateSampling(env, n_samples=SAVE_STATE_SAMPLE_COUNT)
-        env = ControllerRemap(env, keymap=SPARSE_KEYMAP)
+        env = SaveStateSampling(env, n_samples=SAVE_STATE_SAMPLE_COUNT, collect_saves_event=LapEndEvent())
+        env = ControllerRemap(env, keymap=SPARSE_KEYMAP, enable_event=LapEndEvent())
 
     return env
 
@@ -93,8 +100,6 @@ class EnvManager:
         part = partial(vec_class, [(lambda m=m: factory(m)) for m in movies])
         if vec_class.__name__ == "SubprocVecEnv":
             vec_env = part(start_method='spawn') # sb3
-        elif vec_class.__name__ == "DummyVecEnv":
-            vec_env = part() # sb3
         elif vec_class.__name__ == "AsyncVectorEnv":
             vec_env = part(context='spawn') # gymnasium
         else:
@@ -106,7 +111,7 @@ class EnvManager:
     def make_windowed(self, movies: list[Optional[Path]], vec_class: type[VecEnv], **kwargs) -> VecWindowWrapperSB3: ...
 
     @overload
-    def make_windowed(self, movies: list[Optional[Path]], vec_class: type[AsyncVectorEnv], **kwargs) -> VecWindowWrapper: ...
+    def make_windowed(self, movies: list[Optional[Path]], vec_class: type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv, **kwargs) -> VecWindowWrapper: ...
 
     @overload
     def make_windowed(self, movies: Optional[Path], vec_class: type[AsyncVectorEnv], **kwargs) -> WindowWrapper: ...

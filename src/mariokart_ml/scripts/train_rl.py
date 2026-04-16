@@ -63,9 +63,10 @@ def train_rl(
 
     assert env is not None
     model = algo_class("MultiInputPolicy", env=env, verbose=int(verbose), **algo_kwargs)
+    
     while True:
         if isinstance(env, (SubprocVecEnv, VecWindowWrapperSB3)):
-            dummy_actions = np.array([env.action_space.sample() for _ in range(env.num_envs)])
+            dummy_actions = np.array([0 for _ in range(env.num_envs)])
             obs, rewards, dones, infos = env.step(dummy_actions)
         
         if window and hasattr(env, 'window') and env.window is not None:

@@ -1,8 +1,10 @@
+from mariokart_ml.utils.update_rule import Event, RaceEndEvent
+from mariokart_ml.config import N_KEYS
 import ctypes
 import math
 import random
 from functools import cached_property
-from typing import Any, Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -38,7 +40,7 @@ class ResetOptions(TypedDict):
 class TimeTrialEnv(gym.Env[dict[str, Any], int]):
     emu: MarioKart
 
-    def __init__(self, rom_path: str, reset_trigger: Literal['race_progress', 'lap_progress']="race_progress"):
+    def __init__(self, rom_path: str, reset_event: Optional[Event] = RaceEndEvent()):
         super().__init__()
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
@@ -54,7 +56,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
             "surf_norm_z": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
         })
 
-        self.action_space = gym.spaces.Discrete(2048, dtype=np.uint32)
+        self.action_space = gym.spaces.Discrete(2**N_KEYS, dtype=np.uint16)
 
         self.metadata = {
             "render_modes": ["rgb_array"],
@@ -72,7 +74,8 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         self.emu.savestate.save(RACE_SAVE_SLOT)
         self.emu.savestate.save(FRAME_SAVE_SLOT)
 
-        self.reset_trigger = reset_trigger
+        
+        self.reset_event = reset_event
 
         # stores position of kart at time when race starts
         self.race_started = False
@@ -132,6 +135,14 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         return _f == 1
 
     def step(self, action):
+        assert action.dtype == np.uint16, "action must be a numpy array of uint16"
+        
+        self.emu.input.keypad_update(0)
+        if not self.emu.movie.is_playing():
+             # this might be redundant but make sure keys are cleared
+            self.emu.input.keypad_update(int(action))
+        
+        # update emulator state
         self.emu.cycle()
         if self._race_active() and not self.race_started:
             self.race_started = True
@@ -142,8 +153,8 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
         obs = self._get_obs()
         info = self._get_info()
-        terminated = info[self.reset_trigger] >= 0.99 and info['race_progress'] >= 0.1
-        truncated = info[self.reset_trigger] >= 0.99 and info['race_progress'] >= 0.1
+        terminated = self.reset_event.update(self) if self.reset_event is not None else False
+        truncated = terminated
         reward = 0.0
 
         return obs, reward, terminated, truncated, info
@@ -161,26 +172,18 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         return arr[:, :, :3]
 
 
-    def reset(self, *, seed=None, options={ "reset_type": 'savestate' }):
+    def reset(self, *, seed=None, options={"reset_type": None}):
         """Gymnasium requires a reset method to restart the environment."""
         super().reset(seed=seed)
 
         obs = self._get_obs()
         info = self._get_info()
 
-        if options is not None:
-            reset_type = options.get("reset_type", 'savestate')
-        else:
-            reset_type = 'savestate'
-
-        if self._race_active() and reset_type == 'respawn':
-            set_fx(self.emu.memory.driver.position, (3,), self._starting_position)
-        elif self._race_active() and reset_type == 'savestate':
-            self.emu.savestate.load(FRAME_SAVE_SLOT)
-        elif reset_type == 'menu':
-            pass
-            #self.emu.savestate.load(GAME_SAVE_SLOT)
-        elif isinstance(reset_type, int):
+        options = {} if options is None else options
+        reset_type = options.get("reset_type", None)
+        
+        print(f"{reset_type=}, {options=}")
+        if isinstance(reset_type, int):
             self.emu.savestate.load(reset_type)
             
         if self.emu.movie.is_playing():

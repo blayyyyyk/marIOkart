@@ -1,4 +1,3 @@
-from mariokart_ml.scripts.record import create_env
 import time
 from argparse import ArgumentParser
 from functools import partial
@@ -24,9 +23,10 @@ from gym_mkds.wrappers.controller import (
 from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import Autoreset
 
-from ..environments import EnvManager
+from mariokart_ml.scripts.record import create_env
 
 from ..config import *
+from ..environments import EnvManager
 from ..models import registry
 from ..utils import collect_dsm
 from ..wrappers import MovieWrapper
@@ -37,6 +37,7 @@ from ..wrappers.self_driving_reward import (
     SelfDrivingReward,
 )
 from ..wrappers.window_wrapper import VecWindowWrapper, WindowWrapper
+
 
 def debug(
     play: Optional[bool],
@@ -65,7 +66,7 @@ def debug(
         sources = menu
     else:
         raise ValueError(f"Invalid debug mode provided")
-        
+
 
     # set movie paths
     if mode in ('menu', 'movie'):
@@ -76,14 +77,14 @@ def debug(
         movie_paths = [None]
     else:
         raise ValueError(f"Invalid debug mode provided")
-    
+
     assert mode != 'play' if num_procs > 1 else True, "play mode does not support multiple processes"
-    
+
     movie_paths: list[Optional[Path]] = list(movie_paths)
     movie_paths *= num_procs
-    
+
     mgr = EnvManager(env_name, mode, autoreset)
-    env = mgr.make_windowed(movie_paths, scale, show_keys, show_boundary, show_rays)
+    env = mgr.make_windowed(movie_paths, scale=scale, show_keys=show_keys, show_boundary=show_boundary, show_rays=show_rays)
     obs, info = env.reset()
     assert env.window is not None
 

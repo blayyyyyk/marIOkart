@@ -1,7 +1,16 @@
+from typing import Literal, Optional
+
 import gymnasium as gym
+import numpy as np
 import pynput
 from desmume.controls import Keys, keymask
 from desmume.emulator_mkds import MarioKart
+
+from ..utils.update_rule import (
+    RULE_MAP,
+    RuleMapLiteral,
+    RaceStartOffsetEvent, BlankEvent, Event,
+)
 
 USER_KEYMAP = {
     "w": Keys.KEY_UP,
@@ -22,13 +31,17 @@ USER_KEYMAP = {
 }
 
 class KeyboardWrapper(gym.ActionWrapper):
-    def __init__(self, env, keymap: dict[str, int] = USER_KEYMAP):
+    def __init__(self, env, keymap: dict[str, int] = USER_KEYMAP, disable_event: Optional[Event] = None):
         super(KeyboardWrapper, self).__init__(env)
         self.listener = pynput.keyboard.Listener(
             on_press=self._on_press, on_release=self._on_release
         )
         self.keymap = keymap
         self.input_state = set()
+        self.disabled = False
+
+        
+        self.disable_event = disable_event
 
     def _on_press(self, key):
         try:
@@ -49,7 +62,7 @@ class KeyboardWrapper(gym.ActionWrapper):
         if not self.listener.running:
             self.listener.daemon = True
             self.listener.start()
-        
+
         info, obs = super().reset(seed=seed, options=options)
         return info, obs
 
@@ -75,14 +88,18 @@ class KeyboardWrapper(gym.ActionWrapper):
                 if not key in self.keymap:
                     continue
                 mask |= keymask(self.keymap[key])
-                
+
         except RuntimeError:
             pass
 
-        if mask == 0:
-            return action
+        if self.disable_event is not None and self.disable_event.update(self.env):
+            self.disabled = True
+            self.env.reset()
+            
+        if self.disabled:
+            return np.uint16(action)
 
-        return mask
+        return np.uint16(mask)
 
     def close(self):
         self.listener.stop()

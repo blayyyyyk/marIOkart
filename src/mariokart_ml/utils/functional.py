@@ -5,7 +5,21 @@ from gymnasium.vector import AsyncVectorEnv
 from gymnasium import Env
 from itertools import batched
 import sys, os
+import inspect
 
+def instantiate_with_kwargs(cls, env, all_kwargs):
+    sig = inspect.signature(cls)
+    
+    # Check if the class signature contains a generic **kwargs
+    accepts_all = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+    
+    if accepts_all:
+        valid_kwargs = {k: v for k, v in all_kwargs.items() if k != 'env'}
+    else:
+        valid_kwargs = {k: v for k, v in all_kwargs.items() if k in sig.parameters and k != 'env'}
+        
+    return cls(env, **valid_kwargs)
+    
 
 
 def _async_env_worker(func: Callable, create_env_fn: Callable, vec_class: Callable, *list_args):

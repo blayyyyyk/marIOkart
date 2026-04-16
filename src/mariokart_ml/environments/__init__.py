@@ -30,10 +30,9 @@ register(
     id="mariokart_ml/TimeTrial-v1",
     entry_point="mariokart_ml.environments:TimeTrialEnv",
     additional_wrappers=(
-        ControllerAction.wrapper_spec(n_keys=N_KEYS),
         TimeTrialObservations.wrapper_spec(),
         TimeTrialReward.wrapper_spec(),
     ),
-    kwargs={"rom_path": str(ROM_PATH), "reset_trigger": ENV_RESET_TYPE}
+    kwargs={"rom_path": str(ROM_PATH)}
 )
 
