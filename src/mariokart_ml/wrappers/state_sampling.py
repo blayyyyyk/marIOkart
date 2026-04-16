@@ -1,4 +1,4 @@
-from mariokart_ml.utils.update_rule import Event
+from mariokart_ml.utils.game_event import Event
 import random
 from typing import cast, Optional
 

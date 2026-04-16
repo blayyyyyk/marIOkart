@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -7,11 +7,7 @@ from desmume.controls import Keys, keymask
 from desmume.emulator_mkds import MarioKart
 
 from ..config import SPARSE_KEYMAP
-from ..utils.update_rule import (
-    RULE_MAP,
-    RuleMapLiteral,
-    RaceStartOffsetEvent, Event,
-)
+from ..utils.game_event import Event
 
 
 class ControllerAction(gym.ActionWrapper):
@@ -72,9 +68,8 @@ class ControllerRemap(gym.ActionWrapper):
             self.enabled = True
             self.env.reset()
             print(self.enabled)
-            
+
         if not self.enabled:
             return np.uint16(action)
-        
-        return np.uint16(self.keymap.get(int(action), 0))
 
+        return np.uint16(self.keymap.get(int(action), 0))

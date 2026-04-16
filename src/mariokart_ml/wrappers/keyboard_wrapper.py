@@ -6,11 +6,7 @@ import pynput
 from desmume.controls import Keys, keymask
 from desmume.emulator_mkds import MarioKart
 
-from ..utils.update_rule import (
-    RULE_MAP,
-    RuleMapLiteral,
-    RaceStartOffsetEvent, BlankEvent, Event,
-)
+from ..utils.game_event import Event
 
 USER_KEYMAP = {
     "w": Keys.KEY_UP,

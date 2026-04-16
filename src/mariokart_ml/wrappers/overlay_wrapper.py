@@ -395,7 +395,7 @@ class TrackBoundary(CairoWrapper):
 class OverlayWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env, *overlay_classes: CairoWrapper):
         super(OverlayWrapper, self).__init__(reduce(lambda e, cls: cls(e), overlay_classes, env))
-    
+
 
 class SweepingRayOverlay(CairoWrapper):
     # disable depth mask

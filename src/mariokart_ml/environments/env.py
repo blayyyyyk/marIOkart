@@ -1,10 +1,8 @@
-from mariokart_ml.utils.update_rule import Event, RaceEndEvent
-from mariokart_ml.config import N_KEYS
 import ctypes
 import math
 import random
 from functools import cached_property
-from typing import Any, Literal, TypedDict, cast, Optional
+from typing import Any, Literal, Optional, TypedDict, cast
 
 import gymnasium as gym
 import numpy as np
@@ -14,6 +12,9 @@ from desmume.mkds.fx import FX32_SCALE_FACTOR
 from gym_mkds.wrappers.sweeping_ray import get_standing_triangle_id
 from gymnasium.utils.env_checker import check_reset_return_type
 from gymnasium.wrappers.utils import RunningMeanStd
+
+from mariokart_ml.config import N_KEYS
+from mariokart_ml.utils.game_event import Event, RaceEndEvent
 
 from ..utils.collision import compute_collision_dists
 from ..wrappers.boundary_wrapper import project_2d
@@ -29,7 +30,7 @@ FRAME_SAVE_SLOT = 2 # will bring the kart back to a checkpoint in the race
 def fmt_obs(space: gym.spaces.Space, obs: float | np.ndarray) -> np.ndarray:
     if isinstance(obs, np.ndarray): return obs
     return np.array(obs, space.dtype).reshape(space.shape)
-    
+
 def fmt_space_dict(space: gym.spaces.Dict, obs: dict[str, float]) -> dict[str, np.ndarray]:
     assert set(space.spaces.keys()) == set(obs.keys()), f"Expected keys {set(space.spaces.keys())}, got {set(obs.keys())}"
     return {k: fmt_obs(s, obs[k]) for k, s in space.items()}
@@ -74,7 +75,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         self.emu.savestate.save(RACE_SAVE_SLOT)
         self.emu.savestate.save(FRAME_SAVE_SLOT)
 
-        
+
         self.reset_event = reset_event
 
         # stores position of kart at time when race starts
@@ -108,7 +109,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         observation["surf_norm_x"] = surface_normal[0]
         observation["surf_norm_y"] = surface_normal[1]
         observation["surf_norm_z"] = surface_normal[2]
-        
+
         return fmt_space_dict(self.observation_space, observation)
 
     def _get_info(self):
@@ -136,12 +137,12 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
     def step(self, action):
         assert action.dtype == np.uint16, "action must be a numpy array of uint16"
-        
+
         self.emu.input.keypad_update(0)
         if not self.emu.movie.is_playing():
              # this might be redundant but make sure keys are cleared
             self.emu.input.keypad_update(int(action))
-        
+
         # update emulator state
         self.emu.cycle()
         if self._race_active() and not self.race_started:
@@ -181,11 +182,11 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
         options = {} if options is None else options
         reset_type = options.get("reset_type", None)
-        
+
         print(f"{reset_type=}, {options=}")
         if isinstance(reset_type, int):
             self.emu.savestate.load(reset_type)
-            
+
         if self.emu.movie.is_playing():
             self.emu.movie.stop()
 

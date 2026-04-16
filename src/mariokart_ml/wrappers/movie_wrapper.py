@@ -4,13 +4,7 @@ from typing import Callable, Literal, Optional, cast
 import gymnasium as gym
 from desmume.emulator_mkds import MarioKart
 
-from ..utils.update_rule import (
-    RULE_MAP,
-    BlankEvent,
-    RaceStartOffsetEvent,
-    RuleMapLiteral,
-    Event,
-)
+from ..utils.game_event import Event
 
 
 class MovieWrapper(gym.Wrapper):

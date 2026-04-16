@@ -1,4 +1,3 @@
-from mariokart_ml.utils.update_rule import RaceEndEvent, RaceStartEvent, LapEndEvent
 from functools import partial, reduce
 from pathlib import Path
 from typing import (
@@ -17,14 +16,12 @@ from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import Autoreset
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 
+from mariokart_ml.utils.game_event import LapEndEvent, RaceEndEvent, RaceStartEvent
 from mariokart_ml.wrappers.overlay_wrapper import OverlayWrapper
 from mariokart_ml.wrappers.window_wrapper import VecWindowWrapperSB3
 
 from ..config import N_KEYS, RAY_COUNT, SAVE_STATE_SAMPLE_COUNT, SPARSE_KEYMAP
 from ..wrappers import *
-
-
-
 
 
 def _make(
@@ -96,7 +93,7 @@ class EnvManager:
 
         if len(movies) == 1:
             return cast(gym.Env, factory(movies[-1]))
-        
+
         part = partial(vec_class, [(lambda m=m: factory(m)) for m in movies])
         if vec_class.__name__ == "SubprocVecEnv":
             vec_env = part(start_method='spawn') # sb3
