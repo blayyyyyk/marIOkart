@@ -75,7 +75,7 @@ class KeyboardWrapper(gym.ActionWrapper):
             slot_id = self.get_wrapper_attr('save_slot_id')
             emu: MarioKart = self.get_wrapper_attr('emu')
             emu.savestate.save(slot_id)
-
+# 
     def action(self, action):
         mask = 0
         try:
@@ -87,12 +87,9 @@ class KeyboardWrapper(gym.ActionWrapper):
 
         except RuntimeError:
             pass
-
-        if self.disable_event is not None and self.disable_event.update(self.env):
-            self.disabled = True
-            self.env.reset()
             
-        if self.disabled:
+        if action != 0 or self.disabled:
+            self.disabled = True
             return np.uint16(action)
 
         return np.uint16(mask)

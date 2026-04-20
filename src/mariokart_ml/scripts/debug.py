@@ -91,8 +91,11 @@ def debug(
     try:
         print("Starting environment loop. Press Ctrl+C in terminal to exit.")
         while env.window.is_alive:
-            actions = [0] * len(movie_paths)
-            obs, reward, terminated, truncated, info = env.step(actions)
+            actions = 0
+            if isinstance(env, VecWindowWrapper):
+                actions = [0] * len(movie_paths)
+            
+            obs, reward, terminated, truncated, info = env.step(0)
 
     except KeyboardInterrupt:
         print("Loop interrupted by user.")

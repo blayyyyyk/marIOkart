@@ -73,3 +73,58 @@ class ControllerRemap(gym.ActionWrapper):
             return np.uint16(action)
 
         return np.uint16(self.keymap.get(int(action), 0))
+        
+        
+class ControllerRemap(gym.ActionWrapper):
+    def __init__(self, env: gym.Env, keymap: dict[int, int], enable_event: Optional[Event] = None):
+        super().__init__(env)
+        self.keymap = keymap
+        self.action_space = gym.spaces.Discrete(len(keymap), dtype=np.uint16)
+        self.enabled = False
+        self.enable_event = enable_event
+
+    def action(self, action):
+        if self.enable_event is not None and self.enable_event.update(self.env):
+            self.enabled = True
+            self.env.reset()
+            print(self.enabled)
+
+        if not self.enabled:
+            return np.uint16(action)
+
+        return np.uint16(self.keymap.get(int(action), 0))
+
+
+class ControllerDriftingRemap(ControllerRemap):
+    def __init__(self, env: gym.Env, enable_event: Optional[Event] = None):
+        super().__init__(
+            env,
+            keymap={
+                0: 1, # forward
+                1: 17, # right
+                2: 33, # left
+                3: 257, # drift forward + toggle drift (on)
+                4: 1, # forward + toggle drift (off)
+            },
+            enable_event=enable_event,
+        )
+        self.drifting = False
+
+    def action(self, action):
+        if self.enable_event is not None and self.enable_event.update(self.env):
+            self.enabled = True
+            self.env.reset()
+
+        if not self.enabled:
+            return np.uint16(action)
+
+        if action == 3:
+            self.drifting = True
+        elif action == 4:
+            self.drifting = False
+            
+        keymask = self.keymap.get(int(action), 1)
+        if self.drifting:
+            keymask |= 256
+
+        return np.uint16(keymask)

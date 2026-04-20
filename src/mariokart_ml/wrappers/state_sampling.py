@@ -52,7 +52,6 @@ class SaveStateSampling(gym.Wrapper):
         if current_id not in self.saved_slots:
             emu.savestate.save(current_id + 2)
             self.saved_slots.append(current_id)
-            print(f"Save state saved to slot {current_id}")
 
         if len(self.saved_slots) == self.sample_times.shape[0]:
             self.create_states = False

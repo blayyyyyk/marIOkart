@@ -1,3 +1,4 @@
+from mariokart_ml.wrappers.controller_wrapper import ControllerDriftingRemap
 from functools import partial, reduce
 from pathlib import Path
 from typing import (
@@ -29,6 +30,7 @@ def _make(
     mode: Literal['play', 'menu', 'movie', 'train'],
     autoreset: bool = False,
     movie: Optional[Path] = None,
+    **wrappers: list[gym.Wrapper]
 ) -> gym.Env[dict[str, Any], int]:
     env = gym.make(env_name)
     if mode == 'movie':
@@ -52,7 +54,10 @@ def _make(
 
     if mode == 'train':
         env = SaveStateSampling(env, n_samples=SAVE_STATE_SAMPLE_COUNT, collect_saves_event=LapEndEvent())
-        env = ControllerRemap(env, keymap=SPARSE_KEYMAP, enable_event=LapEndEvent())
+        env = ControllerDriftingRemap(env, enable_event=LapEndEvent())
+        
+    if wrappers is not None:
+        env = reduce(lambda e, cls: cls(e), wrappers, env)
 
     return env
 
