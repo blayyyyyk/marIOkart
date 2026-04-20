@@ -11,18 +11,39 @@ class Event(ABC):
 
     def __call__(self, env: gym.Env) -> bool:
         return self.update(env)
+        
+    def __or__(self, other: 'Event') -> 'Event':
+        return AnyEvent([self, other])
+        
+    def __and__(self, other: 'Event') -> 'Event':
+        return AllEvent([self, other])
 
     @abstractmethod
     def update(self, env: gym.Env) -> bool:
         ...
 
+class AnyEvent(Event):
+    def __init__(self, events: list[Event]):
+        super().__init__()
+        self.events = events
+
+    def update(self, env: gym.Env) -> bool:
+        return any(event.update(env) for event in self.events)
+        
+class AllEvent(Event):
+    def __init__(self, events: list[Event]):
+        super().__init__()
+        self.events = events
+
+    def update(self, env: gym.Env) -> bool:
+        return all(event.update(env) for event in self.events)
 
 class BlankEvent(Event):
     def __init__(self):
         super().__init__()
 
     def update(self, env: gym.Env) -> bool:
-        return False
+        return True
 
 
 class StepCountEvent(Event):
