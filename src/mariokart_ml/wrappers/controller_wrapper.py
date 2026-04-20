@@ -76,19 +76,17 @@ class ControllerRemap(gym.ActionWrapper):
         
         
 class ControllerRemap(gym.ActionWrapper):
-    def __init__(self, env: gym.Env, keymap: dict[int, int], enable_event: Optional[Event] = None):
+    def __init__(self, env: gym.Env, keymap: dict[int, int]):
         super().__init__(env)
         self.keymap = keymap
         self.action_space = gym.spaces.Discrete(len(keymap), dtype=np.uint16)
         self.enabled = False
-        self.enable_event = enable_event
+        
+    def enable(self):
+        """Explicitly enables the AI action mapping."""
+        self.enabled = True
 
     def action(self, action):
-        if self.enable_event is not None and self.enable_event.update(self.env):
-            self.enabled = True
-            self.env.reset()
-            print(self.enabled)
-
         if not self.enabled:
             return np.uint16(action)
 
@@ -96,7 +94,7 @@ class ControllerRemap(gym.ActionWrapper):
 
 
 class ControllerDriftingRemap(ControllerRemap):
-    def __init__(self, env: gym.Env, enable_event: Optional[Event] = None):
+    def __init__(self, env: gym.Env):
         super().__init__(
             env,
             keymap={
@@ -106,15 +104,10 @@ class ControllerDriftingRemap(ControllerRemap):
                 3: 257, # drift forward + toggle drift (on)
                 4: 1, # forward + toggle drift (off)
             },
-            enable_event=enable_event,
         )
         self.drifting = False
 
     def action(self, action):
-        if self.enable_event is not None and self.enable_event.update(self.env):
-            self.enabled = True
-            self.env.reset()
-
         if not self.enabled:
             return np.uint16(action)
 

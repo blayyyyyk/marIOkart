@@ -13,14 +13,18 @@ class SaveStateSampling(gym.Wrapper):
 
         self.reset_event = self.get_wrapper_attr('reset_event') if collect_saves_event is None else collect_saves_event
 
+        self.saved_slots: list[int] = []
         if isinstance(n_samples, int):
             self.sample_times = np.linspace(0, 1, n_samples)
+            self.saved_slots: list[int] = [] if not reuse_slots else [i + 2 for i in range(n_samples)]
         elif isinstance(n_samples, list):
             self.sample_times = np.array(n_samples)
+            self.saved_slots: list[int] = [] if not reuse_slots else [i + 2 for i in range(len(n_samples))]
 
-        self.saved_slots: list[int] = []
         self._prev_min_dist = 1.0
 
+        self.resetted = False
+        self.reuse_slots = reuse_slots
         self.create_states = not reuse_slots
 
     def reset(self, *, seed=None, options=None):
@@ -66,5 +70,8 @@ class SaveStateSampling(gym.Wrapper):
             curr_len = len(self.saved_slots)
             if event_state:
                 terminated = truncated = True
+        elif self.reuse_slots and not self.resetted:
+            self.resetted = True
+            terminated = truncated = True
 
         return obs, reward, terminated, truncated, info

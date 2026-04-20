@@ -1,4 +1,3 @@
-from mariokart_ml.wrappers.controller_wrapper import ControllerDriftingRemap
 from functools import partial, reduce
 from pathlib import Path
 from typing import (
@@ -18,6 +17,7 @@ from gymnasium.wrappers import Autoreset
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 
 from mariokart_ml.utils.game_event import LapEndEvent, RaceEndEvent, RaceStartEvent
+from mariokart_ml.wrappers.controller_wrapper import ControllerDriftingRemap
 from mariokart_ml.wrappers.overlay_wrapper import OverlayWrapper
 from mariokart_ml.wrappers.window_wrapper import VecWindowWrapperSB3
 
@@ -30,9 +30,10 @@ def _make(
     mode: Literal['play', 'menu', 'movie', 'train'],
     autoreset: bool = False,
     movie: Optional[Path] = None,
+    reuse_save_slots: Optional[bool] = None,
     **wrappers: list[gym.Wrapper]
 ) -> gym.Env[dict[str, Any], int]:
-    env = gym.make(env_name)
+    env = gym.make(env_name, reset_event=LapEndEvent())
     if mode == 'movie':
         env = MovieWrapper(env, str(movie), disable_event=RaceEndEvent())
     elif mode == 'menu':
@@ -53,9 +54,10 @@ def _make(
         env = Autoreset(env)
 
     if mode == 'train':
-        env = SaveStateSampling(env, n_samples=SAVE_STATE_SAMPLE_COUNT, collect_saves_event=LapEndEvent())
-        env = ControllerDriftingRemap(env, enable_event=LapEndEvent())
-        
+        reuse_save_slots = reuse_save_slots if reuse_save_slots is not None else False
+        env = SaveStateSampling(env, n_samples=SAVE_STATE_SAMPLE_COUNT, collect_saves_event=LapEndEvent(), reuse_slots=reuse_save_slots)
+        env = ControllerDriftingRemap(env)
+
     if wrappers is not None:
         env = reduce(lambda e, cls: cls(e), wrappers, env)
 
@@ -90,8 +92,8 @@ WindowWrapperT = Union[VecWindowWrapper, WindowWrapper, VecWindowWrapperSB3]
 EnvT = Union[gym.Env, AsyncVectorEnv, VecEnv]
 
 class EnvManager:
-    def __init__(self, env_name: str, mode: Literal['play', 'menu', 'movie', 'train'], autoreset: bool = False, ):
-        self.base_factory = partial(_make, env_name, mode, autoreset)
+    def __init__(self, env_name: str, mode: Literal['play', 'menu', 'movie', 'train'], autoreset: bool = False, reuse_save_slots: Optional[bool] = None):
+        self.base_factory = partial(_make, env_name, mode, autoreset, reuse_save_slots)
 
     def make(self, movies: list[Optional[Path]], env_modifier: Optional[Callable] = None, vec_class: type[VecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv) -> EnvT:
         factory = env_modifier if env_modifier else self.base_factory

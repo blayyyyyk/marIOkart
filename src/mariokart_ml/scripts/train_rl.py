@@ -40,6 +40,7 @@ def train_rl(
     num_procs: int,
     verbose: bool = False,
     window: bool = False,
+    reuse_save_slots: Optional[bool] = None,
     sample_from: Optional[Path] = None,
     **kwargs
 ):
@@ -47,7 +48,7 @@ def train_rl(
     algo_kwargs = ALGO_KWARGS.get(algorithm, {})
 
     movie_paths = [sample_from] * num_procs
-    mgr = EnvManager(env_name, "train", autoreset=True)
+    mgr = EnvManager(env_name, "train", autoreset=True, reuse_save_slots=reuse_save_slots or not window)
 
     callback = None
     if window:
@@ -60,6 +61,7 @@ def train_rl(
         callback = WindowUpdateCallback(env.window)
     else:
         env = cast(GymEnv, mgr.make(movie_paths, vec_class=SubprocVecEnv))
+        obs = env.reset()
 
     assert env is not None
     model = algo_class("MultiInputPolicy", env=env, verbose=int(verbose), **algo_kwargs)
@@ -75,6 +77,7 @@ def train_rl(
             
         all_ready = np.all(dones)
         if all_ready:
+            env.env_method("enable")
             break
 
     try:
@@ -94,6 +97,7 @@ train_rl_parser.add_argument("--sample-from", type=Path, help="movie file that p
 train_rl_parser.add_argument("--algorithm", choices=ALGO_MAP.keys(), help="training algorithm", default="ppo")
 train_rl_parser.add_argument("--epochs", type=int, help="number of training epochs", default=EPOCHS)
 train_rl_parser.add_argument("--window", "-w", action="store_true", help="display a window showing the agent's environment")
+train_rl_parser.add_argument("--reuse-save-slots", action="store_true", help="reuse save slots for training, if not specified, new save slots will be created for each training session. If running headless, this will be forcibly enabled.")
 train_rl_parser.add_argument(
     "--num-procs",
     help="Specify the number of processes to debug an emulator on. NOTE: play mode does not support multiple processes",
