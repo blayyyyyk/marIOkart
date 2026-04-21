@@ -25,6 +25,13 @@ parser = ArgumentParser(
 
 parser.add_argument("-c", "--config", type=str, help="Path to a JSON config file")
 
+
+
+general_parser.set_defaults(**json_defaults)
+train_rl_parser.set_defaults(**json_defaults)
+debug_parser.set_defaults(**json_defaults)
+# ^ add the others per script ...
+
 subparsers = parser.add_subparsers(dest="command")
 subparsers.add_parser("record", parents=[record_parser, general_parser, window_parser])
 subparsers.add_parser("train", parents=[train_parser, general_parser])
@@ -34,10 +41,10 @@ subparsers.add_parser("process", parents=[process_parser, general_parser])
 subparsers.add_parser("debug", parents=[debug_parser, general_parser, window_parser])
 
 # inject json file contents into parser defaults
-parser.set_defaults(**json_defaults)
 args = parser.parse_args(remaining_argv)
 
 if hasattr(args, "func"):
+    print(args)
     args_list = vars(args)
     func = args_list.pop("func")
     args_list.pop("command")
