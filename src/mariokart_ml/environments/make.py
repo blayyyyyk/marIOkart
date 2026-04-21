@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from functools import partial, reduce
 from pathlib import Path
 from typing import (
@@ -16,21 +17,25 @@ from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import Autoreset
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 
+from mariokart_ml.config import (
+    N_KEYS,
+    RAY_COUNT,
+    SAVE_STATE_SAMPLE_COUNT,
+    SPARSE_KEYMAP,
+)
 from mariokart_ml.utils.game_event import LapEndEvent, RaceEndEvent, RaceStartEvent
+from mariokart_ml.wrappers import *
 from mariokart_ml.wrappers.controller_wrapper import ControllerDriftingRemap
-from mariokart_ml.wrappers.overlay_wrapper import OverlayWrapper
+from mariokart_ml.wrappers.overlay_wrapper import CairoWrapper, OverlayWrapper
 from mariokart_ml.wrappers.window_wrapper import VecWindowWrapperSB3
-
-from ..config import N_KEYS, RAY_COUNT, SAVE_STATE_SAMPLE_COUNT, SPARSE_KEYMAP
-from ..wrappers import *
 
 
 def _make(
     env_name: str,
     mode: Literal['play', 'menu', 'movie', 'train'],
     autoreset: bool = False,
-    movie: Optional[Path] = None,
     reuse_save_slots: Optional[bool] = None,
+    movie: Optional[Path] = None,
     **wrappers: list[gym.Wrapper]
 ) -> gym.Env[dict[str, Any], int]:
     env = gym.make(env_name, reset_event=LapEndEvent())
