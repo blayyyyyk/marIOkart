@@ -10,9 +10,9 @@ from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import FrameStackObservation
 from gymnasium.wrappers.vector import NumpyToTorch
 
-from ..config import *
-from ..models import registry
-from ..utils import collect_dsm
+from mariokart_ml.config import *
+from mariokart_ml.models import registry
+from mariokart_ml.utils import collect_dsm
 
 
 def eval_supervised(

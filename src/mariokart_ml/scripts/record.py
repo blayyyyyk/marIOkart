@@ -13,10 +13,10 @@ from gym_mkds.wrappers import (
 )
 from gymnasium.vector import AsyncVectorEnv
 
-from ..config import *
-from ..wrappers.dataset_wrapper import DatasetWrapper
-from ..utils import Suppress
-from ..utils.functional import sub_process_func
+from mariokart_ml.config import *
+from mariokart_ml.utils import Suppress
+from mariokart_ml.utils.functional import sub_process_func
+from mariokart_ml.wrappers.dataset_wrapper import DatasetWrapper
 
 
 def create_env(m: Path, o: Path):

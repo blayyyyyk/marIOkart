@@ -2,11 +2,11 @@ from argparse import ArgumentParser
 
 import torch.optim as optim
 
-from ..config import *
-from ..models import registry
-from ..models.registry import CheckpointState
-from ..train import prepare_data, train_loop
-from ..utils import collect_dat
+from mariokart_ml.config import *
+from mariokart_ml.models import registry
+from mariokart_ml.models.registry import CheckpointState
+from mariokart_ml.train import prepare_data, train_loop
+from mariokart_ml.utils import collect_dat
 
 
 def train_supervised(args):
@@ -90,7 +90,7 @@ train_parser.add_argument(
 )
 hyper_params_group = train_parser.add_argument_group("Training Hyperparameters")
 hyper_params_group.add_argument(
-    "--epochs", "-e", help="Number of training epochs.", default=EPOCHS
+    "--epochs", "-e", help="Number of training epochs.", default=TOTAL_TRAINING_TIMESTEPS
 )
 hyper_params_group.add_argument("--lr", help="Learning rate", default=LEARNING_RATE)
 hyper_params_group.add_argument(
