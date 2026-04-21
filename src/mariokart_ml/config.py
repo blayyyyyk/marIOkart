@@ -40,7 +40,7 @@ EMBED_COUNT = 2**N_KEYS # number of possible 11-bit keymask
 NUM_FEATURES = (
     RAY_COUNT + EMBED_SIZE
 )  # number of dims of the feature vector fed into the model. part of this will always be the keymask embed
-EPOCHS = 100  # number of training epochs for a training session
+TOTAL_TRAINING_TIMESTEPS = 20000  # number of training epochs for a training session
 SPLIT_RATIO = (
     0.8  # ratio of training examples to total dataset examples provided for training
 )
@@ -63,7 +63,7 @@ ALGO_MAP: dict[str, type[BaseAlgorithm]] = {
 }
 
 ALGO_KWARGS: dict[str, dict[str, Any]] = {
-    "ppo": {"n_steps": 2048, "learning_rate": 3e-4},
+    "ppo": {"n_steps": 64, "learning_rate": 3e-4},
     "dqn": {"buffer_size": 10000, "learning_rate": 1e-3},
 }
 

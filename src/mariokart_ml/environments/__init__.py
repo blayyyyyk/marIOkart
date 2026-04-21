@@ -33,6 +33,7 @@ register(
         TimeTrialObservations.wrapper_spec(),
         TimeTrialReward.wrapper_spec(),
     ),
-    kwargs={"rom_path": str(ROM_PATH)}
+    kwargs={"rom_path": str(ROM_PATH)},
+    max_episode_steps=5000
 )
 
