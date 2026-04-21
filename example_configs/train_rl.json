@@ -1,0 +1,11 @@
+{
+    "num_procs": 4,
+    "verbose": true,
+    "window": true,
+    "reuse_save_slots": true,
+    "total_timesteps": 30000,
+    "scale": 2,
+    "save_model_path": "checkpoints/f8c_ppo_2.zip",
+    "load_model_path": "checkpoints/f8c_ppo_1.zip",
+    "env_name": "mariokart_ml/TimeTrial-v1"
+}
