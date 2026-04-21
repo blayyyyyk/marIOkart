@@ -3,6 +3,7 @@ import math
 import random
 from functools import cached_property
 from typing import Any, Literal, Optional, TypedDict, cast
+import sys, os
 
 import gymnasium as gym
 import numpy as np
@@ -16,9 +17,11 @@ from gymnasium.wrappers.utils import RunningMeanStd
 from mariokart_ml.config import N_KEYS
 from mariokart_ml.utils.game_event import Event, RaceEndEvent
 
-from ..utils.collision import compute_collision_dists
-from ..wrappers.boundary_wrapper import project_2d
-from ..wrappers.checkpoint_wrapper import checkpoint_angle_signed
+from mariokart_ml.utils.collision import compute_collision_dists
+from mariokart_ml.wrappers.boundary_wrapper import project_2d
+from mariokart_ml.wrappers.checkpoint_wrapper import checkpoint_angle_signed
+from mariokart_ml.utils.suppress import Suppress
+from contextlib import nullcontext
 
 ROTATION_CONST = 1 / (1 << 15)
 
@@ -41,7 +44,7 @@ class ResetOptions(TypedDict):
 class TimeTrialEnv(gym.Env[dict[str, Any], int]):
     emu: MarioKart
 
-    def __init__(self, rom_path: str, reset_event: Optional[Event] = RaceEndEvent()):
+    def __init__(self, rom_path: str, reset_event: Optional[Event] = RaceEndEvent(), suppress_desmume: bool = True):
         super().__init__()
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
@@ -65,15 +68,17 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         }
 
         self.render_mode = "rgb_array"
+        self.suppress_desmume = suppress_desmume
 
-        # stores emulator instance
-        self.emu = MarioKart()
-        self.emu.open(rom_path)
-        self.emu.volume_set(0)
-
-        # clear out any leftover save slots, replace with main menu
-        self.emu.savestate.save(RACE_SAVE_SLOT)
-        self.emu.savestate.save(FRAME_SAVE_SLOT)
+        with Suppress() if self.suppress_desmume else nullcontext():
+            # stores emulator instance
+            self.emu = MarioKart()
+            self.emu.open(rom_path)
+            self.emu.volume_set(0)
+    
+            # clear out any leftover save slots, replace with main menu
+            self.emu.savestate.save(RACE_SAVE_SLOT)
+            self.emu.savestate.save(FRAME_SAVE_SLOT)
 
 
         self.reset_event = reset_event
@@ -183,12 +188,12 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         options = {} if options is None else options
         reset_type = options.get("reset_type", None)
 
-        print(f"{reset_type=}, {options=}")
-        if isinstance(reset_type, int):
-            self.emu.savestate.load(reset_type)
-
-        if self.emu.movie.is_playing():
-            self.emu.movie.stop()
+        with Suppress() if self.suppress_desmume else nullcontext():
+            if isinstance(reset_type, int):
+                self.emu.savestate.load(reset_type)
+    
+            if self.emu.movie.is_playing():
+                self.emu.movie.stop()
 
         return obs, info
 
