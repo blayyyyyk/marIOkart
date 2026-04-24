@@ -2,11 +2,9 @@ import json
 from argparse import ArgumentParser
 
 from mariokart_ml.scripts.debug import debug_parser
-from mariokart_ml.scripts.eval import eval_parser
 from mariokart_ml.scripts.process import process_parser
 from mariokart_ml.scripts.record import record_parser
 from mariokart_ml.scripts.train import train_parser
-from mariokart_ml.scripts.train_rl import train_rl_parser
 from mariokart_ml.scripts.util import general_parser, window_parser
 
 # intercept the existing parser to accept json files
@@ -25,9 +23,7 @@ parser = ArgumentParser(
 
 parser.add_argument("-c", "--config", type=str, help="Path to a JSON config file")
 
-
 general_parser.set_defaults(**json_defaults)
-train_rl_parser.set_defaults(**json_defaults)
 train_parser.set_defaults(**json_defaults)
 debug_parser.set_defaults(**json_defaults)
 # ^ add the others per script ...
@@ -35,8 +31,6 @@ debug_parser.set_defaults(**json_defaults)
 subparsers = parser.add_subparsers(dest="command")
 subparsers.add_parser("record", parents=[record_parser, general_parser, window_parser])
 subparsers.add_parser("train", parents=[train_parser, general_parser, window_parser])
-subparsers.add_parser("train_rl", parents=[train_rl_parser, general_parser, window_parser])
-subparsers.add_parser("eval", parents=[eval_parser, general_parser, window_parser])
 subparsers.add_parser("process", parents=[process_parser, general_parser])
 subparsers.add_parser("debug", parents=[debug_parser, general_parser, window_parser])
 

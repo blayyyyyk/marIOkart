@@ -41,7 +41,7 @@ class WindowUpdateCallback(BaseCallback):
 SPARSE_KEYMAP = {0: 17, 1: 33, 2: 1}
 
 
-def train_rl(
+def train(
     algorithm: str = "ppo",
     total_timesteps: int = TOTAL_TRAINING_TIMESTEPS,
     scale: int = 1,
@@ -100,7 +100,7 @@ def train_rl(
 
         all_ready = np.all(dones)
         if all_ready:
-            env.env_method("enable")
+            env.env_method("enable")  # type: ignore
             break
 
     try:
@@ -115,35 +115,35 @@ def train_rl(
         env.close()
 
 
-train_rl_parser = ArgumentParser(add_help=False)
-train_rl_parser.add_argument(
+train_parser = ArgumentParser(add_help=False)
+train_parser.add_argument(
     "--sample-from",
     type=Path,
     help="""movie file that performs menuing and single race lap to collect savestates for sampling position,
     if none is specified, keyboard input will be enable for the menu and first lap before training.""",
     default=SUPPRESS,
 )
-train_rl_parser.add_argument("--algorithm", choices=ALGO_MAP.keys(), help="training algorithm", default=SUPPRESS)
-train_rl_parser.add_argument("--total-timesteps", type=int, help="number of training timesteps", default=SUPPRESS)
-train_rl_parser.add_argument(
+train_parser.add_argument("--algorithm", choices=ALGO_MAP.keys(), help="training algorithm", default=SUPPRESS)
+train_parser.add_argument("--total-timesteps", type=int, help="number of training timesteps", default=SUPPRESS)
+train_parser.add_argument(
     "--window",
     "-w",
     action="store_true",
     help="display a window showing the agent's environment",
 )
-train_rl_parser.add_argument(
+train_parser.add_argument(
     "--reuse-save-slots",
     action="store_true",
     help="reuse save slots for training, if not specified, new save slots will be created for each training session. If running headless, this will be forcibly enabled.",
 )
-train_rl_parser.add_argument(
+train_parser.add_argument(
     "--num-procs",
     help="Specify the number of processes to debug an emulator on. NOTE: play mode does not support multiple processes",
     type=int,
 )
-train_rl_parser.add_argument("--save-model-path", type=Path, help="Path to save the trained model")
-train_rl_parser.add_argument("--load-model-path", type=Path, help="Path to load a pre-trained model")
-train_rl_parser.set_defaults(func=train_rl, env_name="gym_mkds/MarioKartDS-v1")
+train_parser.add_argument("--save-model-path", type=Path, help="Path to save the trained model")
+train_parser.add_argument("--load-model-path", type=Path, help="Path to load a pre-trained model")
+train_parser.set_defaults(func=train, env_name="gym_mkds/MarioKartDS-v1")
 
 
 if __name__ == "__main__":
@@ -152,4 +152,4 @@ if __name__ == "__main__":
     from .util import general_parser, script_main, window_parser
 
     prog = os.path.basename(__file__)
-    parser = script_main(prog, [train_rl_parser, general_parser, window_parser])
+    parser = script_main(prog, [train_parser, general_parser, window_parser])
