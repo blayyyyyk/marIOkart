@@ -6,7 +6,7 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 
 # Default paths for folders and files #
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-ROM_PATH = ROOT_DIR / "private" / "mariokart_ds.nds"
+ROM_PATH = ROOT_DIR / "mariokart_ds.nds"
 
 DATASET_PATH = ROOT_DIR / "data"
 RAW_DATASET_PATH = DATASET_PATH / "raw"  # this is where .dsm input recordings are held
