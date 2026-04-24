@@ -1,5 +1,3 @@
-from typing import Literal, Optional
-
 import gymnasium as gym
 import numpy as np
 import pynput
@@ -26,17 +24,20 @@ USER_KEYMAP = {
     "down": Keys.KEY_DOWN,
 }
 
+
 class KeyboardWrapper(gym.ActionWrapper):
-    def __init__(self, env, keymap: dict[str, int] = USER_KEYMAP, disable_event: Optional[Event] = None):
-        super(KeyboardWrapper, self).__init__(env)
-        self.listener = pynput.keyboard.Listener(
-            on_press=self._on_press, on_release=self._on_release
-        )
+    def __init__(
+        self,
+        env,
+        keymap: dict[str, int] = USER_KEYMAP,
+        disable_event: Event | None = None,
+    ):
+        super().__init__(env)
+        self.listener = pynput.keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
         self.keymap = keymap
         self.input_state = set()
         self.disabled = False
 
-        
         self.disable_event = disable_event
 
     def _on_press(self, key):
@@ -63,31 +64,32 @@ class KeyboardWrapper(gym.ActionWrapper):
         return info, obs
 
     def _special_keys(self, key: str):
-        if self.has_wrapper_attr('save_slot_id') and key in "p":
-            slot_id = self.get_wrapper_attr('save_slot_id')
-            emu: MarioKart = self.get_wrapper_attr('emu')
+        if self.has_wrapper_attr("save_slot_id") and key in "p":
+            slot_id = self.get_wrapper_attr("save_slot_id")
+            emu: MarioKart = self.get_wrapper_attr("emu")
             emu.savestate.load(slot_id)
-        elif self.has_wrapper_attr('save_slot_id') and key == "o":
-            slot_id = self.get_wrapper_attr('save_slot_id')
-            emu: MarioKart = self.get_wrapper_attr('emu')
+        elif self.has_wrapper_attr("save_slot_id") and key == "o":
+            slot_id = self.get_wrapper_attr("save_slot_id")
+            emu: MarioKart = self.get_wrapper_attr("emu")
             emu.savestate.save(slot_id)
-        elif self.has_wrapper_attr('save_slot_id') and key == "n":
-            slot_id = self.get_wrapper_attr('save_slot_id')
-            emu: MarioKart = self.get_wrapper_attr('emu')
+        elif self.has_wrapper_attr("save_slot_id") and key == "n":
+            slot_id = self.get_wrapper_attr("save_slot_id")
+            emu: MarioKart = self.get_wrapper_attr("emu")
             emu.savestate.save(slot_id)
-# 
+
+    #
     def action(self, action):
         mask = 0
         try:
             for key in self.input_state:
                 self._special_keys(key)
-                if not key in self.keymap:
+                if key not in self.keymap:
                     continue
                 mask |= keymask(self.keymap[key])
 
         except RuntimeError:
             pass
-            
+
         if action != 0 or self.disabled:
             self.disabled = True
             return np.uint16(action)

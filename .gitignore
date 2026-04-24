@@ -1,22 +1,30 @@
-.DS_Store
-**/*/__pycache__
-__pycache__
-.zed
-MKDS Info.lua
-pyrightconfig.json
-rom
-*.nds
-**/*/venv
-**/*/_build
-**/*/_build/*
-**/*/_build/*
-.envrc
-.envrc
-nitro-sdk
-mkds_c/external_include
-.clangd
-private
-.vscode
-todo.txt
-.mypy_cache
+# typechecking
 ty.toml
+ruff.toml
+pyrightconfig.json
+.clangd
+
+# caching
+.mypy_cache
+.ruff_cache
+**/__pycache__
+**/_build/*
+
+# editting
+.vscode
+.zed
+
+# python
+.venv
+venv
+
+# direnv
+.envrc
+
+# special artifacts
+mkds_c/external_include
+**/*/libdesmume.dylib
+**/*.nds
+
+# misc
+.DS_Store

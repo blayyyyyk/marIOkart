@@ -1,9 +1,10 @@
 import shutil
 from argparse import ArgumentParser
+from pathlib import Path
 
-from ..config import *
+from ..config import PROCESSED_BAD_DATASET_PATH, RAW_DATASET_PATH
 from ..utils import sav_to_dsm
-from .util import general_parser, window_parser
+from .util import general_parser
 
 
 def process(source: Path | list[Path], verbose: bool = False):
@@ -19,9 +20,8 @@ def process(source: Path | list[Path], verbose: bool = False):
     )
 
     if verbose:
-        print(
-            f"movie files successfully processed and copied to {PROCESSED_BAD_DATASET_PATH}"
-        )
+        print(f"movie files successfully processed and copied to {PROCESSED_BAD_DATASET_PATH}")
+
 
 # Process Mode Parsing #
 process_parser = ArgumentParser(add_help=False)
@@ -35,8 +35,8 @@ process_parser.set_defaults(func=process)
 
 if __name__ == "__main__":
     import os
-    
-    from .util import general_parser, script_main, window_parser
-    
+
+    from .util import general_parser, script_main
+
     prog = os.path.basename(__file__)
     parser = script_main(prog=prog, parents=[process_parser, general_parser])

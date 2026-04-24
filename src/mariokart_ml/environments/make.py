@@ -1,13 +1,9 @@
-from abc import ABC, abstractmethod
+from collections.abc import Callable
 from functools import partial, reduce
 from pathlib import Path
 from typing import (
     Any,
-    Callable,
     Literal,
-    Optional,
-    TypeAliasType,
-    Union,
     cast,
     overload,
 )
@@ -21,46 +17,51 @@ from mariokart_ml.config import (
     N_KEYS,
     RAY_COUNT,
     SAVE_STATE_SAMPLE_COUNT,
-    SPARSE_KEYMAP,
 )
 from mariokart_ml.utils.game_event import LapEndEvent, RaceEndEvent, RaceStartEvent
-from mariokart_ml.wrappers import *
+from mariokart_ml.wrappers import ControllerDisplay, ControllerObservation, KeyboardWrapper, MovieWrapper, SaveStateSampling, SweepingRayOverlay, TrackBoundary, VecWindowWrapper, WindowWrapper
 from mariokart_ml.wrappers.controller_wrapper import ControllerDriftingRemap
-from mariokart_ml.wrappers.overlay_wrapper import CairoWrapper, OverlayWrapper
+from mariokart_ml.wrappers.overlay_wrapper import OverlayWrapper
 from mariokart_ml.wrappers.window_wrapper import VecWindowWrapperSB3
 
 
 def _make(
     env_name: str,
-    mode: Literal['play', 'menu', 'movie', 'train'],
+    mode: Literal["play", "menu", "movie", "train"],
     autoreset: bool = False,
-    reuse_save_slots: Optional[bool] = None,
-    movie: Optional[Path] = None,
-    **wrappers: list[gym.Wrapper]
+    reuse_save_slots: bool | None = None,
+    movie: Path | None = None,
+    **wrappers: list[gym.Wrapper],
 ) -> gym.Env[dict[str, Any], int]:
     env = gym.make(env_name, reset_event=LapEndEvent())
-    if mode == 'movie':
+    if mode == "movie":
         env = MovieWrapper(env, str(movie), disable_event=RaceEndEvent())
-    elif mode == 'menu':
+    elif mode == "menu":
         env = MovieWrapper(env, str(movie), disable_event=RaceStartEvent())
     elif mode == "train":
         if movie is None:
             env = KeyboardWrapper(env, disable_event=LapEndEvent())
         else:
             env = MovieWrapper(env, str(movie), disable_event=LapEndEvent())
-    elif mode == 'play': pass
+    elif mode == "play":
+        pass
     else:
-        raise ValueError(f"Invalid debug mode provided")
+        raise ValueError("Invalid debug mode provided")
 
-    if mode == 'play' or mode == 'menu':
+    if mode == "play" or mode == "menu":
         env = KeyboardWrapper(env, disable_event=LapEndEvent())
 
     if autoreset:
         env = Autoreset(env)
 
-    if mode == 'train':
+    if mode == "train":
         reuse_save_slots = reuse_save_slots if reuse_save_slots is not None else False
-        env = SaveStateSampling(env, n_samples=SAVE_STATE_SAMPLE_COUNT, collect_saves_event=LapEndEvent(), reuse_slots=reuse_save_slots)
+        env = SaveStateSampling(
+            env,
+            n_samples=SAVE_STATE_SAMPLE_COUNT,
+            collect_saves_event=LapEndEvent(),
+            reuse_slots=reuse_save_slots,
+        )
         env = ControllerDriftingRemap(env)
 
     if wrappers is not None:
@@ -68,11 +69,12 @@ def _make(
 
     return env
 
+
 def _make_window_wrappers(
     env: gym.Env,
     show_keys: bool = False,
     show_boundary: bool = False,
-    show_rays: bool = False
+    show_rays: bool = False,
 ):
     # special overlay (requires input monitoring)
     if show_keys:
@@ -93,14 +95,26 @@ def _make_window_wrappers(
     return OverlayWrapper(env, *overlays)
 
 
-WindowWrapperT = Union[VecWindowWrapper, WindowWrapper, VecWindowWrapperSB3]
-EnvT = Union[gym.Env, AsyncVectorEnv, VecEnv]
+WindowWrapperT = VecWindowWrapper | WindowWrapper | VecWindowWrapperSB3
+EnvT = gym.Env | AsyncVectorEnv | VecEnv
+
 
 class EnvManager:
-    def __init__(self, env_name: str, mode: Literal['play', 'menu', 'movie', 'train'], autoreset: bool = False, reuse_save_slots: Optional[bool] = None):
+    def __init__(
+        self,
+        env_name: str,
+        mode: Literal["play", "menu", "movie", "train"],
+        autoreset: bool = False,
+        reuse_save_slots: bool | None = None,
+    ):
         self.base_factory = partial(_make, env_name, mode, autoreset, reuse_save_slots)
 
-    def make(self, movies: list[Optional[Path]], env_modifier: Optional[Callable] = None, vec_class: type[VecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv) -> EnvT:
+    def make(
+        self,
+        movies: list[Path | None],
+        env_modifier: Callable | None = None,
+        vec_class: type[VecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv,
+    ) -> EnvT:
         factory = env_modifier if env_modifier else self.base_factory
 
         if len(movies) == 1:
@@ -108,25 +122,38 @@ class EnvManager:
 
         part = partial(vec_class, [(lambda m=m: factory(m)) for m in movies])
         if vec_class.__name__ == "SubprocVecEnv":
-            vec_env = part(start_method='spawn') # sb3
+            vec_env = part(start_method="spawn")  # sb3
         elif vec_class.__name__ == "AsyncVectorEnv":
-            vec_env = part(context='spawn') # gymnasium
+            vec_env = part(context="spawn")  # gymnasium
         else:
             raise ValueError(f"Unsupported vector environment class: {vec_class.__name__}")
 
         return vec_env
 
     @overload
-    def make_windowed(self, movies: list[Optional[Path]], vec_class: type[VecEnv], **kwargs) -> VecWindowWrapperSB3: ...
+    def make_windowed(self, movies: list[Path | None], vec_class: type[VecEnv], **kwargs) -> VecWindowWrapperSB3: ...
 
     @overload
-    def make_windowed(self, movies: list[Optional[Path]], vec_class: type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv, **kwargs) -> VecWindowWrapper: ...
+    def make_windowed(
+        self,
+        movies: list[Path | None],
+        vec_class: type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv,
+        **kwargs,
+    ) -> VecWindowWrapper: ...
 
     @overload
-    def make_windowed(self, movies: Optional[Path], vec_class: type[AsyncVectorEnv], **kwargs) -> WindowWrapper: ...
+    def make_windowed(self, movies: Path | None, vec_class: type[AsyncVectorEnv], **kwargs) -> WindowWrapper: ...
 
-    def make_windowed(self, movies: list[Optional[Path]] | Optional[Path], scale: int = 1, vec_class: type[VecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv,  **kwargs) -> WindowWrapperT:
-        windowed_factory = lambda m: _make_window_wrappers(self.base_factory(m), **kwargs)
+    def make_windowed(
+        self,
+        movies: list[Path | None] | Path | None,
+        scale: int = 1,
+        vec_class: type[VecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv,
+        **kwargs,
+    ) -> WindowWrapperT:
+        def windowed_factory(m):
+            _make_window_wrappers(self.base_factory(m), **kwargs)
+
         _movies = movies if isinstance(movies, list) else [movies]
         env = self.make(_movies, env_modifier=windowed_factory, vec_class=vec_class)
         return EnvManager.add_window(env, scale)

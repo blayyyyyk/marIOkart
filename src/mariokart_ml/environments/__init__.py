@@ -1,29 +1,32 @@
-from gym_mkds.wrappers import (
-    CheckpointOverlay,
-    ControllerAction,
-    ControllerDisplay,
-    ControllerObservation,
-    ProgressReward,
-    RaceStats,
-    RewardDisplayWrapper,
-    SweepingRay,
-    SweepingRayOverlay,
-    TrackBoundary,
-)
-from gymnasium.envs.registration import WrapperSpec, register
+from gymnasium.envs.registration import register
 
-from ..config import *
-from ..wrappers import ControllerAction, TimeTrialReward
-from .env import TimeTrialObservations, TimeTrialEnv
-from .make import EnvManager
+from mariokart_ml.config import N_KEYS, ROM_PATH
+from mariokart_ml.environments.env import TimeTrialEnv, TimeTrialObservations
+from mariokart_ml.environments.make import EnvManager
+from mariokart_ml.wrappers import ControllerAction, TimeTrialReward
+
+__all__ = [
+    "CheckpointOverlay",
+    "ControllerAction",
+    "ControllerDisplay",
+    "ControllerObservation",
+    "ProgressReward",
+    "RaceStats",
+    "RewardDisplayWrapper",
+    "SweepingRay",
+    "SweepingRayOverlay",
+    "TrackBoundary",
+    "TimeTrialReward",
+    "TimeTrialEnv",
+    "TimeTrialObservations",
+    "EnvManager",
+]
 
 register(
     id="mariokart_ml/TimeTrial-human-v1",
     entry_point="mariokart_ml.environments:TimeTrialEnv",
-    additional_wrappers=(
-        ControllerAction.wrapper_spec(n_keys=N_KEYS),
-    ),
-    kwargs={"rom_path": str(ROM_PATH)}
+    additional_wrappers=(ControllerAction.wrapper_spec(n_keys=N_KEYS),),
+    kwargs={"rom_path": str(ROM_PATH)},
 )
 
 register(
@@ -34,6 +37,5 @@ register(
         TimeTrialReward.wrapper_spec(),
     ),
     kwargs={"rom_path": str(ROM_PATH)},
-    max_episode_steps=5000
+    max_episode_steps=5000,
 )
-

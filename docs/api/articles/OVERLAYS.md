@@ -1,7 +1,7 @@
 (mkds-overlay-system-extensible-overlays-for-mario-kart-ds)=
 # MKDS Overlay System — Extensible Overlays for Mario Kart DS
 
-> **Composable overlay framework for the DeSmuME renderer.**  
+> **Composable overlay framework for the DeSmuME renderer.**
 > Compute geometry from live emulator memory, project to screen space, and enqueue drawing primitives for a GTK/Cairo render loop. Easily add your own overlays by writing a single `overlay(emu, device)` function.
 
 - **Focus:** Overlays (`utils/overlay.py`) and drawing stack (`utils/draw.py`)
@@ -67,7 +67,7 @@ Core pieces:
 (threading-model)=
 ### Threading Model
 
-- Overlays typically run in a **worker thread** (see `worker()` and the `tick()` in `main.py`).  
+- Overlays typically run in a **worker thread** (see `worker()` and the `tick()` in `main.py`).
 - `draw_queue` is a thread-safe `queue.Queue`; decorated `draw_*` functions push **closures** that will be executed later in the GTK thread with a Cairo `Context`.
 - The GTK `draw` callback maintains an **overlay surface cache** to reuse the last overlay frame when no new draw ops were enqueued (reduces flicker and work).
 
@@ -374,19 +374,19 @@ def my_overlay(emu, device=None):
 (faq)=
 ## FAQ
 
-**Q: Do I need to call `draw_*` with a Cairo context?**  
+**Q: Do I need to call `draw_*` with a Cairo context?**
 A: No. The decorator enqueues a closure; the GTK thread supplies the `Context` later.
 
-**Q: Why does `draw_points` use the 3rd channel of `pts`?**  
+**Q: Why does `draw_points` use the 3rd channel of `pts`?**
 A: It scales the point radius (`radius_scale * z`) to hint depth/parallax. For fixed-size markers, pass a constant `z=1` per point.
 
-**Q: Can I pass per-point radii?**  
+**Q: Can I pass per-point radii?**
 A: The current implementation expects a **float** `radius_scale`; per-point scaling isn’t indexed per row. If you need it, extend the function to accept a per-point array and index it inside the loop.
 
-**Q: Where do `project_to_screen`, `z_clip_mask`, etc. come from?**  
+**Q: Where do `project_to_screen`, `z_clip_mask`, etc. come from?**
 A: They’re provided by the memory/geometry utilities (`utils.memory`), which wrap camera pose reads and projection math.
 
-**Q: What if my overlay needs previous-frame state?**  
+**Q: What if my overlay needs previous-frame state?**
 A: Use module-level globals (as `raycasting_overlay` does with `current_point`) or keep a small state object; be mindful of the worker thread context.
 
 ---

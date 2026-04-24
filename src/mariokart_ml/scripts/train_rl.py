@@ -1,28 +1,21 @@
 from argparse import SUPPRESS, ArgumentParser
 from pathlib import Path
-from typing import Optional, Union, cast
+from typing import cast
 
 import numpy as np
 import torch
 from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.type_aliases import GymEnv
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from mariokart_ml.config import (
     ALGO_KWARGS,
     ALGO_MAP,
-    DEFAULT_DEVICE_NAME,
-    PROCESSED_GOOD_DATASET_PATH,
     TOTAL_TRAINING_TIMESTEPS,
 )
 from mariokart_ml.environments import EnvManager
-from mariokart_ml.utils import collect_dsm
-from mariokart_ml.utils.sav_to_dsm import COURSE_ABBREVIATIONS
 from mariokart_ml.wrappers.window_wrapper import (
-    VecWindowWrapper,
     VecWindowWrapperSB3,
-    WindowWrapper,
 )
 
 
@@ -45,11 +38,8 @@ class WindowUpdateCallback(BaseCallback):
             return True
 
 
-SPARSE_KEYMAP = {
-    0: 17,
-    1: 33,
-    2: 1
-}
+SPARSE_KEYMAP = {0: 17, 1: 33, 2: 1}
+
 
 def train_rl(
     algorithm: str = "ppo",
@@ -60,11 +50,11 @@ def train_rl(
     window: bool = False,
     reuse_save_slots: bool = False,
     env_name: str = "mariokart_ml/TimeTrial-v1",
-    sample_from: Optional[Path] = None,
-    save_model_path: Optional[Path] = None,
-    load_model_path: Optional[Path] = None,
-    device: torch.device = torch.device(DEFAULT_DEVICE_NAME),
-    **kwargs
+    sample_from: Path | None = None,
+    save_model_path: Path | None = None,
+    load_model_path: Path | None = None,
+    device: torch.device | str = "cpu",
+    **kwargs,
 ):
     algo_class = ALGO_MAP[algorithm]
     algo_kwargs = ALGO_KWARGS.get(algorithm, {})
@@ -74,12 +64,12 @@ def train_rl(
         env_name,
         mode="train",
         autoreset=True,
-        reuse_save_slots=reuse_save_slots or not window
+        reuse_save_slots=reuse_save_slots or not window,
     )
 
     if window:
         env = mgr.make_windowed(movie_paths, scale=scale, vec_class=SubprocVecEnv)
-        assert hasattr(env, 'window')
+        assert hasattr(env, "window")
 
         obs = env.reset()
         assert env.window is not None
@@ -99,11 +89,12 @@ def train_rl(
             print(f"Failed to load model from {load_model_path}: {e}")
 
     while True:
-        if isinstance(env, (SubprocVecEnv, VecWindowWrapperSB3)):
-            dummy_actions = np.array([0 for _ in range(env.num_envs)])
-            obs, rewards, dones, infos = env.step(dummy_actions)
+        if isinstance(env, SubprocVecEnv | VecWindowWrapperSB3):
+            assert isinstance(obs, dict)
+            action, _state = model.predict(obs, deterministic=True)
+            obs, reward, dones, info = env.step(action)
 
-        if window and hasattr(env, 'window') and env.window is not None:
+        if window and hasattr(env, "window") and env.window is not None:
             assert isinstance(env, VecWindowWrapperSB3)
             env.window.update()
 
@@ -125,15 +116,30 @@ def train_rl(
 
 
 train_rl_parser = ArgumentParser(add_help=False)
-train_rl_parser.add_argument("--sample-from", type=Path, help="movie file that performs menuing and single race lap to collect savestates for sampling position, if none is specified, keyboard input will be enable for the menu and first lap before training.", default=SUPPRESS)
+train_rl_parser.add_argument(
+    "--sample-from",
+    type=Path,
+    help="""movie file that performs menuing and single race lap to collect savestates for sampling position,
+    if none is specified, keyboard input will be enable for the menu and first lap before training.""",
+    default=SUPPRESS,
+)
 train_rl_parser.add_argument("--algorithm", choices=ALGO_MAP.keys(), help="training algorithm", default=SUPPRESS)
 train_rl_parser.add_argument("--total-timesteps", type=int, help="number of training timesteps", default=SUPPRESS)
-train_rl_parser.add_argument("--window", "-w", action="store_true", help="display a window showing the agent's environment")
-train_rl_parser.add_argument("--reuse-save-slots", action="store_true", help="reuse save slots for training, if not specified, new save slots will be created for each training session. If running headless, this will be forcibly enabled.")
+train_rl_parser.add_argument(
+    "--window",
+    "-w",
+    action="store_true",
+    help="display a window showing the agent's environment",
+)
+train_rl_parser.add_argument(
+    "--reuse-save-slots",
+    action="store_true",
+    help="reuse save slots for training, if not specified, new save slots will be created for each training session. If running headless, this will be forcibly enabled.",
+)
 train_rl_parser.add_argument(
     "--num-procs",
     help="Specify the number of processes to debug an emulator on. NOTE: play mode does not support multiple processes",
-    type=int
+    type=int,
 )
 train_rl_parser.add_argument("--save-model-path", type=Path, help="Path to save the trained model")
 train_rl_parser.add_argument("--load-model-path", type=Path, help="Path to load a pre-trained model")

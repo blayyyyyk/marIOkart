@@ -1,20 +1,15 @@
 from argparse import ArgumentParser
-from functools import partial
 from itertools import batched
 from pathlib import Path
 
 import gymnasium
 import numpy as np
 from gym_mkds.wrappers import (
-    ControllerDisplay,
     GtkVecWindow,
     MoviePlaybackWrapper,
-    compose_overlays,
 )
-from gymnasium.vector import AsyncVectorEnv
 
-from mariokart_ml.config import *
-from mariokart_ml.utils import Suppress
+from mariokart_ml.config import INTERIM_DATASET_PATH, NUM_PROC
 from mariokart_ml.utils.functional import sub_process_func
 from mariokart_ml.wrappers.dataset_wrapper import DatasetWrapper
 
@@ -26,6 +21,7 @@ def create_env(m: Path, o: Path):
     env = MoviePlaybackWrapper(env, path=str(m))
     env = DatasetWrapper(env, str(out_path))
     return env
+
 
 def loop(env: GtkVecWindow):
     obs, info = env.reset()
@@ -44,12 +40,8 @@ def loop(env: GtkVecWindow):
     finally:
         env.window.destroy()
 
-def record(
-    source: list[Path],
-    dest: Path,
-    num_proc: int,
-    verbose: bool = False
-):
+
+def record(source: list[Path], dest: Path, num_proc: int, verbose: bool = False):
     # load paths of backup dsm files
     movie_paths = []
     for s in source:
@@ -60,9 +52,8 @@ def record(
     movie_paths = batched(movie_paths, num_proc)
 
     # record in batches
-    stride = num_proc or movie_count
     record_batch = sub_process_func(loop, create_env)
-    for mp, op in zip(movie_paths, out_paths):
+    for mp, op in zip(movie_paths, out_paths, strict=False):
         record_batch(list(mp), list(op))
         if verbose:
             for m in mp:
@@ -87,7 +78,10 @@ record_parser.add_argument(
     default=INTERIM_DATASET_PATH,
 )
 record_parser.add_argument(
-    "--num-proc", help="maximum number of subprocesses to spawn", default=NUM_PROC, type=int
+    "--num-proc",
+    help="maximum number of subprocesses to spawn",
+    default=NUM_PROC,
+    type=int,
 )
 record_parser.add_argument(
     "--process",
@@ -100,5 +94,6 @@ if __name__ == "__main__":
     import os
 
     from .util import general_parser, script_main, window_parser
+
     prog = os.path.basename(__file__)
     script_main(prog, [record_parser, window_parser, general_parser])

@@ -1,6 +1,6 @@
 import ctypes
 
-from desmume.mkds.mkds import POINTER_T, struct_driver_t
+from desmume.mkds.mkds import struct_race_status_t
 
 
 def get_field_at_offset(struct_class, target_offset):
@@ -21,13 +21,15 @@ def get_field_at_offset(struct_class, target_offset):
 
     return None
 
+
 def main():
     import sys
 
     offset = int(sys.argv[1], 16)
-    struct_class = struct_driver_t
+    struct_class = struct_race_status_t
 
     field_name = get_field_at_offset(struct_class, offset)
+    print(f"Size: {ctypes.sizeof(struct_class)}")
     print(f"Offset {hex(offset)} is in field: {field_name}")
 
 

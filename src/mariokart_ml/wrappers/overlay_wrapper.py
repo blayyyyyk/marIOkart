@@ -7,7 +7,6 @@ import gymnasium as gym
 import matplotlib.cm as cm
 import matplotlib.colors as plt_colors
 import numpy as np
-import torch
 from desmume.emulator_mkds import MarioKart
 from desmume.vector import generate_plane_vectors
 from gym_mkds.wrappers.sweeping_ray import (
@@ -18,7 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from mariokart_ml.utils.collision import compute_collision_dists
 
-KEY_LABELS = ['X', 'Y', 'L', 'R', '↓', '↑', '←', '→', '8', '9', 'B', 'A']
+KEY_LABELS = ["X", "Y", "L", "R", "↓", "↑", "←", "→", "8", "9", "B", "A"]
 COLOR_MAP = [
     # --- DRIVEABLE SURFACES (Grays/Whites) ---
     [128, 128, 128],  # 0:  Road (Standard Gray)
@@ -61,6 +60,7 @@ COLOR_MAP = [
     [0, 255, 0],  # 22: Force Recalc (Lime Green - Debug visual)
 ]
 
+
 def draw_points(
     ctx: cairo.Context,
     pts: np.ndarray,
@@ -80,7 +80,7 @@ def draw_points(
     if colors.shape[0] == 1:
         colors = colors.repeat(pts.shape[0], axis=0)
 
-    for (x, y, z), (r, g, b) in zip(pts, colors):
+    for (x, y, z), (r, g, b) in zip(pts, colors, strict=False):
         ctx.set_source_rgb(r, g, b)
         ctx.arc(x, y, radius_scale * z, 0, 2 * np.pi)
         ctx.fill()
@@ -99,9 +99,7 @@ def draw_lines(
     if pts2.ndim == 1:
         pts2 = pts2[None, :]
 
-    assert (
-        pts2.shape[0] == pts1.shape[0]
-    ), "All point arrays must have the same batch size"
+    assert pts2.shape[0] == pts1.shape[0], "All point arrays must have the same batch size"
 
     if colors.ndim == 1:
         colors = colors[None, :]
@@ -110,7 +108,7 @@ def draw_lines(
     if colors.shape[0] == 1:
         colors = colors.repeat(pts1.shape[0], axis=0)
 
-    for p1, p2, (r, g, b) in zip(pts1, pts2, colors):
+    for p1, p2, (r, g, b) in zip(pts1, pts2, colors, strict=False):
         ctx.set_source_rgb(r, g, b)
         ctx.set_line_width(stroke_width_scale)
         ctx.move_to(*p1[:2])
@@ -126,9 +124,7 @@ def draw_triangles(
     colors: np.ndarray,
 ):
     n = pts1.shape[0]
-    assert (
-        pts2.shape[0] == n and pts3.shape[0] == n
-    ), "All point arrays must have the same batch size"
+    assert pts2.shape[0] == n and pts3.shape[0] == n, "All point arrays must have the same batch size"
 
     colors = np.asarray(colors)
     if colors.ndim == 1:
@@ -148,11 +144,10 @@ def draw_triangles(
 
 class ControllerDisplay(gym.ObservationWrapper):
     def __init__(self, env: gym.Env, n_physical_keys: int = 12):
-        super(ControllerDisplay, self).__init__(env)
+        super().__init__(env)
 
         self.n_physical_keys = n_physical_keys
         self.input_mask = np.zeros((n_physical_keys,), dtype=np.bool)
-
 
     def _is_pressed(self, key: str) -> bool:
         """
@@ -183,7 +178,7 @@ class ControllerDisplay(gym.ObservationWrapper):
             button_width = W // N
             pad = W % N
 
-            active_area = dashboard[:, :W - pad, :].reshape(H, N, button_width, C)
+            active_area = dashboard[:, : W - pad, :].reshape(H, N, button_width, C)
             active_area[:, self.input_mask, :, :] = 255
 
             pil_dash = Image.fromarray(dashboard)
@@ -191,10 +186,13 @@ class ControllerDisplay(gym.ObservationWrapper):
 
             try:
                 font = ImageFont.truetype("arial.ttf", 20)
-            except IOError:
+            except OSError:
                 try:
-                    font = ImageFont.truetype("/Users/blakemoody/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf", 20)
-                except IOError:
+                    font = ImageFont.truetype(
+                        "/Users/blakemoody/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf",
+                        20,
+                    )
+                except OSError:
                     # font fallback
                     font = ImageFont.load_default()
 
@@ -252,20 +250,22 @@ class RewardDisplayWrapper(gym.Wrapper):
 
             try:
                 font = ImageFont.truetype("arial.ttf", 12)
-            except IOError:
+            except OSError:
                 try:
-                    font = ImageFont.truetype("/Users/blakemoody/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf", 12)
-                except IOError:
+                    font = ImageFont.truetype(
+                        "/Users/blakemoody/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf",
+                        12,
+                    )
+                except OSError:
                     font = ImageFont.load_default()
 
-
-            text = f""
+            text = ""
             for k, v in self.info.items():
                 if isinstance(v, float):
                     text += f"{k}: {v}\n"
 
             # Create a separate transparent overlay for the text and its background
-            overlay = Image.new('RGBA', pil_frame.size, (255, 255, 255, 0))
+            overlay = Image.new("RGBA", pil_frame.size, (255, 255, 255, 0))
             draw = ImageDraw.Draw(overlay)
 
             # Calculate text bounding box
@@ -282,8 +282,13 @@ class RewardDisplayWrapper(gym.Wrapper):
             # Draw a semi-transparent black rectangle behind the text for readability
             rect_pad = 4
             draw.rectangle(
-                [x - rect_pad, y - rect_pad, x + text_w + rect_pad, y + text_h + rect_pad],
-                fill=(0, 0, 0, 150) # 150/255 opacity
+                [
+                    x - rect_pad,
+                    y - rect_pad,
+                    x + text_w + rect_pad,
+                    y + text_h + rect_pad,
+                ],
+                fill=(0, 0, 0, 150),  # 150/255 opacity
             )
 
             # Draw the white text
@@ -298,7 +303,7 @@ class RewardDisplayWrapper(gym.Wrapper):
 
 class CairoWrapper(gym.ObservationWrapper):
     def __init__(self, env: gym.Env):
-        super(CairoWrapper, self).__init__(env)
+        super().__init__(env)
         self.depth_mask = True
         self.prev_observation = None
 
@@ -308,7 +313,7 @@ class CairoWrapper(gym.ObservationWrapper):
     def _project(self, *pts: np.ndarray, colors: np.ndarray, depth_mask=True) -> tuple[np.ndarray, ...]:
         B, C = pts[0].shape
         pts_cat = np.concat(pts, axis=0)
-        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr('emu'))
+        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr("emu"))
         proj = emu.memory.project_to_screen(pts_cat)
         proj_mask = proj["mask"].reshape(len(pts), B).all(axis=0)
         proj_pts = proj["screen"].reshape(len(pts), B, C)
@@ -318,8 +323,7 @@ class CairoWrapper(gym.ObservationWrapper):
         return tuple([x.squeeze(0) for x in chunks]) + (proj_colors,)
 
     @abstractmethod
-    def _compute(self) -> tuple[np.ndarray, ...]:
-        ...
+    def _compute(self) -> tuple[np.ndarray, ...]: ...
 
     def observation(self, observation):
         return observation
@@ -327,7 +331,7 @@ class CairoWrapper(gym.ObservationWrapper):
     def render(self):
         if self.render_mode == "rgb_array":
             raw_rgb = cast(np.ndarray, super().render())
-            emu: MarioKart = self.get_wrapper_attr('emu')
+            emu: MarioKart = self.get_wrapper_attr("emu")
             if not emu.memory.race_ready:
                 return raw_rgb
 
@@ -357,23 +361,22 @@ class CairoWrapper(gym.ObservationWrapper):
             surface.flush()
             return arr[:, :, :3]
 
+
 class CollisionPrisms(CairoWrapper):
     def _compute(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        emu: MarioKart = self.get_wrapper_attr('emu')
+        emu: MarioKart = self.get_wrapper_attr("emu")
         idx = get_standing_triangle_id(emu)
-        faces = emu.memory.kcl.triangular_faces[idx:idx+1]
+        faces = emu.memory.kcl.triangular_faces[idx : idx + 1]
 
         v1, v2, v3 = np.unstack(faces, axis=1)
         tri = np.stack([v1, v2, v3], axis=0)
 
         # material color
         color_map = np.array(COLOR_MAP, dtype=np.float32) / 255
-        collision_type = emu.memory.collision_data["prism_attribute"]["collision_type"][idx:idx+1]
-        floor_mask = (
-            emu.memory.collision_data["prism_attribute"]["is_floor"] == 1
-        )
-        wall_mask = emu.memory.collision_data["prism_attribute"]["is_wall"] != 1
-        collision_type = collision_type
+        collision_type = emu.memory.collision_data["prism_attribute"]["collision_type"][idx : idx + 1]
+        # floor_mask = emu.memory.collision_data["prism_attribute"]["is_floor"] == 1
+        # wall_mask = emu.memory.collision_data["prism_attribute"]["is_wall"] != 1
+        # collision_type = collision_type
         colors = color_map[collision_type]
         tri = tri
         v1, v2, v3 = np.unstack(tri)
@@ -382,11 +385,11 @@ class CollisionPrisms(CairoWrapper):
 
 class TrackBoundary(CairoWrapper):
     def _compute(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr('emu'))
+        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr("emu"))
         boundary_lines = find_current_boundary_lines(emu)
         p0, p1 = np.split(boundary_lines, 2, axis=1)
-        p0 = p0.reshape(-1, 3) # squeeze
-        p1 = p1.reshape(-1, 3) # squeeze
+        p0 = p0.reshape(-1, 3)  # squeeze
+        p1 = p1.reshape(-1, 3)  # squeeze
 
         colors = np.array([0.0, 0.1, 0.9])[None, :].repeat(p0.shape[0], axis=0)
         return p0, p1, colors
@@ -394,25 +397,25 @@ class TrackBoundary(CairoWrapper):
 
 class OverlayWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env, *overlay_classes: CairoWrapper):
-        super(OverlayWrapper, self).__init__(reduce(lambda e, cls: cls(e), overlay_classes, env))
+        super().__init__(reduce(lambda e, cls: cls(e), overlay_classes, env))
 
 
 class SweepingRayOverlay(CairoWrapper):
     # disable depth mask
     def __init__(self, env: gym.Env, n_rays: int, color_map: str = "viridis"):
-        super(SweepingRayOverlay, self).__init__(env)
+        super().__init__(env)
         assert isinstance(env.observation_space, gym.spaces.Dict)
         self.depth_mask = False
         self.color_map = color_map
         self.n_rays = n_rays
 
     def _compute(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        emu: MarioKart = self.get_wrapper_attr('emu')
+        emu: MarioKart = self.get_wrapper_attr("emu")
         n_rays: int = self.n_rays
 
         # driver info
         position = emu.memory.driver_position
-        mtx = emu.memory.driver_matrix2 # 3x3 rotation matrix (row-major)
+        mtx = emu.memory.driver_matrix2  # 3x3 rotation matrix (row-major)
 
         # ray generation
         ray_origin, ray_direction = generate_plane_vectors(n_rays, 180, mtx, position)
@@ -435,7 +438,7 @@ class SweepingRayOverlay(CairoWrapper):
 
 class CheckpointOverlay(CairoWrapper):
     def _compute(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        emu: MarioKart = self.get_wrapper_attr('emu')
+        emu: MarioKart = self.get_wrapper_attr("emu")
         checkpoint_info = emu.memory.checkpoint_info()
         p0, p1 = np.split(checkpoint_info["next_checkpoint_pos"], 2, axis=0)
 

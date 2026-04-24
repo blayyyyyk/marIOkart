@@ -1,6 +1,4 @@
-import os
 from pathlib import Path
-from typing import Optional
 
 from desmume.emulator import DeSmuME
 
@@ -17,14 +15,15 @@ from ..utils.recording.extract_ghost import (
 def sav_to_dsm_file(emu: DeSmuME, sav_path: Path, out_path: Path, verbose=False):
     # read byte contents from save file
     contents: bytearray
-    with open(sav_path, 'rb') as fs:
+    with open(sav_path, "rb") as fs:
         contents = bytearray(fs.read())
 
     assert contents, "contents could not be read"
     course_data_entries = {}
     for course_i in range(32):
         # ensure ghost exists
-        if not has_ghost(contents, course_i): continue
+        if not has_ghost(contents, course_i):
+            continue
 
         # extract ghost inputs course at current index
         ghost_data = get_normal_ghost_data(contents, course_i)
@@ -39,15 +38,16 @@ def sav_to_dsm_file(emu: DeSmuME, sav_path: Path, out_path: Path, verbose=False)
     for course_id, course_data in course_data_entries.items():
         out_file_path = out_path / f"{course_id.lower()}_{sav_path.stem}.dsm"
         convert_to_dsm(emu, str(out_file_path), **course_data)
-        if not verbose: continue
+        if not verbose:
+            continue
         print(f"saving inputs to {out_file_path}")
 
 
-def sav_to_dsm(in_path: Path | list[Path], out_path: Optional[Path] = None, verbose=False):
+def sav_to_dsm(in_path: Path | list[Path], out_path: Path | None = None, verbose=False):
     emu = DeSmuME()
     emu.open(str(ROM_PATH))
 
-    def _sav_to_dsm(ip: Path, op: Optional[Path]):
+    def _sav_to_dsm(ip: Path, op: Path | None):
         if ip.is_dir():
             sav_found = False
             for sav_path in ip.rglob("*.sav"):

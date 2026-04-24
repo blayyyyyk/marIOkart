@@ -1,6 +1,6 @@
 {
     "num_procs": 4,
-    "verbose": true,
+    "verbose": false,
     "window": true,
     "reuse_save_slots": true,
     "total_timesteps": 30000,

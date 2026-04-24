@@ -6,7 +6,7 @@ MarI/O Kart is a comprehensive machine learning framework built in Python that t
 **Table of Contents**
 1. [Installation Guide](#installation-guide)
 2. [Usage Guide](#usage-guide)
-    1. [Dataset Collection](#dataset-collection)  
+    1. [Dataset Collection](#dataset-collection)
         1. [Recording .dsm](#recording-dsm)
         2. [Recording .sav](#recording-sav)
     2. [Training the Model](#training-the-model)
@@ -48,7 +48,7 @@ python src/main.py
 
 For our supervised learning training pipeline, we required labelled training examples of speedrunner data. Right now, we train models to predict speedrunner inputs given a set of observation data.
 
-**Movie Replays**  
+**Movie Replays**
 Our training environment uses an Nintendo DS emulator called DeSmuME. Using DeSmuME's built-in movie replay feature, we can load a series of controller inputs into the start of the game, and the emulator will replay the game in real-time using frame-by-frame prerecorded inputs. During this replay, our script will collect and precompute our observation data to save to a file. Our model then must predict the player's controller input given this observation data.
 
 #### Recording `.dsm`
@@ -74,7 +74,7 @@ options:
 
 #### Recording `.sav`
 
-`.sav` files are MarioKartDS-specific save files for the game. From save files, you can extract what are called "ghost inputs" from time trial races which essentially play the same role as `.dsm` files however ghost inputs are internal to the game. To record training datasets from `.sav` files, you must first extract all ghost inputs and convert to `.dsm` files with `process.py`  
+`.sav` files are MarioKartDS-specific save files for the game. From save files, you can extract what are called "ghost inputs" from time trial races which essentially play the same role as `.dsm` files however ghost inputs are internal to the game. To record training datasets from `.sav` files, you must first extract all ghost inputs and convert to `.dsm` files with `process.py`
 `process.py` - Extract all `.dsm` files from a `.sav` file.
 
 ```bash
@@ -212,7 +212,7 @@ while not window.has_quit():
 
     # checks if a race has started
     if not emu.memory.race_ready: continue
-    
+
     # access the player's current kart position
     kart_position: torch.Tensor = emu.memory.driver.position
 
@@ -251,10 +251,10 @@ import gymnasium
 from functools import partial
 from gym_mkds.wrappers import (
     EnvWindow,
-    OverlayWrapper, 
-    HumanInputWrapper, 
-    compose_overlays, 
-    collision_overlay, 
+    OverlayWrapper,
+    HumanInputWrapper,
+    compose_overlays,
+    collision_overlay,
     sensor_overlay
 )
 

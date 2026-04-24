@@ -1,25 +1,19 @@
 from argparse import ArgumentParser
-from functools import partial
 from pathlib import Path
 
 import gymnasium
-import numpy as np
 import torch
 from gym_mkds.wrappers import GtkVecWindow, MoviePlaybackWrapper
 from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import FrameStackObservation
 from gymnasium.wrappers.vector import NumpyToTorch
 
-from mariokart_ml.config import *
+from mariokart_ml.config import CHECKPOINTS_PATH, DEFAULT_MODEL_NAME, SEQ_LEN
 from mariokart_ml.models import registry
 from mariokart_ml.utils import collect_dsm
 
 
-def eval_supervised(
-    movie_source: list[Path],
-    model_name: str,
-    device: torch.device
-):
+def eval_supervised(movie_source: list[Path], model_name: str, device: torch.device):
     movie_paths = set([])
     for s in movie_source:
         movie_paths |= set(collect_dsm(s))
@@ -41,11 +35,7 @@ def eval_supervised(
 
     # Load a registered model architecture
     folder_name = CHECKPOINTS_PATH / model_name
-    model, mdata = registry.load(
-        model_name,
-        folder_name,
-        device=device
-    )
+    model, mdata = registry.load(model_name, folder_name, device=device)
 
     # Initialize the parallel environments
     env = AsyncVectorEnv([(lambda m=m: create_env(m)) for m in movie_paths])
@@ -64,12 +54,8 @@ def eval_supervised(
 
                     if mdata and key in mdata and "mean" in mdata[key]:
                         t = t.to(torch.float32)
-                        mean = torch.tensor(
-                            mdata[key]["mean"], device=device, dtype=torch.float32
-                        )
-                        std = torch.tensor(
-                            mdata[key]["std"], device=device, dtype=torch.float32
-                        )
+                        mean = torch.tensor(mdata[key]["mean"], device=device, dtype=torch.float32)
+                        std = torch.tensor(mdata[key]["std"], device=device, dtype=torch.float32)
                         t = (t - mean) / (std + 1e-8)
 
                     tensor_obs[key] = t
@@ -85,19 +71,15 @@ def eval_supervised(
     finally:
         env.close()
 
+
 # Evaluation Mode Parsing #
 eval_parser = ArgumentParser(add_help=False)
-eval_parser.add_argument(
-    "model_name",
-    help="name of model to evaluate",
-    type=str,
-    default=DEFAULT_MODEL_NAME
-)
+eval_parser.add_argument("model_name", help="name of model to evaluate", type=str, default=DEFAULT_MODEL_NAME)
 eval_parser.add_argument(
     "movie_source",
     help="the file(s) or director(ies) containing movie replays to source menu controls during evaluation (accepted files: .dsm)",
     nargs="+",
-    type=Path
+    type=Path,
 )
 eval_parser.set_defaults(func=eval)
 

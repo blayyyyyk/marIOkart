@@ -1,19 +1,16 @@
-from gym_mkds.wrappers.window import VecEnvWindow
-from abc import ABC
-from stable_baselines3.common.type_aliases import GymEnv
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv, VecEnvWrapper
-from typing import Any, TypeVar, Union, cast, Optional
+from typing import TypeVar, cast
 
 import cairo
 import gi
 import gymnasium as gym
-from gymnasium.vector import AsyncVectorEnv
 import numpy as np
-from desmume.emulator import SCREEN_HEIGHT, SCREEN_HEIGHT_BOTH, SCREEN_WIDTH
+from desmume.emulator import SCREEN_HEIGHT_BOTH, SCREEN_WIDTH
+from gymnasium.vector import AsyncVectorEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv, VecEnvWrapper
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GLib, Gtk # type: ignore
+from gi.repository import Gtk  # type: ignore # noqa: E402
 
 
 def tile_images(images: np.ndarray) -> np.ndarray:
@@ -27,18 +24,16 @@ def tile_images(images: np.ndarray) -> np.ndarray:
         blanks = np.zeros((N_blank, H, W, C), dtype=np.uint8)
         images = np.concatenate([images, blanks])
 
-    out = (
-        images.reshape(rows, cols, H, W, C)
-        .swapaxes(1, 2)
-        .reshape(rows * H, cols * W, C)
-    )
+    out = images.reshape(rows, cols, H, W, C).swapaxes(1, 2).reshape(rows * H, cols * W, C)
     return out
 
-ENV_T = TypeVar('ENV_T', bound=Union[VecEnv, gym.Env])
+
+ENV_T = TypeVar("ENV_T", bound=VecEnv | gym.Env)
+
 
 class WindowBase[ENV_T](Gtk.Window):
     def __init__(self, env: ENV_T, scale: float = 1.0):
-        super(WindowBase, self).__init__()
+        super().__init__()
         self.set_title("MarioKart Async Training")
         self.width = int(round(SCREEN_WIDTH * scale))
         self.height = int(round(SCREEN_HEIGHT_BOTH * scale))
@@ -72,8 +67,8 @@ class WindowBase[ENV_T](Gtk.Window):
         while Gtk.events_pending():
             Gtk.main_iteration()
 
-    def on_draw(self, widget: Gtk.Widget, ctx: cairo.Context):
-        ...
+    def on_draw(self, widget: Gtk.Widget, ctx: cairo.Context): ...
+
 
 class Window(WindowBase[gym.Env]):
     def __init__(self, env: gym.Env, scale: float = 1.0):
@@ -90,9 +85,7 @@ class Window(WindowBase[gym.Env]):
         new_arr[:, :, :3] = arr
         top = np.ascontiguousarray(new_arr)
 
-        upper_image = cairo.ImageSurface.create_for_data(
-            top.data, cairo.FORMAT_RGB24, width, height
-        )
+        upper_image = cairo.ImageSurface.create_for_data(top.data, cairo.FORMAT_RGB24, width, height)
 
         ctx.scale(self.scale, self.scale)
         ctx.set_source_surface(upper_image, 0, 0)
@@ -103,14 +96,24 @@ class Window(WindowBase[gym.Env]):
 
 
 class VecWindow(WindowBase[VecEnv]):
-    def __init__(self, vec_env: VecEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None, show_menu: bool = True):
-        super(VecWindow, self).__init__(vec_env, scale=scale)
+    def __init__(
+        self,
+        vec_env: VecEnv,
+        scale: float = 1.0,
+        colors: list[tuple[float, float, float]] | None = None,
+        show_menu: bool = True,
+    ):
+        super().__init__(vec_env, scale=scale)
         # Default colors if none provided (R, G, B normalized 0-1)
         self.colors = colors or [
-            (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
-            (1.0, 1.0, 0.0), (1.0, 0.0, 1.0), (0.0, 1.0, 1.0)
+            (1.0, 0.0, 0.0),
+            (0.0, 1.0, 0.0),
+            (0.0, 0.0, 1.0),
+            (1.0, 1.0, 0.0),
+            (1.0, 0.0, 1.0),
+            (0.0, 1.0, 1.0),
         ]
-        self.frame_width = 2 # Border thickness in pixels
+        self.frame_width = 2  # Border thickness in pixels
         self.show_menu = show_menu
 
     def on_draw(self, widget: Gtk.Widget, ctx: cairo.Context) -> bool:
@@ -119,16 +122,16 @@ class VecWindow(WindowBase[VecEnv]):
         else:
             images = self.env.get_images()
 
-        if not isinstance(images, (np.ndarray, tuple, list)):
+        if not isinstance(images, np.ndarray | tuple | list):
             return True
-        if isinstance(images, (tuple, list)):
+        if isinstance(images, tuple | list):
             images = np.stack(images)
 
         if images.ndim == 3:
             images = images[None, ...]
 
         N, H, W, C = images.shape
-        images = images[:, :(H//2 if not self.show_menu else H), :, :]
+        images = images[:, : (H // 2 if not self.show_menu else H), :, :]
         H = images.shape[1]
         cols = int(np.ceil(np.sqrt(N)))
         rows = int(np.ceil(N / cols))
@@ -158,9 +161,7 @@ class VecWindow(WindowBase[VecEnv]):
             rgba_buffer = np.zeros((H, W, 4), dtype=np.uint8)
             rgba_buffer[:, :, :3] = img
             stride = W * 4
-            surface = cairo.ImageSurface.create_for_data(
-                np.ascontiguousarray(rgba_buffer), cairo.FORMAT_RGB24, W, H, stride
-            )
+            surface = cairo.ImageSurface.create_for_data(np.ascontiguousarray(rgba_buffer), cairo.FORMAT_RGB24, W, H, stride)
 
             ctx.set_source_surface(surface, x + self.frame_width, y + self.frame_width)
             ctx.get_source().set_filter(cairo.FILTER_NEAREST)
@@ -175,7 +176,12 @@ class VecWindow(WindowBase[VecEnv]):
             text_y = y + extents.height + 5
 
             ctx.set_source_rgba(0, 0, 0, 0.6)
-            ctx.rectangle(text_x - 2, text_y - extents.height - 2, extents.width + 4, extents.height + 4)
+            ctx.rectangle(
+                text_x - 2,
+                text_y - extents.height - 2,
+                extents.width + 4,
+                extents.height + 4,
+            )
             ctx.fill()
 
             ctx.set_source_rgb(*color)
@@ -190,66 +196,87 @@ class WindowWrapper(gym.Wrapper):
         super().__init__(env)
         self.window = None
         self.scale = scale
-        
+
     def reset(self, *args, seed=None, options=None):
         obs, info = super().reset()
         self.window = Window(self.env, scale=self.scale)
         return obs, info
-        
+
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
-        
+
         if self.window is not None:
             self.window.update()
-        
+
         return obs, reward, terminated, truncated, info
-        
 
 
 class VecWindowWrapper(gym.vector.VectorWrapper):
     env: VecEnv
-    window: Optional[VecWindow]
-    
-    def __init__(self, env: AsyncVectorEnv, scale: float = 1.0, colors: list[tuple[float, float, float]] | None = None, show_menu: bool = False):
+    window: VecWindow | None
+
+    def __init__(
+        self,
+        env: AsyncVectorEnv,
+        scale: float = 1.0,
+        colors: list[tuple[float, float, float]] | None = None,
+        show_menu: bool = False,
+    ):
         super().__init__(env)
         self.window = None
         self.scale = scale
         self.colors = colors
         self.show_menu = show_menu
-        
+
     def close(self, **kwargs):
-        if self.window is None: return
+        if self.window is None:
+            return
         self.window.destroy()
         super().close()
-        
+
     def reset(self, *args, seed=None, options=None):
         obs, info = super().reset()
         self.window = VecWindow(self.env, scale=self.scale, colors=self.colors, show_menu=self.show_menu) if self.window is None else self.window
         return obs, info
-        
+
     def step(self, actions):
         obs, reward, terminated, truncated, info = super().step(actions)
-        
+
         if self.window is not None:
             self.window.update()
-        
+
         return obs, reward, terminated, truncated, info
-        
+
+
 class VecWindowWrapperSB3(VecEnvWrapper):
-    window: Optional[VecWindow]
-    
-    def __init__(self, venv: SubprocVecEnv, scale: float, colors: list[tuple[float, float, float]] | None = None, show_menu: bool = False):
+    window: VecWindow | None
+
+    def __init__(
+        self,
+        venv: SubprocVecEnv,
+        scale: float,
+        colors: list[tuple[float, float, float]] | None = None,
+        show_menu: bool = False,
+    ):
         # SB3 wrappers take 'venv' instead of 'env'
         super().__init__(venv)
         self.window = None
         self.scale = scale
         self.colors = colors
         self.show_menu = show_menu
-        
 
     def reset(self):
         obs = self.venv.reset()
-        self.window = VecWindow(self.venv, scale=self.scale, colors=self.colors, show_menu=self.show_menu) if self.window is None else self.window
+        self.window = (
+            VecWindow(
+                self.venv,
+                scale=self.scale,
+                colors=self.colors,
+                show_menu=self.show_menu,
+            )
+            if self.window is None
+            else self.window
+        )
         return obs
 
     def step_async(self, actions):
@@ -257,10 +284,8 @@ class VecWindowWrapperSB3(VecEnvWrapper):
 
     def step_wait(self):
         obs, rewards, dones, infos = self.venv.step_wait()
-        
+
         if self.window is not None:
             self.window.update()
-        
+
         return obs, rewards, dones, infos
-        
-        

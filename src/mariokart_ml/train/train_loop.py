@@ -1,9 +1,8 @@
-from torch.optim.optimizer import Optimizer
-from ..models.model_impl import Model
-from torch.utils.data import DataLoader
-import torch.nn as nn
 import torch
-from typing import Optional
+from torch.optim.optimizer import Optimizer
+from torch.utils.data import DataLoader
+
+from ..models.model_impl import Model
 
 
 def train_loop(
@@ -16,7 +15,6 @@ def train_loop(
     report_interval: int = 1,
 ):
     train_losses, test_losses = [], []
-    criterion = nn.CrossEntropyLoss()
     model = model.to(device)
     for epoch in range(num_epochs):
         # training run
@@ -41,7 +39,7 @@ def train_loop(
                 data = {x: y.to(device) for x, y in data.items()}
                 targets = data["keymask"].squeeze(2)[..., -1].to(torch.long)
                 logits, loss = model(data, targets=targets)
-                
+
                 total_test_loss += loss.item()
                 _, predicted = torch.max(logits.data, 1)
                 total += targets.size(0)
@@ -55,6 +53,4 @@ def train_loop(
 
             train_losses.append(avg_train)
             test_losses.append(avg_test)
-            print(
-                f"Epoch {epoch+1} | Train Loss: {avg_train:.4f} | Test Loss: {avg_test:.4f} | Acc: {accuracy:.2f}%"
-            )
+            print(f"Epoch {epoch + 1} | Train Loss: {avg_train:.4f} | Test Loss: {avg_test:.4f} | Acc: {accuracy:.2f}%")

@@ -1,6 +1,6 @@
 # MKDS Emulator I/O & Geometry Utilities
 
-> **Mario Kart DS (MKDS) emulator-memory helpers + vectorized geometry utilities for visualization, control, and RL.**  
+> **Mario Kart DS (MKDS) emulator-memory helpers + vectorized geometry utilities for visualization, control, and RL.**
 > Read live game state from DeSmuME, project world points to screen space, and compute distances to checkpoints and obstacles — all with PyTorch tensors and deterministic caching.
 
 ---
@@ -189,22 +189,22 @@ Boolean mask for rows whose camera-space `Z` is within `[-Z_FAR, -Z_NEAR]`. Use 
 (clock--course)=
 ### Clock & Course
 
-#### `read_clock_ptr(emu)` *(game-cached)*  
+#### `read_clock_ptr(emu)` *(game-cached)*
 Base pointer to the game’s clock data struct.
 
-#### `read_clock(emu)` *(frame-cached)*  
+#### `read_clock(emu)` *(frame-cached)*
 Current game time in **centiseconds** (10ms units).
 
-#### `get_current_course_id(emu)`  
+#### `get_current_course_id(emu)`
 Read current course ID (byte).
 
-#### `get_course_path(id: int)`  
+#### `get_course_path(id: int)`
 Resolve a course ID to a directory path via `utils/courses.json`. Raises if missing.
 
-#### `load_current_kcl(emu, device)` *(game-cached)*  
+#### `load_current_kcl(emu, device)` *(game-cached)*
 Parse and load the **KCL collision** file for the current course into a `KCLTensor` on `device`.
 
-#### `load_current_nkm(emu, device)` *(game-cached)*  
+#### `load_current_nkm(emu, device)` *(game-cached)*
 Parse and load the **NKM** map file into an `NKMTensor` on `device`.
 
 ---
@@ -212,52 +212,52 @@ Parse and load the **NKM** map file into an `NKMTensor` on `device`.
 (player--objects)=
 ### Player & Objects
 
-#### `read_racer_ptr(emu, addr=RACER_PTR_ADDR)`  
+#### `read_racer_ptr(emu, addr=RACER_PTR_ADDR)`
 Returns the address of the racer struct.
 
-#### `read_position(emu, device)` *(frame-cached)*  
+#### `read_position(emu, device)` *(frame-cached)*
 Player world position `(3,)` as a tensor.
 
-#### `read_direction(emu, device)` *(frame-cached)*  
+#### `read_direction(emu, device)` *(frame-cached)*
 Player forward direction `(3,)` as a tensor.
 
-#### `read_objects_array_max_count(emu, addr=OBJECTS_PTR_ADDR)`  
+#### `read_objects_array_max_count(emu, addr=OBJECTS_PTR_ADDR)`
 Max number of objects in the global array.
 
-#### `read_objects_array_ptr(emu, addr=OBJECTS_PTR_ADDR)`  
+#### `read_objects_array_ptr(emu, addr=OBJECTS_PTR_ADDR)`
 Pointer to the object pointer array.
 
-#### `read_object_offset(emu, id)`  
+#### `read_object_offset(emu, id)`
 Compute per-object metadata entry offset.
 
-#### `read_object_ptr(emu, id)`  
+#### `read_object_ptr(emu, id)`
 Pointer to object struct (0 if null).
 
-#### `read_object_flags(emu, id)`  
+#### `read_object_flags(emu, id)`
 Unsigned short flags for the object (type/state bits).
 
-#### `read_object_position_ptr(emu, id)`  
+#### `read_object_position_ptr(emu, id)`
 Pointer to object’s position struct (0 if deleted).
 
-#### `read_object_is_ignored(emu, id)`  
+#### `read_object_is_ignored(emu, id)`
 Returns `True` if the object is null or has the ignored bit set.
 
-#### `read_object_is_deleted(emu, id)`  
+#### `read_object_is_deleted(emu, id)`
 Returns `True` if the object’s position pointer is null.
 
-#### `read_object_position(emu, id, device)` *(safe_object + frame-cached)*  
+#### `read_object_position(emu, id, device)` *(safe_object + frame-cached)*
 Object world position `(3,)` or `None` if deleted.
 
-#### `read_map_object_type_id(emu, id)` *(safe_object + frame-cached)*  
+#### `read_map_object_type_id(emu, id)` *(safe_object + frame-cached)*
 Signed short map-object type ID, or `None`.
 
-#### `read_map_object_is_coin_collected(emu, id)` *(safe_object + frame-cached)*  
+#### `read_map_object_is_coin_collected(emu, id)` *(safe_object + frame-cached)*
 `True` if coin is collected, else `False`; or `None`.
 
-#### `read_racer_object_is_ghost(emu, id)` *(safe_object + frame-cached)*  
+#### `read_racer_object_is_ghost(emu, id)` *(safe_object + frame-cached)*
 `True` if racer object is in ghost state; or `None`.
 
-#### `read_objects(emu)` *(frame-cached)*  
+#### `read_objects(emu)` *(frame-cached)*
 Scan and group objects into categories: `map_objects`, `racer_objects`, `item_objects`, `dynamic_objects`. Returns `dict[str, list[int]]`.
 
 ---
@@ -265,25 +265,25 @@ Scan and group objects into categories: `map_objects`, `racer_objects`, `item_ob
 (camera--projection)=
 ### Camera & Projection
 
-#### `read_camera_ptr(emu, addr=CAMERA_PTR_ADDR)` *(frame-cached)*  
+#### `read_camera_ptr(emu, addr=CAMERA_PTR_ADDR)` *(frame-cached)*
 Address of the active camera struct.
 
-#### `read_camera_fov(emu)` *(frame-cached)*  
+#### `read_camera_fov(emu)` *(frame-cached)*
 Camera field-of-view in **radians** (from 16-bit fixed-point).
 
-#### `read_camera_aspect(emu)` *(frame-cached)*  
+#### `read_camera_aspect(emu)` *(frame-cached)*
 Aspect ratio (width/height).
 
-#### `read_camera_position(emu, device)` *(frame-cached)*  
+#### `read_camera_position(emu, device)` *(frame-cached)*
 Camera world position `(3,)` including elevation offset.
 
-#### `read_camera_target_position(emu, device)`  
+#### `read_camera_target_position(emu, device)`
 Camera look-at target `(3,)`.
 
-#### `read_model_view(emu, device)` *(frame-cached)*  
+#### `read_model_view(emu, device)` *(frame-cached)*
 4×4 model-view matrix (row-major), derived from camera position/target.
 
-#### `project_to_screen(emu, points, device)`  
+#### `project_to_screen(emu, points, device)`
 Convenience wrapper that reads current camera, then calls the internal `_project_to_screen`. Returns `(N, 4)` → `[x_px, y_px, clip_z, normalized_depth]` in a `256×192` viewport.
 
 > See also: `z_clip_mask(x)` to cull points outside view-space Z range.
@@ -293,46 +293,46 @@ Convenience wrapper that reads current camera, then calls the internal `_project
 (checkpoints)=
 ### Checkpoints
 
-#### `read_checkpoint_ptr(emu, addr=CHECKPOINT_PTR_ADDR)` *(game-cached)*  
+#### `read_checkpoint_ptr(emu, addr=CHECKPOINT_PTR_ADDR)` *(game-cached)*
 Pointer to checkpoint manager/state.
 
-#### `read_current_checkpoint(emu)` *(frame-cached)*  
+#### `read_current_checkpoint(emu)` *(frame-cached)*
 Current checkpoint index (unsigned byte).
 
-#### `read_current_key_checkpoint(emu)` *(frame-cached)*  
+#### `read_current_key_checkpoint(emu)` *(frame-cached)*
 Current **key** checkpoint index (signed byte).
 
-#### `read_ghost_checkpoint(emu)` *(frame-cached)*  
+#### `read_ghost_checkpoint(emu)` *(frame-cached)*
 Ghost checkpoint index (signed byte).
 
-#### `read_ghost_key_checkpoint(emu)` *(frame-cached)*  
+#### `read_ghost_key_checkpoint(emu)` *(frame-cached)*
 Ghost key checkpoint index (signed byte).
 
-#### `read_current_lap(emu)` *(frame-cached)*  
+#### `read_current_lap(emu)` *(frame-cached)*
 Current lap index (0-based, signed byte).
 
-#### `read_next_checkpoint(emu, checkpoint_count)` *(frame-cached)*  
+#### `read_next_checkpoint(emu, checkpoint_count)` *(frame-cached)*
 Compute next checkpoint index with wrap-around to 0.
 
-#### `read_checkpoint_positions(emu, device)` *(game-cached)*  
+#### `read_checkpoint_positions(emu, device)` *(game-cached)*
 Tensor of shape `(C, 2, 3)` listing endpoints `[p1, p2]` per checkpoint in **3D**. Uses KCL floors to lift 2D endpoints to 3D by nearest-neighbor elevation.
 
-#### `read_next_checkpoint_position(emu, device)` *(frame-cached)*  
+#### `read_next_checkpoint_position(emu, device)` *(frame-cached)*
 Endpoints `(2,3)` for the next checkpoint segment.
 
-#### `read_current_checkpoint_position(emu, device)` *(frame-cached)*  
+#### `read_current_checkpoint_position(emu, device)` *(frame-cached)*
 Endpoints `(2,3)` for the current checkpoint segment.
 
-#### `read_facing_point_checkpoint(emu, direction, device)` *(frame-cached)*  
+#### `read_facing_point_checkpoint(emu, direction, device)` *(frame-cached)*
 Intersection point of a ray (from player in `direction`) with the **next checkpoint line** in **XZ**; returns 3D point.
 
-#### `read_forward_distance_checkpoint(emu, device)` *(frame-cached)*  
+#### `read_forward_distance_checkpoint(emu, device)` *(frame-cached)*
 Forward distance to next checkpoint along player’s forward vector (scalar tensor).
 
-#### `read_left_distance_checkpoint(emu, device)` *(frame-cached)*  
+#### `read_left_distance_checkpoint(emu, device)` *(frame-cached)*
 Leftward distance to the next checkpoint (scalar tensor).
 
-#### `read_direction_to_checkpoint(emu, device)` *(frame-cached)*  
+#### `read_direction_to_checkpoint(emu, device)` *(frame-cached)*
 Steering angle `atan(forward / left)` toward the next checkpoint (radians).
 
 ---
@@ -340,19 +340,19 @@ Steering angle `atan(forward / left)` toward the next checkpoint (radians).
 (obstacles-walls--offroad)=
 ### Obstacles (Walls / Offroad)
 
-#### `read_facing_point_obstacle(emu, position=None, direction=None, device=None)` *(frame-cached)*  
+#### `read_facing_point_obstacle(emu, position=None, direction=None, device=None)` *(frame-cached)*
 Samples a **cone of rays** around the provided (or player’s) direction and finds the **nearest** intersection with **wall/offroad** triangles from KCL. Returns a 3D point or `None` if no intersections.
 
-#### `read_forward_distance_obstacle(emu, device)` *(frame-cached)*  
+#### `read_forward_distance_obstacle(emu, device)` *(frame-cached)*
 Forward distance to the nearest wall/offroad obstacle; returns `+inf` (tensor) when no hit.
 
-#### `read_left_distance_obstacle(emu, device)` *(frame-cached)*  
+#### `read_left_distance_obstacle(emu, device)` *(frame-cached)*
 Leftward distance to nearest obstacle; `+inf` when no hit.
 
-#### `read_right_distance_obstacle(emu, device)` *(frame-cached)*  
+#### `read_right_distance_obstacle(emu, device)` *(frame-cached)*
 Rightward distance to nearest obstacle; `+inf` when no hit.
 
-#### `read_checkpoint_distance_altitude(emu, device)` *(frame-cached)*  
+#### `read_checkpoint_distance_altitude(emu, device)` *(frame-cached)*
 Triangle altitude given the player position and the two endpoints of the **next** checkpoint. Useful as a lateral proximity measure to the segment.
 
 ---
@@ -425,16 +425,16 @@ else:
 (faq)=
 ## FAQ
 
-**Q: Why are screen Y coordinates flipped?**  
+**Q: Why are screen Y coordinates flipped?**
 A: DS screen uses a top-left origin; we map NDC to pixel space with `(1 - ndc_y)` to respect that convention.
 
-**Q: Do I need to pass `device` everywhere?**  
+**Q: Do I need to pass `device` everywhere?**
 A: Only to functions returning tensors. Consistency is important because some results are cached and tied to the first-used device.
 
-**Q: I changed args but got a cached result — bug?**  
+**Q: I changed args but got a cached result — bug?**
 A: By design, `@frame_cache` and `@game_cache` memoize a single value and **ignore** argument values. Keep args stable or avoid caching for arg-sensitive functions.
 
-**Q: What units are returned from memory reads?**  
+**Q: What units are returned from memory reads?**
 A: FX32 (and similar) are converted to floats by helper functions before tensors are constructed.
 
 ---

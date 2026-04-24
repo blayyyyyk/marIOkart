@@ -8,7 +8,7 @@ from gymnasium.wrappers.utils import RunningMeanStd
 
 class DatasetWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env, out_path: str, max_steps: int = 100000):
-        super(DatasetWrapper, self).__init__(env)
+        super().__init__(env)
         self.out_path = out_path
         self.max_steps = max_steps
         self.current_step = 0
@@ -21,11 +21,7 @@ class DatasetWrapper(gym.Wrapper):
             # not sure if single observation case works, I just did this to get pylance off my back
             spaces = {"default": env.observation_space}.items()
 
-        self.obs_rms = {
-            key: RunningMeanStd(shape=space.shape)
-            for key, space in spaces
-            if space.shape is not None and space.shape[0] > 1
-        }
+        self.obs_rms = {key: RunningMeanStd(shape=space.shape) for key, space in spaces if space.shape is not None and space.shape[0] > 1}
 
         if not os.path.exists(self.out_path):
             os.makedirs(self.out_path)
@@ -40,9 +36,7 @@ class DatasetWrapper(gym.Wrapper):
             shape = (self.max_steps, *value.shape)
 
             # Create the memmap file
-            self.mmaps[key] = np.memmap(
-                file_path, dtype=value.dtype, mode="w+", shape=shape
-            )
+            self.mmaps[key] = np.memmap(file_path, dtype=value.dtype, mode="w+", shape=shape)
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
@@ -85,7 +79,7 @@ class DatasetWrapper(gym.Wrapper):
                 for mmap in self.mmaps.values():
                     mmap.flush()
 
-        self.progress = info['race_progress']
+        self.progress = info["race_progress"]
         return obs, reward, terminated, truncated, info
 
     def render(self):

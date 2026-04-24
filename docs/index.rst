@@ -17,8 +17,7 @@ Navigation
 .. toctree::
    :maxdepth: 2
    :caption: Documentation
-   
+
    api/articles/articles
    api/modules
    api/mkds
-   

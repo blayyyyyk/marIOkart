@@ -1,4 +1,4 @@
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 import gymnasium as gym
 import numpy as np
@@ -19,10 +19,7 @@ class TimeTrialReward(gym.RewardWrapper):
     def _collision_penalty(self, emu: MarioKart):
         n_rays = 3
 
-        dist = compute_collision_dists(
-            emu,
-            n_rays=n_rays
-        )
+        dist = compute_collision_dists(emu, n_rays=n_rays)
 
         if dist is None:
             return 0.0
@@ -49,15 +46,15 @@ class TimeTrialReward(gym.RewardWrapper):
     def _drift_boost_penalty(self, emu: MarioKart):
         drift_direction = float(emu.memory.driver.leftRightDir)
         drift_released = drift_direction != 0 and not self._prev_drift_direction != 0
-        self._prev_drift_direction = drift_direction # update prev drift direction
+        self._prev_drift_direction = drift_direction  # update prev drift direction
         drift_boost_active = emu.memory.driver.driftBoostCounter > 0
         return -1.0 if drift_released and not drift_boost_active else 0.0
 
     def _snaking_reward(self, emu: MarioKart):
         drift_boost_count = emu.memory.driver.driftBoostCounter
 
-        drift_left_count = emu.memory.driver.driftLeftCount # was: mt_left
-        drift_right_count = emu.memory.driver.driftRightCount # was: mt_right
+        drift_left_count = emu.memory.driver.driftLeftCount  # was: mt_left
+        drift_right_count = emu.memory.driver.driftRightCount  # was: mt_right
         drift_progress = (drift_left_count + drift_right_count) / 4
 
         if self.snaking_cooldown == 0 and drift_boost_count > 0 and drift_progress > 0.99:
@@ -73,13 +70,12 @@ class TimeTrialReward(gym.RewardWrapper):
     def step(self, action: int):
         obs, reward, terminated, truncated, info = super().step(action)
 
-        emu = cast(MarioKart, self.get_wrapper_attr('emu'))
-        race_started = self.get_wrapper_attr('race_started')
+        emu = cast(MarioKart, self.get_wrapper_attr("emu"))
+        race_started = self.get_wrapper_attr("race_started")
         if race_started:
             speed = float(emu.memory.driver.speed)
             self.running_speed_stats.update(np.array([speed], dtype=np.float32))
-            self.snaking_cooldown = max(self.snaking_cooldown - 1, 0) # I like this. this is very clean :)
-
+            self.snaking_cooldown = max(self.snaking_cooldown - 1, 0)  # I like this. this is very clean :)
 
         return obs, reward, terminated, truncated, info
 
@@ -88,8 +84,8 @@ class TimeTrialReward(gym.RewardWrapper):
         return super().reset(**kwargs)
 
     def reward(self, reward) -> float:
-        emu = self.get_wrapper_attr('emu')
-        race_started = self.get_wrapper_attr('race_started')
+        emu = self.get_wrapper_attr("emu")
+        race_started = self.get_wrapper_attr("race_started")
         if not race_started:
             return 0.0
 

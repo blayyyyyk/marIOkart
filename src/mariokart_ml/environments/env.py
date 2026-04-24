@@ -1,71 +1,72 @@
-import ctypes
 import math
-import random
-from functools import cached_property
-from typing import Any, Literal, Optional, TypedDict, cast
-import sys, os
+from contextlib import nullcontext
+from typing import Any, Literal, TypedDict, cast
 
 import gymnasium as gym
 import numpy as np
 from desmume.emulator import SCREEN_HEIGHT, SCREEN_PIXEL_SIZE, SCREEN_WIDTH
-from desmume.emulator_mkds import MarioKart, get_fx, set_fx
+from desmume.emulator_mkds import MarioKart, get_fx
 from desmume.mkds.fx import FX32_SCALE_FACTOR
-from gym_mkds.wrappers.sweeping_ray import get_standing_triangle_id
-from gymnasium.utils.env_checker import check_reset_return_type
-from gymnasium.wrappers.utils import RunningMeanStd
 
 from mariokart_ml.config import N_KEYS
 from mariokart_ml.utils.game_event import Event, RaceEndEvent
-
-from mariokart_ml.utils.collision import compute_collision_dists
+from mariokart_ml.utils.suppress import Suppress
 from mariokart_ml.wrappers.boundary_wrapper import project_2d
 from mariokart_ml.wrappers.checkpoint_wrapper import checkpoint_angle_signed
-from mariokart_ml.utils.suppress import Suppress
-from contextlib import nullcontext
 
 ROTATION_CONST = 1 / (1 << 15)
 
-GAME_SAVE_SLOT = 0 # will bring the kart back to the start of the game menu
-RACE_SAVE_SLOT = 1 # will bring the kart back to the start of the race
-FRAME_SAVE_SLOT = 2 # will bring the kart back to a checkpoint in the race
+GAME_SAVE_SLOT = 0  # will bring the kart back to the start of the game menu
+RACE_SAVE_SLOT = 1  # will bring the kart back to the start of the race
+FRAME_SAVE_SLOT = 2  # will bring the kart back to a checkpoint in the race
 
 
 def fmt_obs(space: gym.spaces.Space, obs: float | np.ndarray) -> np.ndarray:
-    if isinstance(obs, np.ndarray): return obs
+    if isinstance(obs, np.ndarray):
+        return obs
     return np.array(obs, space.dtype).reshape(space.shape)
+
 
 def fmt_space_dict(space: gym.spaces.Dict, obs: dict[str, float]) -> dict[str, np.ndarray]:
     assert set(space.spaces.keys()) == set(obs.keys()), f"Expected keys {set(space.spaces.keys())}, got {set(obs.keys())}"
     return {k: fmt_obs(s, obs[k]) for k, s in space.items()}
 
+
 class ResetOptions(TypedDict):
-    reset_type: Literal['respawn', 'savestate', 'menu', 'custom'] | int
+    reset_type: Literal["respawn", "savestate", "menu", "custom"] | int
+
 
 class TimeTrialEnv(gym.Env[dict[str, Any], int]):
     emu: MarioKart
 
-    def __init__(self, rom_path: str, reset_event: Optional[Event] = RaceEndEvent(), suppress_desmume: bool = True):
+    def __init__(
+        self,
+        rom_path: str,
+        reset_event: Event | None = None,
+        suppress_desmume: bool = True,
+    ):
         super().__init__()
+        if reset_event is None:
+            reset_event = RaceEndEvent()
 
-        self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
-            "pos_x": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "pos_y": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "pos_z": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "vel_x": gym.spaces.Box(low=-1, high=1,  shape=(1,), dtype=np.float32),
-            "vel_y": gym.spaces.Box(low=-1, high=1,  shape=(1,), dtype=np.float32),
-            "vel_z": gym.spaces.Box(low=-1, high=1,  shape=(1,), dtype=np.float32),
-            "vertical_velocity": gym.spaces.Box(low=-1, high=1,  shape=(1,), dtype=np.float32),
-            "surf_norm_x": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "surf_norm_y": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "surf_norm_z": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-        })
+        self.observation_space: gym.spaces.Dict = gym.spaces.Dict(
+            {
+                "pos_x": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "pos_y": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "pos_z": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "vel_x": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "vel_y": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "vel_z": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "vertical_velocity": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "surf_norm_x": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "surf_norm_y": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "surf_norm_z": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+            }
+        )
 
         self.action_space = gym.spaces.Discrete(2**N_KEYS, dtype=np.uint16)
 
-        self.metadata = {
-            "render_modes": ["rgb_array"],
-            "render_fps": 30
-        }
+        self.metadata = {"render_modes": ["rgb_array"], "render_fps": 30}
 
         self.render_mode = "rgb_array"
         self.suppress_desmume = suppress_desmume
@@ -75,11 +76,10 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
             self.emu = MarioKart()
             self.emu.open(rom_path)
             self.emu.volume_set(0)
-    
+
             # clear out any leftover save slots, replace with main menu
             self.emu.savestate.save(RACE_SAVE_SLOT)
             self.emu.savestate.save(FRAME_SAVE_SLOT)
-
 
         self.reset_event = reset_event
 
@@ -135,7 +135,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         _f = 0
         try:
             _f = self.emu.memory.race_state.frameCounter - self.emu.memory.race_state.frameCounter2
-        except:
+        except Exception as _e:
             return False
 
         return _f == 1
@@ -145,7 +145,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
         self.emu.input.keypad_update(0)
         if not self.emu.movie.is_playing():
-             # this might be redundant but make sure keys are cleared
+            # this might be redundant but make sure keys are cleared
             self.emu.input.keypad_update(int(action))
 
         # update emulator state
@@ -177,10 +177,11 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
         return arr[:, :, :3]
 
-
-    def reset(self, *, seed=None, options={"reset_type": None}):
+    def reset(self, *, seed=None, options=None):
         """Gymnasium requires a reset method to restart the environment."""
         super().reset(seed=seed)
+        if options is None:
+            options = {"reset_type": None}
 
         obs = self._get_obs()
         info = self._get_info()
@@ -191,7 +192,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         with Suppress() if self.suppress_desmume else nullcontext():
             if isinstance(reset_type, int):
                 self.emu.savestate.load(reset_type)
-    
+
             if self.emu.movie.is_playing():
                 self.emu.movie.stop()
 
@@ -207,42 +208,42 @@ class TimeTrialObservations(gym.ObservationWrapper):
         super().__init__(env)
 
         assert isinstance(env.observation_space, gym.spaces.Dict)
-        self.observation_space = gym.spaces.Dict({
-            "speed_frac": gym.spaces.Box(low=0,    high=1.3, shape=(1,), dtype=np.float32),
-            "speed_max_frac": gym.spaces.Box(low=0,  high=1,  shape=(1,), dtype=np.float32),
-            "speed_rescaled": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "speed_turn": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "speed_offroad": gym.spaces.Box(low=-1, high=1,  shape=(1,), dtype=np.float32),
-            "speed_effect": gym.spaces.Box(low=-1, high=1,  shape=(1,), dtype=np.float32),
-            "speed_midair": gym.spaces.Box(low=-1, high=1,  shape=(1,), dtype=np.float32),
-
-            "angle_checkpoint": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "angle_facing": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "angle_drift": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "angle_inertia": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "angle_pitch": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-
-            "drift_direction": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "drift_progress": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "drift_left_count": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "drift_right_count": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "drift_boost_active": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "drift_timeout": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-
-            "is_collision": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "centerline_dist": gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            "surf_friction": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "is_touching_ground": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "trackstatus": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            "prb_flag": gym.spaces.Box(low=0,    high=1,   shape=(1,), dtype=np.float32),
-            # "horizon_short":    gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            # "horizon_mid":      gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            # "horizon_long":     gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-            # "obsppm" :             gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
-        } | env.observation_space.spaces)
+        self.observation_space = gym.spaces.Dict(
+            {
+                "speed_frac": gym.spaces.Box(low=0, high=1.3, shape=(1,), dtype=np.float32),
+                "speed_max_frac": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "speed_rescaled": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "speed_turn": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "speed_offroad": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "speed_effect": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "speed_midair": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_checkpoint": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_facing": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_drift": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_inertia": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_pitch": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "drift_direction": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "drift_progress": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "drift_left_count": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "drift_right_count": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "drift_boost_active": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "drift_timeout": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "is_collision": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "centerline_dist": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "surf_friction": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "is_touching_ground": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "trackstatus": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "prb_flag": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                # "horizon_short":    gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
+                # "horizon_mid":      gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
+                # "horizon_long":     gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
+                # "obsppm" :             gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
+            }
+            | env.observation_space.spaces
+        )
 
     def _centerline_dist(self):
-        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr('emu'))
+        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr("emu"))
         if not emu.memory.race_ready:
             return 0.0
 
@@ -265,13 +266,13 @@ class TimeTrialObservations(gym.ObservationWrapper):
         speed_diff = float(emu.memory.driver.maxSpeed) - float(emu.memory.driver.speed)
         observation["speed_frac"] = float(emu.memory.driver.speed) / (float(emu.memory.driver.maxSpeed) + eps)
         observation["speed_max_frac"] = float(emu.memory.driver.maxSpeedFraction)
-        observation["speed_rescaled"] = speed_diff / (float(emu.memory.driver.maxSpeed) + eps) # used to be: speed_deficit
+        observation["speed_rescaled"] = speed_diff / (float(emu.memory.driver.maxSpeed) + eps)  # used to be: speed_deficit
         observation["speed_turn"] = emu.memory.driver.yRotSpeed * ROTATION_CONST
 
         # special speed
         observation["speed_offroad"] = float(emu.memory.driver.speedMultiplier)
-        observation["speed_effect"] = float(emu.memory.driver.field394) * FX32_SCALE_FACTOR # this is a discovered field!
-        observation["speed_midair"] = float(emu.memory.driver.field3F8) * FX32_SCALE_FACTOR # this is a discovered field! # was: air_speed
+        observation["speed_effect"] = float(emu.memory.driver.field394) * FX32_SCALE_FACTOR  # this is a discovered field!
+        observation["speed_midair"] = float(emu.memory.driver.field3F8) * FX32_SCALE_FACTOR  # this is a discovered field! # was: air_speed
 
         return observation
 
@@ -282,18 +283,18 @@ class TimeTrialObservations(gym.ObservationWrapper):
         observation["angle_drift"] = emu.memory.driver.driftRotY * ROTATION_CONST
         observation["angle_pitch"] = emu.memory.driver.xRot * ROTATION_CONST
         observation["angle_checkpoint"] = checkpoint_angle_signed(emu, direction_mode="movement")
-        observation["angle_inertia"] = np.arctan2(emu.memory.driver_direction, emu.memory.driver_velocity)[0].item() / math.pi # was: heading_rate
+        observation["angle_inertia"] = np.arctan2(emu.memory.driver_direction, emu.memory.driver_velocity)[0].item() / math.pi  # was: heading_rate
 
         return observation
 
     def _get_drift_obs(self, emu: MarioKart):
         observation = {}
 
-        observation["drift_left_count"] = emu.memory.driver.driftLeftCount # was: mt_left
-        observation["drift_right_count"] = emu.memory.driver.driftRightCount # was: mt_right
-        observation["drift_timeout"] = emu.memory.driver.driftLeftRightTimeout # was: mttime
+        observation["drift_left_count"] = emu.memory.driver.driftLeftCount  # was: mt_left
+        observation["drift_right_count"] = emu.memory.driver.driftRightCount  # was: mt_right
+        observation["drift_timeout"] = emu.memory.driver.driftLeftRightTimeout  # was: mttime
         observation["drift_direction"] = float(emu.memory.driver.leftRightDir)
-        observation["drift_boost_active"] = 1.0 if emu.memory.driver.driftBoostCounter > 0 else -1.0 # was: slip_angle
+        observation["drift_boost_active"] = 1.0 if emu.memory.driver.driftBoostCounter > 0 else -1.0  # was: slip_angle
         observation["drift_progress"] = (observation["drift_left_count"] + observation["drift_right_count"]) / 4
 
         return observation
@@ -309,20 +310,20 @@ class TimeTrialObservations(gym.ObservationWrapper):
     def _get_special_obs(self, emu: MarioKart):
         observation = {}
 
-        observation["is_collision"] = 0.0 # TODO
+        observation["is_collision"] = 0.0  # TODO
         observation["is_touching_ground"] = 0.0 if emu.memory.driver.floorColType > 0 else 1.0
         observation["centerline_dist"] = self._centerline_dist()
         observation["surf_friction"] = float(emu.memory.driver.velocityMinusDirMultiplier)
-        observation["trackstatus"] = 0.0 # TODO: Ask symbiose
-        observation["prb_flag"] = int((emu.memory.driver.flags & 0x20) != 0) # pre-respawn bit (prb)
+        observation["trackstatus"] = 0.0  # TODO: Ask symbiose
+        observation["prb_flag"] = int((emu.memory.driver.flags & 0x20) != 0)  # pre-respawn bit (prb)
 
         return observation
 
     def observation(self, observation: dict):
-        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr('emu'))
+        emu: MarioKart = cast(MarioKart, self.get_wrapper_attr("emu"))
         assert isinstance(self.observation_space, gym.spaces.Dict), "wrong observation space type"
         if not emu.memory.race_ready:
-            return { k: fmt_obs(s, 0.0) for k, s in self.observation_space.items() }
+            return {k: fmt_obs(s, 0.0) for k, s in self.observation_space.items()}
 
         observation |= self._get_speed_obs(emu)
         observation |= self._get_angle_obs(emu)

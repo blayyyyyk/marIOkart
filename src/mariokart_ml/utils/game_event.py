@@ -1,26 +1,23 @@
 from abc import ABC, abstractmethod
-from typing import Literal, cast
+from typing import cast
 
 import gymnasium as gym
 from desmume.emulator_mkds import MarioKart
 
 
 class Event(ABC):
-    def __init__(self):
-        ...
-
     def __call__(self, env: gym.Env) -> bool:
         return self.update(env)
-        
-    def __or__(self, other: 'Event') -> 'Event':
+
+    def __or__(self, other: "Event") -> "Event":
         return AnyEvent([self, other])
-        
-    def __and__(self, other: 'Event') -> 'Event':
+
+    def __and__(self, other: "Event") -> "Event":
         return AllEvent([self, other])
 
     @abstractmethod
-    def update(self, env: gym.Env) -> bool:
-        ...
+    def update(self, env: gym.Env) -> bool: ...
+
 
 class AnyEvent(Event):
     def __init__(self, events: list[Event]):
@@ -29,7 +26,8 @@ class AnyEvent(Event):
 
     def update(self, env: gym.Env) -> bool:
         return any(event.update(env) for event in self.events)
-        
+
+
 class AllEvent(Event):
     def __init__(self, events: list[Event]):
         super().__init__()
@@ -37,6 +35,7 @@ class AllEvent(Event):
 
     def update(self, env: gym.Env) -> bool:
         return all(event.update(env) for event in self.events)
+
 
 class BlankEvent(Event):
     def __init__(self):
@@ -56,13 +55,15 @@ class StepCountEvent(Event):
         self.step_count += 1
         return self.step_count >= self.max_steps
 
+
 class RaceStartEvent(Event):
     def __init__(self):
         super().__init__()
 
     def update(self, env: gym.Env) -> bool:
-        race_started = env.get_wrapper_attr('race_started')
+        race_started = env.get_wrapper_attr("race_started")
         return race_started
+
 
 class RaceStartOffsetEvent(Event):
     def __init__(self, offset: int):
@@ -83,7 +84,7 @@ class MovieEndEvent(Event):
         super().__init__()
 
     def update(self, env: gym.Env) -> bool:
-        emu = cast(MarioKart, env.get_wrapper_attr('emu'))
+        emu = cast(MarioKart, env.get_wrapper_attr("emu"))
         return not emu.movie.is_playing()
 
 
@@ -98,7 +99,7 @@ class RaceEndEvent(Event):
         if not started:
             return False
 
-        emu = cast(MarioKart, env.get_wrapper_attr('emu'))
+        emu = cast(MarioKart, env.get_wrapper_attr("emu"))
         progress = float(emu.memory.race_status.driverStatus[0].raceProgress)
         return progress > self.max_progress
 
@@ -114,18 +115,10 @@ class LapEndEvent(Event):
         if not started:
             return False
 
-        emu = cast(MarioKart, env.get_wrapper_attr('emu'))
+        emu = cast(MarioKart, env.get_wrapper_attr("emu"))
         status = emu.memory.race_status.driverStatus[0]
         lap_progress = float(status.lapProgress)
         race_progress = float(status.raceProgress)
 
         lap_end = lap_progress > self.max_progress and race_progress > 0.1
         return lap_end
-
-RuleMapLiteral = Literal["race_start", "movie_end", "race_end", "lap_end"]
-RULE_MAP: dict[str, type[Event]] = {
-    "race_start": RaceStartEvent,
-    "movie_end": MovieEndEvent,
-    "race_end": RaceEndEvent,
-    "lap_end": LapEndEvent
-}

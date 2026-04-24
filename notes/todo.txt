@@ -1,0 +1,50 @@
+Issues:
+1. Despite model acheiving cross-entropy loss of ~0.3 (~85% test accuracy), kart does not appear to move during model evaluation. Below are some potential issues.
+    - Most likely because 0.3 loss and 85% accuracy is not sufficient for adaptable driving capabilities. This could likely be caused by...
+        1a. Training Data - The training labels are mostly uniform (i.e. mostly not pressing anything = mostly `0` keymasks)
+        1b. Data Augmentation - The input features we're passing in are insufficient for producing a learnable loss landscape.
+
+
+1a. Training Data
+
+1b. Data Augmentation
+So far, I've tried the following:
+    i. Sweeping Rays:
+        - Collect distance values of rays coming from the karts center of mass, going to first triangle intersection of the race course.
+        - Rays are evenly distributed on the interval (0, pi) along the karts local xz-plane.
+        - The number of rays $n_rays$ sampled is a hyperparameter of the model.
+        - I've tried $n_rays$=3 and $n_rays$=24.
+        - Choosing $n_rays$=3 caused the three rays the be place along the left, forward and right directions of the kart's local coordinate space.
+        - Both cases for $n_rays$ results in loss of around 0.5-0.6.
+    ii. Actions:
+        - A keymask is a 11-bit binary value that represents the key states of the ds controller interface.
+        - To give the model information about its prvious action in it feature vector, I map the previous keymask to an embedding space.
+        - The number of embedding dimensions is a hyperparameter of the model.
+        - The feature vector of the model is made by concatenating the sweeping ray distances and the embedding channels along the channel dimension.
+        - There was no noticeable difference in the minimum loss but in training it took longer to reach the minimum loss I previously observed.
+        - No noticeable differences in observations of the model's race evaluation.
+    iii. Time Series:
+        - I then made an LSTM make future keymask predictions based on previous feature vectors
+        - 2d kernel (time, feature)
+        - The following are new hyperparameters for the model:
+            - Kernel Stride (every $s$ number of frames)
+            - Kernel Size / Sequence length ($w$ number of frames)
+            - Kernel Spacing ($x$ frames are between neighboring batches of frames
+        - Adding time series resulted in loss of 0.3-0.4 (~30% improvement)
+        - Training has plateaued at 0.3. I can't reach sub-.3 no matter what I choosing for kernel parameters
+    iv. Sweeping Rays v2:
+        - I tried to add the rates of change of the sweeping rays' distance features
+        - I do this during data collection. (i.e. (dist(time=N)-dist(time=M))/(N-M))
+        - The size of the observation vector is doubled as a result.
+        - Learning slightly went up to ~0.4 during training. Accuracy went down 20%.
+    v. Time Series v2:
+        - Implementing a convolutional model, and testing it against the LSTM model
+
+
+To Do:
+1. Data scaling
+
+
+Import errors with ctypes bindings:
+1. ctypes.CFUNCTYPE needs to change to POINTER_T(ctypes.c_uint32)
+2. All padding that is 32 bits should be removed. (i.e ('PADDING_4', ctypes.c_ubyte * 4),)

@@ -71,7 +71,7 @@ local function __json__()
 		if not val then error('Error parsing number at position ' .. pos .. '.') end
 		return val, pos + #num_str
 	end
-	
+
 	json.stringify = function(obj, as_key)
 		local s = {} -- We'll build the string as an array of strings to be concatenated.
 		local kind = kind_of(obj) -- This is 'array' if it's an array or type(obj) otherwise.
@@ -107,10 +107,10 @@ local function __json__()
 		end
 		return table.concat(s)
 	end
-	
+
 	-- This is a one-off table to represent the null value.
 	json.null = {}
-	
+
 	json.parse = function(str, pos, end_delim)
 		pos = pos or 1
 		if pos > #str then error('Reached unexpected end of input.') end
@@ -174,9 +174,9 @@ if is_desmume then
 	memory.read_u32_le = memory.readdword
 	memory.read_s32_le = memory.readdwordsigned
 	memory.read_bytes_as_array = memory.readbyterange
-	
+
 	memory.write_u16_le = memory.writeword
-	
+
 	event.onexit = emu.registerexit
 end
 -----------------------------------
@@ -210,7 +210,7 @@ local function FramesSinceRaceStart()
 	if sceneState < 2 or sceneState > 3 then
 		return -1
 	end
-	
+
 	-- Check if race has begun. (This static pointer points to junk on the main menu, which is why we checked racer data first.)
 	return memory.read_s32_le(memory.read_s32_le(raceStatePtr) + 4)
 end
@@ -228,7 +228,7 @@ local function collectData(fileName)
 	if fs == nil then error("could not open/create " .. fileName) end
 	fs:write(json.stringify(data))
 	io.close(fs)
-	
+
 	print("Wrote data file " .. fileName)
 end
 
@@ -255,7 +255,7 @@ local function main()
 			lastFinishId = lastFinishId + 1
 			collectData("completed_race_" .. lastFinishId)
 		end
-		
+
 		-- Detect quitting.
 		local scenePtr = memory.read_u32_le(sceneStatePtr)
 		local sceneState = memory.read_u32_le(scenePtr + 0x10c)

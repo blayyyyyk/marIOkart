@@ -1,6 +1,6 @@
 # `mkds` — Mario Kart DS NKM & KCL Readers
 
-> **Installable parser library for Mario Kart DS course files.**  
+> **Installable parser library for Mario Kart DS course files.**
 > Read *NKM* (course map) and *KCL* (collision) files with clean Python APIs. Designed for tooling, editors, analytics, and research.
 
 - **PyPI:** `pip install mkds`
@@ -117,7 +117,7 @@ print(kcl.positions[0])         # first vertex position
 
 - Most NKM sections (except **STAG**) implement:
   - An 8-byte header (`magic`, `entry_count`).
-  - Fixed-size entries (a **stride**).  
+  - Fixed-size entries (a **stride**).
 - The `Section` base class:
   - Parses `entry_count` from the header.
   - Provides `__len__` and `__iter__` to iterate over raw entry bytes.
@@ -148,7 +148,7 @@ p2 = nkm._CPOI.position2[0]
 (header--section-offsets)=
 ### Header & Section Offsets
 
-- `NKM._header_offset = 0x4C` (header length).  
+- `NKM._header_offset = 0x4C` (header length).
 - Section offsets in the header (at 0x08..0x48) are **relative to the end of the header**; the parser **adds 0x4C** to get absolute positions.
 - The canonical order in this implementation:
   `OBJI, PATH, POIT, STAG, KTPS, KTPJ, KTP2, KTPC, KTPM, CPOI, CPAT, IPOI, IPAT, EPOI, EPAT, AREA, CAME`.
@@ -161,7 +161,7 @@ Below, fields are Python lists with per-entry values unless noted.
 (section-base)=
 #### Section (base)
 
-- **Purpose:** Common scaffolding for fixed-stride NKM sections.  
+- **Purpose:** Common scaffolding for fixed-stride NKM sections.
 - **Attributes:**
   - `data`: Raw section bytes (header + entries)
   - `stride`: Entry size in bytes
@@ -478,16 +478,16 @@ This package focuses on **I/O**. If you need tensor-native processing (GPU/MPS),
 (faq)=
 ## FAQ
 
-**Q: How do I list all cameras that follow a route?**  
+**Q: How do I list all cameras that follow a route?**
 A: In `nkm._CAME`, filter entries where `linked_route[i] != 0xFFFF`.
 
-**Q: How do I determine if a prism is a wall or floor?**  
+**Q: How do I determine if a prism is a wall or floor?**
 A: Use `prisms.attributes[i][6]` and `[7]` respectively (or named tensor properties in your Torch extension).
 
-**Q: Can I rebuild triangles directly from KCL?**  
+**Q: Can I rebuild triangles directly from KCL?**
 A: Yes, but `mkds` itself doesn’t compute them. Use a tensor extension (see *Torch Extensions*) or reconstruct from `positions`, `normals`, and prism `height`/normals like in the example code in your project.
 
-**Q: Are indices 0-based?**  
+**Q: Are indices 0-based?**
 A: Prism indices in leaves are **1-based** and terminated by 0; everywhere else indices into arrays are 0-based in the parsed lists.
 
 ---

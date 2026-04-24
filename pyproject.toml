@@ -12,6 +12,8 @@ dependencies = [
     "pygobject==3.50.0",
     "pynput>=1.8.1",
     "stable-baselines3>=2.8.0",
+    "streamlit>=1.56.0",
+    "streamlit-webrtc>=0.64.5",
     "torch>=2.11.0",
     "trimesh>=4.11.3",
 ]
@@ -22,3 +24,47 @@ requires = ["flit_core >=3.2,<4"]
 
 [tool.setuptools.packages.find]
 where = ["src", "."] # search in both src/ and root
+
+[tool.ruff]
+line-length = 200
+indent-width = 4
+target-version = "py312"
+
+# Merged exclude list from your ruff.toml
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg",
+    ".ipynb_checkpoints", ".mypy_cache", ".nox", ".pants.d",
+    ".pyenv", ".pytest_cache", ".pytype", ".ruff_cache", ".svn",
+    ".tox", ".venv", ".vscode", "__pypackages__", "_build",
+    "buck-out", "build", "dist", "node_modules", "site-packages", "venv",
+    "private"
+]
+
+[tool.ruff.lint]
+# Your specific rule selections for the project
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = []
+fixable = ["ALL"]
+unfixable = ["F841"] # don't auto-delete unused variables while I'm still coding
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.ty.environment]
+# Note: Ensure the relative paths to py-desmume-mkds remain valid from the project root
+extra-paths = [
+    "../py-desmume-mkds/desmume/mkds",
+    "../py-desmume-mkds/desmume",
+    "../py-desmume-mkds"
+]

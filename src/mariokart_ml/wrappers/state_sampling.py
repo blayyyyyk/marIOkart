@@ -1,17 +1,24 @@
-from mariokart_ml.utils.game_event import Event
 import random
-from typing import cast, Optional
+from typing import cast
 
 import gymnasium as gym
 import numpy as np
 from desmume.emulator_mkds import MarioKart
 
+from mariokart_ml.utils.game_event import Event
+
 
 class SaveStateSampling(gym.Wrapper):
-    def __init__(self, env: gym.Env, n_samples: int | list[float], reuse_slots: bool = False, collect_saves_event: Optional[Event] = None):
+    def __init__(
+        self,
+        env: gym.Env,
+        n_samples: int | list[float],
+        reuse_slots: bool = False,
+        collect_saves_event: Event | None = None,
+    ):
         super().__init__(env)
 
-        self.reset_event = self.get_wrapper_attr('reset_event') if collect_saves_event is None else collect_saves_event
+        self.reset_event = self.get_wrapper_attr("reset_event") if collect_saves_event is None else collect_saves_event
 
         self.saved_slots: list[int] = []
         if isinstance(n_samples, int):
@@ -33,12 +40,12 @@ class SaveStateSampling(gym.Wrapper):
 
         slot = random.choice(self.saved_slots)
         print(f"Resetting to saved slot: {slot}")
-        return super().reset(seed=seed, options={ "reset_type": slot })
+        return super().reset(seed=seed, options={"reset_type": slot})
 
     def _make_state_sample(self):
-        emu = cast(MarioKart, self.get_wrapper_attr('emu'))
-        race_started = self.get_wrapper_attr('race_started')
-        
+        emu = cast(MarioKart, self.get_wrapper_attr("emu"))
+        race_started = self.get_wrapper_attr("race_started")
+
         if not race_started:
             return
 
@@ -51,7 +58,7 @@ class SaveStateSampling(gym.Wrapper):
             raise ValueError(f"Invalid reset trigger provided: {self.reset_event}")
 
         dist = np.abs(progress - self.sample_times)
-        current_id = int(dist.argmin().item()) # including offset of GAME_SAVE_SLOT and RACE_SAVE_SLOT
+        current_id = int(dist.argmin().item())  # including offset of GAME_SAVE_SLOT and RACE_SAVE_SLOT
 
         if current_id not in self.saved_slots:
             emu.savestate.save(current_id + 2)
@@ -63,11 +70,9 @@ class SaveStateSampling(gym.Wrapper):
     def step(self, action):
         event_state = self.reset_event.update(self.env) if self.create_states else False
         obs, reward, terminated, truncated, info = super().step(action)
-        
+
         if self.create_states:
-            prev_len = len(self.saved_slots)
             self._make_state_sample()
-            curr_len = len(self.saved_slots)
             if event_state:
                 terminated = truncated = True
         elif self.reuse_slots and not self.resetted:
