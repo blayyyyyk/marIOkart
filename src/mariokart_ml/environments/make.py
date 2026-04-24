@@ -151,9 +151,7 @@ class EnvManager:
         vec_class: type[VecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv,
         **kwargs,
     ) -> WindowWrapperT:
-        def windowed_factory(m):
-            _make_window_wrappers(self.base_factory(m), **kwargs)
-
+        windowed_factory = lambda m: _make_window_wrappers(self.base_factory(m), **kwargs)  # noqa: E731
         _movies = movies if isinstance(movies, list) else [movies]
         env = self.make(_movies, env_modifier=windowed_factory, vec_class=vec_class)
         return EnvManager.add_window(env, scale)
