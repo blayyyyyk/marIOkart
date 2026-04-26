@@ -8,6 +8,8 @@ from desmume.emulator import SCREEN_HEIGHT_BOTH, SCREEN_WIDTH
 from gymnasium.vector import AsyncVectorEnv
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv, VecEnvWrapper
 
+from mariokart_ml.utils.window_performance import FpsTracker
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk  # type: ignore # noqa: E402
@@ -42,6 +44,8 @@ class WindowBase[ENV_T](Gtk.Window):
         self.env = env
         self.is_alive = True
         self.scale = scale
+        self.fps_tracker = FpsTracker(window_size=60)
+        self.current_fps = 0.0
 
         self.drawing_area = Gtk.DrawingArea()
         self.drawing_area.connect("draw", self.on_draw)
@@ -60,6 +64,9 @@ class WindowBase[ENV_T](Gtk.Window):
         Gtk.main_quit()
 
     def update(self):
+        # updates the frames per second rolling average based on the invocation rate.
+        self.current_fps = self.fps_tracker.tick()
+
         # Queue a redraw for the main GTK window
         self.drawing_area.queue_draw()
 
@@ -187,6 +194,21 @@ class VecWindow(WindowBase[VecEnv]):
             ctx.set_source_rgb(*color)
             ctx.move_to(text_x, text_y)
             ctx.show_text(label_text)
+
+        # renders the fps overlay in the top-left corner of the window.
+        ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        ctx.set_font_size(14)
+
+        # outlines the text for visibility against dynamic backgrounds.
+        fps_text = f"FPS: {self.current_fps:.1f}"
+        ctx.set_source_rgba(0, 0, 0, 0.8)
+        ctx.move_to(11, 21)
+        ctx.show_text(fps_text)
+
+        # paints the actual text body in white.
+        ctx.set_source_rgb(1.0, 1.0, 1.0)
+        ctx.move_to(10, 20)
+        ctx.show_text(fps_text)
 
         return True
 
