@@ -1,18 +1,16 @@
+import subprocess
+import sys
 from argparse import SUPPRESS, ArgumentParser
 from pathlib import Path
 from typing import cast
 
 import numpy as np
 import torch
+from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.type_aliases import GymEnv
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 
-from mariokart_ml.config import (
-    ALGO_KWARGS,
-    ALGO_MAP,
-    TOTAL_TRAINING_TIMESTEPS,
-)
+from mariokart_ml.config import ALGO_KWARGS, ALGO_MAP, ROOT_DIR, STREAMLIT_UDP_DATA_PORT, TOTAL_TRAINING_TIMESTEPS
 from mariokart_ml.environments import EnvManager
 from mariokart_ml.wrappers.window_wrapper import (
     VecWindowWrapperSB3,
@@ -39,6 +37,44 @@ class WindowUpdateCallback(BaseCallback):
 
 
 SPARSE_KEYMAP = {0: 17, 1: 33, 2: 1}
+
+
+def start(env: VecEnv, model: BaseAlgorithm, show_menu=False):
+    obs = env.reset()
+
+    if hasattr(env, "window") and env.window is not None:
+        assert isinstance(env, VecWindowWrapperSB3)
+        env.window.show_menu = show_menu
+
+    training = False
+    while True:
+        if isinstance(env, SubprocVecEnv | VecWindowWrapperSB3):
+            assert isinstance(obs, dict)
+            action, _ = model.predict(obs, deterministic=False) if training else ([0] * env.num_envs, None)
+            obs, reward, dones, info = env.step(action)
+
+        if hasattr(env, "window") and env.window is not None:
+            assert isinstance(env, VecWindowWrapperSB3)
+            env.window.update()
+
+        all_ready = np.all(dones)
+        if all_ready:
+            env.env_method("enable")
+            training = True
+
+
+def start_streamlit(num_instances: int):
+    # Construct the command
+    # Using sys.executable ensures we use the same Python environment
+    app_path = ROOT_DIR / "src" / "mariokart_ml" / "streamlit" / "app.py"
+    cmd = [sys.executable, "-m", "streamlit", "run", f"{str(app_path)}", "--", "--num-instances", str(num_instances), "--base-data-port", str(STREAMLIT_UDP_DATA_PORT)]
+
+    # Launch the process
+    process = subprocess.Popen(cmd)
+
+    port_list = [STREAMLIT_UDP_DATA_PORT + i for i in range(num_instances)]
+    print(f"Streamlit started with PID: {process.pid}\nList of open ports (UDP): {port_list}")
+    return process
 
 
 def train(
@@ -70,17 +106,17 @@ def train(
     if window:
         env = mgr.make_windowed(movie_paths, scale=scale, vec_class=SubprocVecEnv)
         assert hasattr(env, "window")
-
-        obs = env.reset()
-        assert env.window is not None
-        env.window.show_menu = not reuse_save_slots
-        callback = WindowUpdateCallback(env.window)
     else:
-        env = cast(GymEnv, mgr.make(movie_paths, vec_class=SubprocVecEnv))
-        obs = env.reset()
-        callback = WindowUpdateCallback(None)
+        env = cast(VecEnv, mgr.make(movie_paths, vec_class=SubprocVecEnv))
 
     assert env is not None
+
+    # start streamlit app if necessary
+    streamlit_proc = None
+    if env_name == "mariokart_ml/TimeTrial-streamlit-v1":
+        streamlit_proc = start_streamlit(num_procs)
+
+    # initialize model and policy
     model = algo_class("MultiInputPolicy", env=env, verbose=int(verbose), device=device, **algo_kwargs)
     if load_model_path is not None and load_model_path.exists():
         try:
@@ -88,31 +124,19 @@ def train(
         except Exception as e:
             print(f"Failed to load model from {load_model_path}: {e}")
 
-    while True:
-        if isinstance(env, SubprocVecEnv | VecWindowWrapperSB3):
-            assert isinstance(obs, dict)
-            action, _state = model.predict(obs, deterministic=True)
-            obs, reward, dones, info = env.step(action)
-
-        if window and hasattr(env, "window") and env.window is not None:
-            assert isinstance(env, VecWindowWrapperSB3)
-            env.window.update()
-
-        all_ready = np.all(dones)
-        if all_ready:
-            env.env_method("enable")  # type: ignore
-            break
-
     try:
-        print("Starting RL training. Press Ctrl+C to exit.")
+        print("Press Ctrl+C to exit.")
         # total_timesteps should be passed via args
-        model.learn(total_timesteps=total_timesteps, callback=callback)
+        start(env, model, show_menu=(not reuse_save_slots))
         if save_model_path is not None:
             model.save(save_model_path)
     except KeyboardInterrupt:
         print("Training interrupted by user.")
     finally:
         env.close()
+
+        if streamlit_proc is not None:
+            streamlit_proc.terminate()
 
 
 train_parser = ArgumentParser(add_help=False)
