@@ -11,6 +11,7 @@ from .overlay_wrapper import (
 )
 from .state_sampling import SaveStateSampling
 from .time_trial_reward import TimeTrialReward
+from .web_wrapper import WebWrapper
 from .window_wrapper import VecWindowWrapper, WindowWrapper
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "TimeTrialReward",
     "VecWindowWrapper",
     "WindowWrapper",
+    "WebWrapper",
 ]
