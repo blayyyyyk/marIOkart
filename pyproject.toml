@@ -13,7 +13,6 @@ dependencies = [
     "pynput>=1.8.1",
     "stable-baselines3>=2.8.0",
     "streamlit>=1.56.0",
-    "streamlit-webrtc>=0.64.5",
     "torch>=2.11.0",
     "trimesh>=4.11.3",
 ]
