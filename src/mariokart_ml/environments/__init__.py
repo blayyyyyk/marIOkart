@@ -1,9 +1,9 @@
 from gymnasium.envs.registration import register
 
-from mariokart_ml.config import N_KEYS, ROM_PATH
+from mariokart_ml.config import N_KEYS, ROM_PATH, STREAMLIT_UDP_DATA_PORT
 from mariokart_ml.environments.env import TimeTrialEnv, TimeTrialObservations
 from mariokart_ml.environments.make import EnvManager
-from mariokart_ml.wrappers import ControllerAction, TimeTrialReward
+from mariokart_ml.wrappers import ControllerAction, TimeTrialReward, WebWrapper
 
 __all__ = [
     "CheckpointOverlay",
@@ -35,6 +35,18 @@ register(
     additional_wrappers=(
         TimeTrialObservations.wrapper_spec(),
         TimeTrialReward.wrapper_spec(),
+    ),
+    kwargs={"rom_path": str(ROM_PATH)},
+    max_episode_steps=5000,
+)
+
+register(
+    id="mariokart_ml/TimeTrial-streamlit-v1",
+    entry_point="mariokart_ml.environments:TimeTrialEnv",
+    additional_wrappers=(
+        TimeTrialObservations.wrapper_spec(),
+        TimeTrialReward.wrapper_spec(),
+        WebWrapper.wrapper_spec(data_port=STREAMLIT_UDP_DATA_PORT),
     ),
     kwargs={"rom_path": str(ROM_PATH)},
     max_episode_steps=5000,

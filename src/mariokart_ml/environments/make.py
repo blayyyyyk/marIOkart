@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from functools import partial, reduce
+from functools import partial
 from pathlib import Path
 from typing import (
     Any,
@@ -18,8 +18,18 @@ from mariokart_ml.config import (
     RAY_COUNT,
     SAVE_STATE_SAMPLE_COUNT,
 )
-from mariokart_ml.utils.game_event import LapEndEvent, RaceEndEvent, RaceStartEvent
-from mariokart_ml.wrappers import ControllerDisplay, ControllerObservation, KeyboardWrapper, MovieWrapper, SaveStateSampling, SweepingRayOverlay, TrackBoundary, VecWindowWrapper, WindowWrapper
+from mariokart_ml.utils.game_event import CollisionEvent, LapEndEvent, RaceEndEvent, RaceStartEvent
+from mariokart_ml.wrappers import (
+    ControllerDisplay,
+    ControllerObservation,
+    KeyboardWrapper,
+    MovieWrapper,
+    SaveStateSampling,
+    SweepingRayOverlay,
+    TrackBoundary,
+    VecWindowWrapper,
+    WindowWrapper,
+)
 from mariokart_ml.wrappers.controller_wrapper import ControllerDriftingRemap
 from mariokart_ml.wrappers.overlay_wrapper import OverlayWrapper
 from mariokart_ml.wrappers.window_wrapper import VecWindowWrapperSB3
@@ -31,9 +41,9 @@ def _make(
     autoreset: bool = False,
     reuse_save_slots: bool | None = None,
     movie: Path | None = None,
-    **wrappers: list[gym.Wrapper],
+    id: int = 0,
 ) -> gym.Env[dict[str, Any], int]:
-    env = gym.make(env_name, reset_event=LapEndEvent())
+    env = gym.make(env_name, reset_event=LapEndEvent() | CollisionEvent())
     if mode == "movie":
         env = MovieWrapper(env, str(movie), disable_event=RaceEndEvent())
     elif mode == "menu":
@@ -64,18 +74,15 @@ def _make(
         )
         env = ControllerDriftingRemap(env)
 
-    if wrappers is not None:
-        env = reduce(lambda e, cls: cls(e), wrappers, env)
+    # give each instance its own dedicated port
+    if env.has_wrapper_attr("data_port"):
+        current_port = env.get_wrapper_attr("data_port")
+        env.set_wrapper_attr("data_port", current_port + id)
 
     return env
 
 
-def _make_window_wrappers(
-    env: gym.Env,
-    show_keys: bool = False,
-    show_boundary: bool = False,
-    show_rays: bool = False,
-):
+def _make_window_wrappers(env: gym.Env, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False, id: int = 0):
     # special overlay (requires input monitoring)
     if show_keys:
         env = ControllerObservation(env, n_keys=N_KEYS)
@@ -120,7 +127,7 @@ class EnvManager:
         if len(movies) == 1:
             return cast(gym.Env, factory(movies[-1]))
 
-        part = partial(vec_class, [(lambda m=m: factory(m)) for m in movies])
+        part = partial(vec_class, [(lambda m=m, id=i: factory(movie=m, id=id)) for i, m in enumerate(movies)])
         if vec_class.__name__ == "SubprocVecEnv":
             vec_env = part(start_method="spawn")  # sb3
         elif vec_class.__name__ == "AsyncVectorEnv":
@@ -151,7 +158,9 @@ class EnvManager:
         vec_class: type[VecEnv] | type[AsyncVectorEnv] = gym.vector.AsyncVectorEnv,
         **kwargs,
     ) -> WindowWrapperT:
-        windowed_factory = lambda m: _make_window_wrappers(self.base_factory(m), **kwargs)  # noqa: E731
+        windowed_factory = lambda movie=None, id=0: _make_window_wrappers(  # noqa: E731
+            self.base_factory(movie=movie, id=id), id=id, **kwargs
+        )
         _movies = movies if isinstance(movies, list) else [movies]
         env = self.make(_movies, env_modifier=windowed_factory, vec_class=vec_class)
         return EnvManager.add_window(env, scale)
