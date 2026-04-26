@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any, cast
 
 import gymnasium as gym
@@ -5,7 +6,7 @@ import numpy as np
 from desmume.emulator_mkds import MarioKart
 from gymnasium.wrappers.utils import RunningMeanStd
 
-from ..utils.collision import compute_collision_dists
+from mariokart_ml.utils.collision import compute_collision_dists
 
 
 class TimeTrialReward(gym.RewardWrapper):
@@ -15,6 +16,7 @@ class TimeTrialReward(gym.RewardWrapper):
         self.running_speed_stats = RunningMeanStd()
         self.snaking_cooldown = 0
         self._prev_drift_direction = 0
+        self.reward_components = {}
 
     def _collision_penalty(self, emu: MarioKart):
         n_rays = 3
@@ -26,7 +28,7 @@ class TimeTrialReward(gym.RewardWrapper):
 
         return -3.0 if np.any(dist < 30.0) else 0.0
 
-    def _existing_penalty(self):
+    def _existing_penalty(self, emu: MarioKart):
         # life is pain
         return -1.0
 
@@ -83,19 +85,25 @@ class TimeTrialReward(gym.RewardWrapper):
         self.snaking_cooldown = 0
         return super().reset(**kwargs)
 
+    def reward_component(self, emu, hook: Callable[[MarioKart], float | int]) -> float | int:
+        val = hook(emu)
+        func_name = getattr(hook, "__name__", str(hook))
+        self.reward_components[func_name] = val
+        return val
+
     def reward(self, reward) -> float:
         emu = self.get_wrapper_attr("emu")
         race_started = self.get_wrapper_attr("race_started")
         if not race_started:
             return 0.0
 
-        reward += self._drifting_reward(emu)
-        reward += self._snaking_reward(emu)
-        reward += self._drifting_penalty(emu)
-        reward += self._drifting_direction_reward(emu)
-        reward += self._drift_boost_penalty(emu)
-        reward += self._surface_grip_penalty(emu)
-        reward += self._collision_penalty(emu)
-        reward += self._existing_penalty()
+        reward += self.reward_component(emu, self._drifting_reward)
+        reward += self.reward_component(emu, self._snaking_reward)
+        reward += self.reward_component(emu, self._drifting_penalty)
+        reward += self.reward_component(emu, self._drifting_direction_reward)
+        reward += self.reward_component(emu, self._drift_boost_penalty)
+        reward += self.reward_component(emu, self._surface_grip_penalty)
+        reward += self.reward_component(emu, self._collision_penalty)
+        reward += self.reward_component(emu, self._existing_penalty)
 
         return reward
