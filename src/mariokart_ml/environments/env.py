@@ -1,4 +1,5 @@
 import math
+import time
 from contextlib import nullcontext
 from typing import Any, Literal, TypedDict, cast
 
@@ -7,9 +8,10 @@ import numpy as np
 from desmume.emulator import SCREEN_HEIGHT, SCREEN_PIXEL_SIZE, SCREEN_WIDTH
 from desmume.emulator_mkds import MarioKart, get_fx
 from desmume.mkds.fx import FX32_SCALE_FACTOR
+from gymnasium.wrappers.utils import RunningMeanStd
 
 from mariokart_ml.config import N_KEYS
-from mariokart_ml.utils.game_event import Event, RaceEndEvent
+from mariokart_ml.utils.game_event import CollisionEvent, Event, RaceEndEvent
 from mariokart_ml.utils.suppress import Suppress
 from mariokart_ml.wrappers.boundary_wrapper import project_2d
 from mariokart_ml.wrappers.checkpoint_wrapper import checkpoint_angle_signed
@@ -47,7 +49,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
     ):
         super().__init__()
         if reset_event is None:
-            reset_event = RaceEndEvent()
+            reset_event = RaceEndEvent() | CollisionEvent()
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict(
             {
@@ -86,6 +88,8 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         # stores position of kart at time when race starts
         self.race_started = False
         self._starting_position = np.array([2000, -2000, 2000], dtype=np.float32)
+
+        self.rms_latency = RunningMeanStd()
 
     def _get_obs(self) -> dict:
         assert isinstance(self.observation_space, gym.spaces.Dict)
@@ -143,6 +147,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
     def step(self, action):
         assert action.dtype == np.uint16, "action must be a numpy array of uint16"
 
+        start = time.time()
         self.emu.input.keypad_update(0)
         if not self.emu.movie.is_playing():
             # this might be redundant but make sure keys are cleared
@@ -159,8 +164,14 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
         obs = self._get_obs()
         info = self._get_info()
+
         terminated = self.reset_event.update(self) if self.reset_event is not None else False
         truncated = terminated
+        end = time.time()
+
+        self.rms_latency.update(np.array([end - start]))
+        info["latency"] = float(self.rms_latency.mean)
+
         reward = 0.0
 
         return obs, reward, terminated, truncated, info
@@ -195,6 +206,8 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
 
             if self.emu.movie.is_playing():
                 self.emu.movie.stop()
+
+        self.emu.volume_set(0)
 
         return obs, info
 
@@ -310,7 +323,7 @@ class TimeTrialObservations(gym.ObservationWrapper):
     def _get_special_obs(self, emu: MarioKart):
         observation = {}
 
-        observation["is_collision"] = 0.0  # TODO
+        observation["is_collision"] = 0.0
         observation["is_touching_ground"] = 0.0 if emu.memory.driver.floorColType > 0 else 1.0
         observation["centerline_dist"] = self._centerline_dist()
         observation["surf_friction"] = float(emu.memory.driver.velocityMinusDirMultiplier)
