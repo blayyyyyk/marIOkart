@@ -4,6 +4,9 @@ import sys
 
 class Suppress:
     def __enter__(self):
+        sys.stdout.flush()
+        sys.stderr.flush()
+
         # save original file descriptor for later
         self.stdout_fd = sys.stdout.fileno()
         self.stderr_fd = sys.stderr.fileno()
@@ -16,6 +19,10 @@ class Suppress:
         os.dup2(self.devnull.fileno(), self.stderr_fd)
 
     def __exit__(self, type, value, traceback):
+        # idk why but it is necessary to manually clear
+        sys.stdout.flush()
+        sys.stderr.flush()
+
         # restore original file descriptor
         os.dup2(self.saved_stdout_fd, self.stdout_fd)
         os.dup2(self.saved_stderr_fd, self.stderr_fd)
