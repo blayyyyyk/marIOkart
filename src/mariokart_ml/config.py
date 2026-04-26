@@ -54,3 +54,6 @@ ALGO_KWARGS: dict[str, dict[str, Any]] = {
 }
 
 SPARSE_KEYMAP = {0: 17, 1: 33, 2: 0, 3: 1}
+
+# Streamlit #
+STREAMLIT_UDP_DATA_PORT = 64000
