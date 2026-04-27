@@ -1,4 +1,5 @@
 import gymnasium as gym
+import numpy as np
 from desmume.emulator_mkds import MarioKart
 
 from ..utils.game_event import Event
@@ -33,7 +34,7 @@ class MovieWrapper(gym.Wrapper):
             emu.movie.stop()
 
     def step(self, action):
-        obs, reward, terminated, truncated, info = super().step(action)
+        obs, reward, terminated, truncated, info = super().step(np.uint16(action))
         if self.disable_event is not None and self.disable_event.update(self):
             self._stop_movie()
 

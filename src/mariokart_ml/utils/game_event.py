@@ -2,7 +2,10 @@ from abc import ABC, abstractmethod
 from typing import cast
 
 import gymnasium as gym
+import numpy as np
 from desmume.emulator_mkds import MarioKart
+
+from mariokart_ml.utils.collision import compute_collision_dists
 
 
 class Event(ABC):
@@ -122,3 +125,21 @@ class LapEndEvent(Event):
 
         lap_end = lap_progress > self.max_progress and race_progress > 0.1
         return lap_end
+
+
+class CollisionEvent(Event):
+    def __init__(self):
+        super().__init__()
+        self.col_count = 0
+
+    def update(self, env: gym.Env) -> bool:
+        emu = cast(MarioKart, env.get_wrapper_attr("emu"))
+        if not env.get_wrapper_attr("race_started"):
+            return False
+
+        collision = compute_collision_dists(emu, n_rays=3)
+
+        if collision is None:
+            return False
+
+        return bool(np.any(collision < 30.0))

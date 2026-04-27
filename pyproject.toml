@@ -11,8 +11,12 @@ dependencies = [
     "pycairo>=1.29.0",
     "pygobject==3.50.0",
     "pynput>=1.8.1",
+    "pythonping>=1.1.4",
+    "scipy>=1.17.1",
+    "seaborn>=0.13.2",
     "stable-baselines3>=2.8.0",
     "streamlit>=1.56.0",
+    "tensorboard>=2.20.0",
     "torch>=2.11.0",
     "trimesh>=4.11.3",
 ]

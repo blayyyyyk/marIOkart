@@ -1,11 +1,11 @@
 {
-    "num_procs": 4,
+    "num_procs": 16,
     "verbose": false,
-    "window": true,
+    "window": false,
     "reuse_save_slots": true,
-    "total_timesteps": 30000,
+    "total_timesteps": 3000000,
     "scale": 2,
-    "save_model_path": "checkpoints/f8c_ppo_2.zip",
-    "load_model_path": "checkpoints/f8c_ppo_1.zip",
-    "env_name": "mariokart_ml/TimeTrial-v1"
+    "save_model_path": "checkpoints/f8c_ppo_3.zip",
+    "load_model_path": "checkpoints/f8c_ppo_3.zip",
+    "env_name": "mariokart_ml/TimeTrial-streamlit-v1"
 }

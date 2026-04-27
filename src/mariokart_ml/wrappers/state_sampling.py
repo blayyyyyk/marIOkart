@@ -38,7 +38,8 @@ class SaveStateSampling(gym.Wrapper):
         if len(self.saved_slots) == 0:
             return super().reset(seed=seed)
 
-        slot = random.choice(self.saved_slots)
+        slot = self.saved_slots[random.randint(0, len(self.saved_slots) - 2)]
+
         print(f"Resetting to saved slot: {slot}")
         return super().reset(seed=seed, options={"reset_type": slot})
 

@@ -7,10 +7,10 @@ import gymnasium as gym
 import numpy as np
 from desmume.emulator import SCREEN_HEIGHT, SCREEN_PIXEL_SIZE, SCREEN_WIDTH
 from desmume.emulator_mkds import MarioKart, get_fx
-from desmume.mkds.fx import FX32_SCALE_FACTOR
 from gymnasium.wrappers.utils import RunningMeanStd
 
 from mariokart_ml.config import N_KEYS
+from mariokart_ml.utils.collision import compute_collision_dists
 from mariokart_ml.utils.game_event import CollisionEvent, Event, RaceEndEvent
 from mariokart_ml.utils.suppress import Suppress
 from mariokart_ml.wrappers.boundary_wrapper import project_2d
@@ -59,7 +59,6 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
                 "vel_x": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "vel_y": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "vel_z": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
-                "vertical_velocity": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "surf_norm_x": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "surf_norm_y": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "surf_norm_z": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
@@ -111,7 +110,6 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
         observation["vel_x"] = velocity_norm[0]
         observation["vel_y"] = velocity_norm[1]
         observation["vel_z"] = velocity_norm[2]
-        observation["vertical_velocity"] = float(self.emu.memory.driver.velocityY.y)
 
         # kart up vector / surface normal vector
         surface_normal = get_fx(self.emu.memory.driver.upDir, shape=(3,))
@@ -226,7 +224,7 @@ class TimeTrialObservations(gym.ObservationWrapper):
                 "speed_frac": gym.spaces.Box(low=0, high=1.3, shape=(1,), dtype=np.float32),
                 "speed_max_frac": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 "speed_rescaled": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
-                "speed_turn": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                # "speed_turn": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "speed_offroad": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "speed_effect": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "speed_midair": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
@@ -241,12 +239,15 @@ class TimeTrialObservations(gym.ObservationWrapper):
                 "drift_right_count": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 "drift_boost_active": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 "drift_timeout": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
-                "is_collision": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 "centerline_dist": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "surf_friction": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 "is_touching_ground": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 "trackstatus": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 "prb_flag": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
+                "collision_dist_left": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "collision_dist_right": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "collision_dist_front": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "collision_is_touching": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32),
                 # "horizon_short":    gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
                 # "horizon_mid":      gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
                 # "horizon_long":     gym.spaces.Box(low=-1,   high=1,   shape=(1,), dtype=np.float32),
@@ -254,6 +255,10 @@ class TimeTrialObservations(gym.ObservationWrapper):
             }
             | env.observation_space.spaces
         )
+
+        self.rms_centerline_dist = RunningMeanStd()
+        self.rms_speed_turn = RunningMeanStd()
+        self.rms_collision_dist = RunningMeanStd(shape=(3,))
 
     def _centerline_dist(self):
         emu: MarioKart = cast(MarioKart, self.get_wrapper_attr("emu"))
@@ -269,7 +274,19 @@ class TimeTrialObservations(gym.ObservationWrapper):
         kart_position = emu.memory.driver_position
         centerline_intersect = project_2d(mid0[None, :], mid1[None, :], kart_position)
         centerline_dist = np.linalg.norm(centerline_intersect - kart_position)
-        return centerline_dist
+
+        centerline_dist_old = centerline_dist
+        norm = (centerline_dist - self.rms_centerline_dist.mean) / (self.rms_centerline_dist.var ** (0.5) + 1e-8)
+
+        self.rms_centerline_dist.update(np.array([centerline_dist_old]))
+
+        return norm
+
+    def _speed_turn(self, emu: MarioKart):
+        speed_turn = float(emu.memory.driver.yRotSpeed)
+        speed_turn_old = speed_turn
+        self.rms_speed_turn.update(np.array([speed_turn]))
+        return (speed_turn_old - self.rms_speed_turn.mean) / (self.rms_speed_turn.var ** (0.5) + 1e-8)
 
     def _get_speed_obs(self, emu: MarioKart):
         observation = {}
@@ -280,12 +297,33 @@ class TimeTrialObservations(gym.ObservationWrapper):
         observation["speed_frac"] = float(emu.memory.driver.speed) / (float(emu.memory.driver.maxSpeed) + eps)
         observation["speed_max_frac"] = float(emu.memory.driver.maxSpeedFraction)
         observation["speed_rescaled"] = speed_diff / (float(emu.memory.driver.maxSpeed) + eps)  # used to be: speed_deficit
-        observation["speed_turn"] = emu.memory.driver.yRotSpeed * ROTATION_CONST
+        # observation["speed_turn"] = emu.memory.driver.yRotSpeed * FX32_SCALE_FACTOR
 
         # special speed
         observation["speed_offroad"] = float(emu.memory.driver.speedMultiplier)
-        observation["speed_effect"] = float(emu.memory.driver.field394) * FX32_SCALE_FACTOR  # this is a discovered field!
-        observation["speed_midair"] = float(emu.memory.driver.field3F8) * FX32_SCALE_FACTOR  # this is a discovered field! # was: air_speed
+        observation["speed_effect"] = float(emu.memory.driver.field394)  # this is a discovered field!
+        observation["speed_midair"] = float(emu.memory.driver.field3F8)  # this is a discovered field! # was: air_speed
+
+        return observation
+
+    def _get_collision_obs(self, emu: MarioKart):
+        observation = {}
+
+        dists = compute_collision_dists(emu, n_rays=3)
+
+        old_dists = None
+        if dists is not None:
+            old_dists = dists
+            self.rms_collision_dist.update(dists)
+            old_dists = (old_dists - self.rms_collision_dist.mean) / (self.rms_collision_dist.var ** (0.5))  # standardize
+
+        if old_dists is None:
+            old_dists = np.zeros(3)
+
+        observation["collision_dist_left"] = old_dists[0]
+        observation["collision_dist_right"] = old_dists[1]
+        observation["collision_dist_front"] = old_dists[2]
+        observation["collision_is_touching"] = 1.0 if np.any(old_dists < 30.0) else 0.0
 
         return observation
 
@@ -323,7 +361,6 @@ class TimeTrialObservations(gym.ObservationWrapper):
     def _get_special_obs(self, emu: MarioKart):
         observation = {}
 
-        observation["is_collision"] = 0.0
         observation["is_touching_ground"] = 0.0 if emu.memory.driver.floorColType > 0 else 1.0
         observation["centerline_dist"] = self._centerline_dist()
         observation["surf_friction"] = float(emu.memory.driver.velocityMinusDirMultiplier)
@@ -342,6 +379,7 @@ class TimeTrialObservations(gym.ObservationWrapper):
         observation |= self._get_angle_obs(emu)
         observation |= self._get_drift_obs(emu)
         observation |= self._get_track_obs(emu)
+        observation |= self._get_collision_obs(emu)
         observation |= self._get_special_obs(emu)
 
         return fmt_space_dict(self.observation_space, observation)

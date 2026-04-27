@@ -1,7 +1,7 @@
 {
     "scale": 2,
     "play": true,
-    "env_name": "mariokart_ml/TimeTrial-v1",
+    "env_name": "mariokart_ml/TimeTrial-streamlit-v1",
     "show_keys": true,
     "show_rays": true,
     "show_boundary": true

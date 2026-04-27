@@ -1,66 +1,39 @@
 import subprocess
 import sys
 from argparse import SUPPRESS, ArgumentParser
+from datetime import datetime
 from pathlib import Path
 from typing import cast
 
 import numpy as np
 import torch
-from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 
-from mariokart_ml.config import ALGO_KWARGS, ALGO_MAP, ROOT_DIR, STREAMLIT_UDP_DATA_PORT, TOTAL_TRAINING_TIMESTEPS
+from mariokart_ml.config import ALGO_KWARGS, ALGO_MAP, ROOT_DIR, STREAMLIT_UDP_DATA_PORT, TENSORBOARD_LOG_DIR, TOTAL_TRAINING_TIMESTEPS
 from mariokart_ml.environments import EnvManager
-from mariokart_ml.wrappers.window_wrapper import (
-    VecWindowWrapperSB3,
-)
-
-
-class WindowUpdateCallback(BaseCallback):
-    def __init__(self, window):
-        super().__init__()
-        self.window = window
-
-    def _on_step(self) -> bool:
-        rewards = self.locals.get("rewards")
-        if rewards is not None:
-            # For multiple processes, you might want to average them or print the first one
-            avg_reward = np.mean(rewards)
-            print(f"Step: {self.num_timesteps} | Mean Reward: {avg_reward:.4f}", end="\r")
-
-        if self.window is not None:
-            self.window.update()
-            return self.window.is_alive
-        else:
-            return True
-
+from mariokart_ml.wrappers import TelemetryCallback, TelemetryWrapper
 
 SPARSE_KEYMAP = {0: 17, 1: 33, 2: 1}
 
 
-def start(env: VecEnv, model: BaseAlgorithm, show_menu=False):
+def warmup_environments(env: VecEnv, show_menu: bool = False):
     obs = env.reset()
 
+    # relies on attribute forwarding through the wrapper stack to access the window.
     if hasattr(env, "window") and env.window is not None:
-        assert isinstance(env, VecWindowWrapperSB3)
         env.window.show_menu = show_menu
 
-    training = False
     while True:
-        if isinstance(env, SubprocVecEnv | VecWindowWrapperSB3):
-            assert isinstance(obs, dict)
-            action, _ = model.predict(obs, deterministic=False) if training else ([0] * env.num_envs, None)
-            obs, reward, dones, info = env.step(action)
+        action = [0] * env.num_envs
+        obs, reward, dones, info = env.step(action)
 
+        # delegates update rendering to the unwrapped window component.
         if hasattr(env, "window") and env.window is not None:
-            assert isinstance(env, VecWindowWrapperSB3)
             env.window.update()
 
-        all_ready = np.all(dones)
-        if all_ready:
+        if np.all(dones):
             env.env_method("enable")
-            training = True
+            return
 
 
 def start_streamlit(num_instances: int):
@@ -90,6 +63,7 @@ def train(
     save_model_path: Path | None = None,
     load_model_path: Path | None = None,
     device: torch.device | str = "cpu",
+    tensorboard_log_dir: Path = TENSORBOARD_LOG_DIR,
     **kwargs,
 ):
     algo_class = ALGO_MAP[algorithm]
@@ -105,19 +79,19 @@ def train(
 
     if window:
         env = mgr.make_windowed(movie_paths, scale=scale, vec_class=SubprocVecEnv)
+        # injects the telemetry wrapper into the windowed environment pipeline.
+        env = TelemetryWrapper(env)
         assert hasattr(env, "window")
     else:
         env = cast(VecEnv, mgr.make(movie_paths, vec_class=SubprocVecEnv))
+        # injects the telemetry wrapper into the headless environment pipeline.
+        env = TelemetryWrapper(env)
 
     assert env is not None
 
-    # start streamlit app if necessary
-    streamlit_proc = None
-    if env_name == "mariokart_ml/TimeTrial-streamlit-v1":
-        streamlit_proc = start_streamlit(num_procs)
+    # binds the tensorboard logging directory to the model instance.
+    model = algo_class("MultiInputPolicy", env=env, verbose=int(verbose), device=device, tensorboard_log=str(tensorboard_log_dir), **algo_kwargs)
 
-    # initialize model and policy
-    model = algo_class("MultiInputPolicy", env=env, verbose=int(verbose), device=device, **algo_kwargs)
     if load_model_path is not None and load_model_path.exists():
         try:
             model.load(load_model_path)
@@ -125,18 +99,32 @@ def train(
             print(f"Failed to load model from {load_model_path}: {e}")
 
     try:
-        print("Press Ctrl+C to exit.")
-        # total_timesteps should be passed via args
-        start(env, model, show_menu=(not reuse_save_slots))
+        print("Warming up environments...")
+        warmup_environments(env, show_menu=(not reuse_save_slots))
+
+        # generates a highly specific, collision-proof run name
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_name = f"mkds_{algorithm}_{timestamp}"
+
+        # constructs the absolute path for the multi-writer callback.
+        base_log_dir = str(Path(tensorboard_log_dir) / run_name)
+
+        # injects the environment count and target directory into the callback.
+        telemetry_callback = TelemetryCallback(log_dir=base_log_dir, num_envs=env.num_envs)
+
+        print(f"Starting training phase. Press Ctrl+C to exit. Logging to: {tensorboard_log_dir}/{run_name}")
+
+        # delegates standard trajectory collection and optimization to stable baselines.
+        model.learn(total_timesteps=total_timesteps, callback=telemetry_callback, reset_num_timesteps=True)
+
         if save_model_path is not None:
             model.save(save_model_path)
     except KeyboardInterrupt:
         print("Training interrupted by user.")
+        if save_model_path is not None:
+            model.save(save_model_path)
     finally:
         env.close()
-
-        if streamlit_proc is not None:
-            streamlit_proc.terminate()
 
 
 train_parser = ArgumentParser(add_help=False)
