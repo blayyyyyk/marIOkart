@@ -18,8 +18,9 @@ from mariokart_ml.config import (
     RAY_COUNT,
     SAVE_STATE_SAMPLE_COUNT,
 )
-from mariokart_ml.utils.game_event import CollisionEvent, LapEndEvent, RaceEndEvent, RaceStartEvent
+from mariokart_ml.utils.game_event import LapEndEvent, RaceEndEvent, RaceStartEvent
 from mariokart_ml.wrappers import (
+    CheckpointOverlay,
     ControllerDisplay,
     ControllerObservation,
     KeyboardWrapper,
@@ -43,7 +44,7 @@ def _make(
     movie: Path | None = None,
     id: int = 0,
 ) -> gym.Env[dict[str, Any], int]:
-    env = gym.make(env_name, reset_event=LapEndEvent() | CollisionEvent())
+    env = gym.make(env_name)
     if mode == "movie":
         env = MovieWrapper(env, str(movie), disable_event=RaceEndEvent())
     elif mode == "menu":
@@ -82,7 +83,7 @@ def _make(
     return env
 
 
-def _make_window_wrappers(env: gym.Env, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False, id: int = 0):
+def _make_window_wrappers(env: gym.Env, show_keys: bool = False, show_boundary: bool = False, show_rays: bool = False, show_checkpoint: bool = False, id: int = 0):
     # special overlay (requires input monitoring)
     if show_keys:
         env = ControllerObservation(env, n_keys=N_KEYS)
@@ -95,6 +96,9 @@ def _make_window_wrappers(env: gym.Env, show_keys: bool = False, show_boundary: 
 
     if show_rays:
         overlays.append(partial(SweepingRayOverlay, n_rays=RAY_COUNT))
+
+    if show_checkpoint:
+        overlays.append(CheckpointOverlay)
 
     if len(overlays) == 0:
         return env

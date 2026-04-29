@@ -1,7 +1,6 @@
 import subprocess
 import sys
 from argparse import SUPPRESS, ArgumentParser
-from datetime import datetime
 from pathlib import Path
 from typing import cast
 
@@ -103,8 +102,7 @@ def train(
         warmup_environments(env, show_menu=(not reuse_save_slots))
 
         # generates a highly specific, collision-proof run name
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        run_name = f"mkds_{algorithm}_{timestamp}"
+        run_name = f"mkds_{algorithm}_{env.num_envs}"
 
         # constructs the absolute path for the multi-writer callback.
         base_log_dir = str(Path(tensorboard_log_dir) / run_name)
@@ -115,7 +113,7 @@ def train(
         print(f"Starting training phase. Press Ctrl+C to exit. Logging to: {tensorboard_log_dir}/{run_name}")
 
         # delegates standard trajectory collection and optimization to stable baselines.
-        model.learn(total_timesteps=total_timesteps, callback=telemetry_callback, reset_num_timesteps=True)
+        model.learn(total_timesteps=total_timesteps, callback=telemetry_callback, reset_num_timesteps=False)
 
         if save_model_path is not None:
             model.save(save_model_path)

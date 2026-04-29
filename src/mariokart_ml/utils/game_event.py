@@ -131,15 +131,33 @@ class CollisionEvent(Event):
     def __init__(self):
         super().__init__()
         self.col_count = 0
+        self.race_start = RaceStartEvent()
 
     def update(self, env: gym.Env) -> bool:
-        emu = cast(MarioKart, env.get_wrapper_attr("emu"))
-        if not env.get_wrapper_attr("race_started"):
+        started = self.race_start.update(env)
+        if not started:
             return False
 
+        emu = cast(MarioKart, env.get_wrapper_attr("emu"))
         collision = compute_collision_dists(emu, n_rays=3)
 
         if collision is None:
             return False
 
         return bool(np.any(collision < 30.0))
+
+
+class SlowSpeedEvent(Event):
+    def __init__(self):
+        super().__init__()
+        self.race_start = RaceStartEvent()
+
+    def update(self, env: gym.Env) -> bool:
+        started = self.race_start.update(env)
+        if not started:
+            return False
+
+        emu = cast(MarioKart, env.get_wrapper_attr("emu"))
+        speed = float(emu.memory.driver.speed) / max(float(emu.memory.driver.maxSpeed), 1e-8)
+
+        return speed < 0.4

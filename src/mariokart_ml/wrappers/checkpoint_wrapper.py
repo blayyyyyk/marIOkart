@@ -40,11 +40,19 @@ def checkpoint_angle_unsigned(
     return np.min(angle).item()
 
 
-def checkpoint_angle_signed(
-    emu: MarioKart,
-    direction_mode: Literal["movement"] | Literal["direction"] = "movement",
-    eps: float = 1e-7,
-) -> float:
+def get_checkpoint_id(emu: MarioKart, id: int) -> int:
+    return int(id % emu.memory.map_data.cpoiCount)
+
+
+def get_checkpoint_pos(emu: MarioKart, id: int) -> np.ndarray:
+    entry = emu.memory.checkpoint_data[id]
+    _y = float(emu.memory.camera.target.y)
+    p0 = [float(entry.x1), _y, float(entry.z1)]
+    p1 = [float(entry.x2), _y, float(entry.z2)]
+    return np.array([p0, p1], dtype=np.float32)
+
+
+def checkpoint_angle_signed(emu: MarioKart, direction_mode: Literal["movement"] | Literal["direction"] = "movement", eps: float = 1e-7, lookahead_id: int = 1) -> float:
     """
     Returns the angle the kart is facing/moving towards from the next checkpoint boundary.
 
@@ -54,8 +62,10 @@ def checkpoint_angle_signed(
     Returns:
         An angle value, (0, -pi) when the checkpoint is to the right, (0, +pi) when checkpoint is to the left of the kart., 0 = the kart is facing the next checkpoint, +/- 1 = the kart is facing away
     """
+
+    checkpoint_id = get_checkpoint_id(emu, emu.memory.race_status.driverStatus[0].curCpoi + lookahead_id)  # by default, this is the next checkpoint for the kart
+    checkpoint_pts = get_checkpoint_pos(emu, checkpoint_id)  # (2, 3)
     kart_position = emu.memory.driver_position
-    checkpoint_pts = emu.memory.checkpoint_info()["next_checkpoint_pos"]  # (2, 3)
 
     if direction_mode == "movement":
         kart_mtx = emu.memory.driver_matrix2  # (3, 3)

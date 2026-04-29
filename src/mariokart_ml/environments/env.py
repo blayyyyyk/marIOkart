@@ -1,6 +1,7 @@
 import math
 import time
 from contextlib import nullcontext
+from functools import cached_property
 from typing import Any, Literal, TypedDict, cast
 
 import gymnasium as gym
@@ -9,9 +10,10 @@ from desmume.emulator import SCREEN_HEIGHT, SCREEN_PIXEL_SIZE, SCREEN_WIDTH
 from desmume.emulator_mkds import MarioKart, get_fx
 from gymnasium.wrappers.utils import RunningMeanStd
 
-from mariokart_ml.config import N_KEYS
+from mariokart_ml.config import N_KEYS, RAY_MAX_DIST
+from mariokart_ml.utils.checkpoint import NKM
 from mariokart_ml.utils.collision import compute_collision_dists
-from mariokart_ml.utils.game_event import CollisionEvent, Event, RaceEndEvent
+from mariokart_ml.utils.game_event import Event, RaceEndEvent, SlowSpeedEvent
 from mariokart_ml.utils.suppress import Suppress
 from mariokart_ml.wrappers.boundary_wrapper import project_2d
 from mariokart_ml.wrappers.checkpoint_wrapper import checkpoint_angle_signed
@@ -49,7 +51,7 @@ class TimeTrialEnv(gym.Env[dict[str, Any], int]):
     ):
         super().__init__()
         if reset_event is None:
-            reset_event = RaceEndEvent() | CollisionEvent()
+            reset_event = RaceEndEvent() | SlowSpeedEvent()
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict(
             {
@@ -228,7 +230,12 @@ class TimeTrialObservations(gym.ObservationWrapper):
                 "speed_offroad": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "speed_effect": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "speed_midair": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
-                "angle_checkpoint": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_checkpoint_near": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_checkpoint_mid": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_checkpoint_far": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_curvature_near": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_curvature_mid": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
+                "angle_curvature_far": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "angle_facing": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "angle_drift": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
                 "angle_inertia": gym.spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32),
@@ -276,11 +283,11 @@ class TimeTrialObservations(gym.ObservationWrapper):
         centerline_dist = np.linalg.norm(centerline_intersect - kart_position)
 
         centerline_dist_old = centerline_dist
-        norm = (centerline_dist - self.rms_centerline_dist.mean) / (self.rms_centerline_dist.var ** (0.5) + 1e-8)
+        norm = (centerline_dist - self.rms_centerline_dist.mean) / (self.rms_centerline_dist.var ** (0.5) + 1e-8)  # noqa: F841
 
         self.rms_centerline_dist.update(np.array([centerline_dist_old]))
 
-        return norm
+        return centerline_dist
 
     def _speed_turn(self, emu: MarioKart):
         speed_turn = float(emu.memory.driver.yRotSpeed)
@@ -311,19 +318,13 @@ class TimeTrialObservations(gym.ObservationWrapper):
 
         dists = compute_collision_dists(emu, n_rays=3)
 
-        old_dists = None
-        if dists is not None:
-            old_dists = dists
-            self.rms_collision_dist.update(dists)
-            old_dists = (old_dists - self.rms_collision_dist.mean) / (self.rms_collision_dist.var ** (0.5))  # standardize
+        if dists is None:
+            dists = np.zeros(3)
 
-        if old_dists is None:
-            old_dists = np.zeros(3)
-
-        observation["collision_dist_left"] = old_dists[0]
-        observation["collision_dist_right"] = old_dists[1]
-        observation["collision_dist_front"] = old_dists[2]
-        observation["collision_is_touching"] = 1.0 if np.any(old_dists < 30.0) else 0.0
+        observation["collision_dist_left"] = dists[0] / RAY_MAX_DIST
+        observation["collision_dist_right"] = dists[1] / RAY_MAX_DIST
+        observation["collision_dist_front"] = dists[2] / RAY_MAX_DIST
+        observation["collision_is_touching"] = 1.0 if np.any(dists < 15.0) else 0.0
 
         return observation
 
@@ -333,7 +334,26 @@ class TimeTrialObservations(gym.ObservationWrapper):
         observation["angle_facing"] = emu.memory.driver.yRot * ROTATION_CONST
         observation["angle_drift"] = emu.memory.driver.driftRotY * ROTATION_CONST
         observation["angle_pitch"] = emu.memory.driver.xRot * ROTATION_CONST
-        observation["angle_checkpoint"] = checkpoint_angle_signed(emu, direction_mode="movement")
+
+        def wrap_angle_diff(diff: float) -> float:
+            # Keeps the difference strictly between -1 and 1
+            return (diff + 1.0) % 2.0 - 1.0
+
+        a1 = checkpoint_angle_signed(emu, direction_mode="movement")
+        a2 = checkpoint_angle_signed(emu, direction_mode="movement", lookahead_id=2)
+        a3 = checkpoint_angle_signed(emu, direction_mode="movement", lookahead_id=3)
+
+        observation["angle_checkpoint_near"] = a1
+        observation["angle_checkpoint_mid"] = wrap_angle_diff(a2 - a1)
+        observation["angle_checkpoint_far"] = wrap_angle_diff(a3 - a2)
+
+        b1 = self.nkm.get_cpoi_angle_interp(mid_offset=0.02) / np.pi
+        b2 = self.nkm.get_cpoi_angle_interp(mid_offset=0.04) / np.pi
+        b3 = self.nkm.get_cpoi_angle_interp(mid_offset=0.06) / np.pi
+
+        observation["angle_curvature_near"] = b1
+        observation["angle_curvature_mid"] = b2
+        observation["angle_curvature_far"] = b3
         observation["angle_inertia"] = np.arctan2(emu.memory.driver_direction, emu.memory.driver_velocity)[0].item() / math.pi  # was: heading_rate
 
         return observation
@@ -368,6 +388,12 @@ class TimeTrialObservations(gym.ObservationWrapper):
         observation["prb_flag"] = int((emu.memory.driver.flags & 0x20) != 0)  # pre-respawn bit (prb)
 
         return observation
+
+    @cached_property
+    def nkm(self) -> NKM:
+        emu = cast(MarioKart, self.get_wrapper_attr("emu"))
+        nkm = NKM(emu)
+        return nkm
 
     def observation(self, observation: dict):
         emu: MarioKart = cast(MarioKart, self.get_wrapper_attr("emu"))

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from functools import reduce
+from functools import cached_property, reduce
 from typing import cast
 
 import cairo
@@ -15,6 +15,7 @@ from gym_mkds.wrappers.sweeping_ray import (
 )
 from PIL import Image, ImageDraw, ImageFont
 
+from mariokart_ml.utils.checkpoint import NKM
 from mariokart_ml.utils.collision import compute_collision_dists
 
 KEY_LABELS = ["X", "Y", "L", "R", "↓", "↑", "←", "→", "8", "9", "B", "A"]
@@ -437,9 +438,31 @@ class SweepingRayOverlay(CairoWrapper):
 
 
 class CheckpointOverlay(CairoWrapper):
-    def _compute(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        emu: MarioKart = self.get_wrapper_attr("emu")
-        checkpoint_info = emu.memory.checkpoint_info()
-        p0, p1 = np.split(checkpoint_info["next_checkpoint_pos"], 2, axis=0)
+    def __init__(self, env: gym.Env):
+        super().__init__(env)
+        self.emu = cast(MarioKart, self.get_wrapper_attr("emu"))
 
-        return p0, p1, np.array([0.5, 0.7, 0.0])[None, :]
+    @cached_property
+    def nkm(self) -> NKM:
+        return NKM(self.emu)
+
+    def _compute(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        l0 = self.nkm.get_cpoi_position_interp(offset=0.03)
+        l1 = self.nkm.get_cpoi_position_interp(offset=0.02)
+        l2 = self.nkm.get_cpoi_position_interp(offset=0.01)
+
+        p0, p1 = np.stack([l0, l1, l2], axis=1)
+
+        blank_p0 = np.zeros((p1.shape[0], 3))
+        blank_p1 = np.zeros((p1.shape[0], 3))
+
+        blank_p0[:, [0, 2]] = p0
+        blank_p1[:, [0, 2]] = p1
+
+        _y = float(self.emu.memory.camera.target.y)
+        blank_p0[:, 1] = _y
+        blank_p1[:, 1] = _y
+
+        colors = np.array([[0.5, 0.7, 0.0], [0.0, 0.7, 0.5], [1.0, 0.2, 0.5]])
+
+        return blank_p0, blank_p1, colors

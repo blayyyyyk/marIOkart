@@ -37,7 +37,6 @@ register(
         TimeTrialReward.wrapper_spec(),
     ),
     kwargs={"rom_path": str(ROM_PATH)},
-    max_episode_steps=5000,
 )
 
 register(
@@ -49,5 +48,4 @@ register(
         WebWrapper.wrapper_spec(data_port=STREAMLIT_UDP_DATA_PORT),
     ),
     kwargs={"rom_path": str(ROM_PATH)},
-    max_episode_steps=5000,
 )

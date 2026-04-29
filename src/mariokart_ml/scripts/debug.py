@@ -15,6 +15,7 @@ def debug(
     show_keys: bool,
     show_boundary: bool,
     show_rays: bool,
+    show_checkpoint: bool,
     autoreset: bool,
     num_procs: int,
     **kwargs,
@@ -50,13 +51,7 @@ def debug(
     movie_paths *= num_procs
 
     mgr = EnvManager(env_name, mode, autoreset)
-    env = mgr.make_windowed(
-        movie_paths,
-        scale=scale,
-        show_keys=show_keys,
-        show_boundary=show_boundary,
-        show_rays=show_rays,
-    )
+    env = mgr.make_windowed(movie_paths, scale=scale, show_keys=show_keys, show_boundary=show_boundary, show_rays=show_rays, show_checkpoint=show_checkpoint)
     obs, info = env.reset()
     assert env.window is not None
 
@@ -98,6 +93,7 @@ mode_group.add_argument(
 debug_parser.add_argument("--show-keys", help="Display DS controller overlay", action="store_true")
 debug_parser.add_argument("--show-boundary", help="Display DS controller overlay", action="store_true")
 debug_parser.add_argument("--show-rays", help="Display DS controller overlay", action="store_true")
+debug_parser.add_argument("--show-checkpoint", help="Display checkpoint overlay", action="store_true")
 debug_parser.add_argument(
     "--autoreset",
     help="Reset the environment when the kart completes the race",

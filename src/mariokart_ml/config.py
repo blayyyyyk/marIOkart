@@ -51,7 +51,7 @@ MIN_PROGRESS_FOR_GOOD_DATASET = 0.9
 ALGO_MAP: dict[str, type[BaseAlgorithm]] = {"ppo": PPO, "dqn": DQN, "a2c": A2C}
 
 ALGO_KWARGS: dict[str, dict[str, Any]] = {
-    "ppo": {"n_steps": 64, "learning_rate": 3e-4},
+    "ppo": {"n_steps": 256, "learning_rate": 1e-4},
     "dqn": {"buffer_size": 10000, "learning_rate": 1e-3},
 }
 

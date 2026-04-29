@@ -1,11 +1,13 @@
 # MarI/O Kart
 > Training an AI model to perform advanced speedrunner inputs of the popular racing title Mario Kart DS
 
-MarI/O Kart is a comprehensive machine learning framework built in Python that trains autonomous driving agents to navigate Mario Kart DS. Utilizing PyTorch for model training, the project explores both supervised learning—predicting and cloning advanced speedrunner techniques from `.dsm` and `.sav` files—and experimental reinforcement learning. To support these high-performance models, the repository features a custom-optimized DeSmuME emulator API for lightning-fast memory access and a standalone Gymnasium environment, complete with GTK-based visual overlays for real-time observation rendering.
-
 **Table of Contents**
 1. [Installation Guide](#installation-guide)
 2. [Usage Guide](#usage-guide)
+    1. [Training](#training)
+        1. [Tensorboard Support](#tensorboard-support)
+    2. [Debugging](#debugging)
+    3. [Streamlit Dashboard](#streamlit-dashboard)
 3. [Working With the MarioKart DS Memory API](#working-with-the-mariokart-ds-memory-api)
 
 ## Installation Guide
@@ -77,7 +79,7 @@ You can test the emulator with human input with the following command:
 python -m mariokart_ml debug --play -c example_configs/debug.json
 ```
 
-### Realtime Per-step metrics Dashboard
+### Streamlit Dashboard
 
 A web-based [streamlit](https://streamlit.io/) dashboard can be used to view realtime observation and reward distribution for each emulator instance. View the demo [here](https://streamable.com/02z96h)
 
