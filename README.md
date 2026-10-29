@@ -1,6 +1,14 @@
 # MarI/O Kart
 > Training an AI model to perform advanced speedrunner inputs of the popular racing title Mario Kart DS
 
+<p align="center">
+  <a href="https://youtu.be/4dDEzTr_Bko">
+    <img src="https://img.youtube.com/vi/4dDEzTr_Bko/maxresdefault.jpg" alt="Watch the MarI/O Kart highlights on YouTube: a reinforcement-learning agent snaking Figure-8 Circuit (1:27.832, 73 mini-turbos)" width="800">
+  </a>
+  <br>
+  <em>▶ Watch the highlights on YouTube: a PPO agent snaking Figure-8 Circuit, with geometry overlays and frame-by-frame controller inputs.</em>
+</p>
+
 **Table of Contents**
 1. [Installation Guide](#installation-guide)
 2. [Usage Guide](#usage-guide)
